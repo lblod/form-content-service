@@ -1,5 +1,10 @@
 import { app, errorHandler } from "mu";
-import { fetchFormDefinitionById } from "./form-repository";
+import {
+  fetchFormDefinitionById,
+  loadFormsFromConfig,
+} from "./form-repository";
+
+loadFormsFromConfig();
 
 app.get("/", async function (_req, res) {
   res.send({ status: "ok" });
