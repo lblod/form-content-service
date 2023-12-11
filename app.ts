@@ -1,18 +1,18 @@
-import { app, errorHandler, query } from "mu";
+import { app, errorHandler, query } from 'mu';
 import {
   fetchFormDefinitionById,
   loadFormsFromConfig,
-} from "./form-repository";
-import { cleanAndValidateFormTtl } from "./form-validator";
-import { ttlToInsert } from "./utils";
+} from './form-repository';
+import { cleanAndValidateFormTtl } from './form-validator';
+import { ttlToInsert } from './utils';
 
 loadFormsFromConfig();
 
-app.get("/", async function (_req, res) {
-  res.send({ status: "ok" });
+app.get('/', async function (_req, res) {
+  res.send({ status: 'ok' });
 });
 
-app.get("/:id", async function (_req, res) {
+app.get('/:id', async function (_req, res) {
   const form = await fetchFormDefinitionById(_req.params.id);
   if (!form) {
     res.send(404);
@@ -21,7 +21,7 @@ app.get("/:id", async function (_req, res) {
   res.send(form);
 });
 
-app.post("/:id", async function (req, res) {
+app.post('/:id', async function (req, res) {
   const form = await fetchFormDefinitionById(req.params.id);
   if (!form) {
     res.send(404);

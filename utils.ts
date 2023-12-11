@@ -13,16 +13,16 @@ export const ttlToInsert = function (ttl) {
 
   lines.forEach((line) => {
     const trimmedLine = line.trim();
-    if (trimmedLine.toLowerCase().startsWith("@prefix")) {
+    if (trimmedLine.toLowerCase().startsWith('@prefix')) {
       prefixLines.push(`PREFIX ${trimmedLine.substring(8)}`);
     } else {
       insertLines.push(trimmedLine);
     }
   });
 
-  return `${prefixLines.join("\n")}
+  return `${prefixLines.join('\n')}
 
   INSERT DATA {
-    ${insertLines.join(".\n")}
+    ${insertLines.join('.\n')}
   }`;
 };
