@@ -1,9 +1,12 @@
 import { query, sparqlEscapeString } from "mu";
 import { promises as fs } from "fs";
+import { FormDefinition } from "./types";
 
 const formsFromConfig = {};
 
-export const fetchFormDefinitionById = async function (id: string) {
+export const fetchFormDefinitionById = async function (
+  id: string
+): Promise<FormDefinition | null> {
   if (formsFromConfig[id]) {
     return formsFromConfig[id];
   }
