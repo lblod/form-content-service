@@ -5,8 +5,6 @@ import {
 } from './form-repository';
 import { cleanAndValidateFormTtl } from './form-validator';
 import { ttlToInsert } from './utils';
-// @ts-ignore unused but needed for linting to work
-import bodyParser from 'body-parser';
 
 loadFormsFromConfig();
 
