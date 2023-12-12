@@ -43,8 +43,8 @@ export const loadFormsFromConfig = async function () {
 };
 
 export const loadConfigForm = async function (formName: string) {
-  const filePath = `/config/${formName}/form.ttl`;
-  const metaPath = `/config/${formName}/meta.ttl`;
+  const filePath = `/forms/${formName}/form.ttl`;
+  const metaPath = `/forms/${formName}/meta.ttl`;
   try {
     const specification = await fs.readFile(filePath, 'utf-8');
     const meta = await fs.readFile(metaPath, 'utf-8').catch(() => null);
