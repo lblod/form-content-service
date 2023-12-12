@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { FormDefinition } from './types';
 
 const formsFromConfig = {};
+const formDirectory = '/forms';
 
 export const fetchFormDefinitionById = async function (
   id: string,
@@ -35,7 +36,7 @@ export const fetchFormDefinitionById = async function (
 };
 
 export const loadFormsFromConfig = async function () {
-  const formDirectories = await fs.readdir('/forms');
+  const formDirectories = await fs.readdir(formDirectory);
   formDirectories.forEach(async (formDirectory) => {
     const form = await loadConfigForm(formDirectory);
     formsFromConfig[formDirectory] = form;
@@ -43,8 +44,8 @@ export const loadFormsFromConfig = async function () {
 };
 
 export const loadConfigForm = async function (formName: string) {
-  const filePath = `/forms/${formName}/form.ttl`;
-  const metaPath = `/forms/${formName}/meta.ttl`;
+  const filePath = `${formDirectory}/${formName}/form.ttl`;
+  const metaPath = `${formDirectory}/${formName}/meta.ttl`;
   try {
     const specification = await fs.readFile(filePath, 'utf-8');
     const meta = await fs.readFile(metaPath, 'utf-8').catch(() => null);
