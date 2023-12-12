@@ -35,7 +35,7 @@ export const fetchFormDefinitionById = async function (
 };
 
 export const loadFormsFromConfig = async function () {
-  const formDirectories = await fs.readdir('/config');
+  const formDirectories = await fs.readdir('/forms');
   formDirectories.forEach(async (formDirectory) => {
     const form = await loadConfigForm(formDirectory);
     formsFromConfig[formDirectory] = form;
