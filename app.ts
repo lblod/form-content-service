@@ -3,7 +3,7 @@ import {
   fetchFormDefinitionById,
   loadFormsFromConfig,
 } from './form-repository';
-import { cleanAndValidateFormTtl } from './form-validator';
+import { cleanAndValidateFormInstance } from './form-validator';
 import { ttlToInsert } from './utils';
 
 loadFormsFromConfig();
@@ -28,9 +28,13 @@ app.post('/:id', async function (req, res) {
     return;
   }
   // fetch form content from body
-  const { contentTtl } = req.body;
+  const { contentTtl, instanceUri } = req.body;
 
-  const validatedContent = await cleanAndValidateFormTtl(contentTtl, form);
+  const validatedContent = await cleanAndValidateFormInstance(
+    contentTtl,
+    form,
+    instanceUri,
+  );
 
   query(ttlToInsert(validatedContent));
 

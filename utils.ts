@@ -1,3 +1,9 @@
+import { QueryEngine } from '@comunica/query-sparql';
+import N3 from 'n3';
+
+const parser = new N3.Parser();
+const sparql = new QueryEngine();
+
 /**
  * This is a naive implementation that will not work for data of the format:
  * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
@@ -25,4 +31,29 @@ export const ttlToInsert = function (ttl) {
   INSERT DATA {
     ${insertLines.join('.\n')}
   }`;
+};
+
+export const queryStore = async function (query: string, store: N3.Store) {
+  const bindingStream = await sparql.queryBindings(query, {
+    sources: [store],
+  });
+  return await bindingStream.toArray();
+};
+
+export const ttlToStore = function (ttl: string): Promise<N3.Store> {
+  const store = new N3.Store();
+
+  return new Promise((resolve, reject) => {
+    parser.parse(ttl, (error, quad) => {
+      if (!quad) {
+        resolve(store);
+        return;
+      }
+      if (error) {
+        console.error(error);
+        reject(error);
+      }
+      store.addQuad(quad);
+    });
+  });
 };
