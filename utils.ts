@@ -62,3 +62,12 @@ export const modifierLookup = {
   // only inverse path is supported for now
   'http://www.w3.org/ns/shacl#inversePath': '^',
 };
+
+export const datatypeNames = {
+  'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
+  'http://www.w3.org/2001/XMLSchema#date': 'date',
+  'http://www.w3.org/2001/XMLSchema#decimal': 'decimal',
+  'http://www.w3.org/2001/XMLSchema#integer': 'int',
+  'http://www.w3.org/2001/XMLSchema#float': 'float',
+  'http://www.w3.org/2001/XMLSchema#boolean': 'bool',
+};
