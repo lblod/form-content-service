@@ -119,7 +119,7 @@ export const buildFormConstructQuery = async function (formTtl, instanceUri) {
     return pathToConstructVariables(allPaths[field], index, instanceUri);
   });
   const constructPaths = constructVariables.map((path) => {
-    return `OPTIONAL { ${path} }`;
+    return `OPTIONAL { ${path} }`; // TODO: For virtuoso, a UNION is faster, we may want to replace this BUT UNION is broken by comunica right now
   });
 
   return `
