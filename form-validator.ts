@@ -6,6 +6,7 @@ import { QueryEngine } from '@comunica/query-sparql';
 import N3 from 'n3';
 import { ttlToStore } from './utils';
 import { getPathsForFieldsQuery } from './queries/getPathsForFields';
+import { getPathsForGeneratorQuery } from './queries/getPathsForGenerators';
 
 const getPathsForFields = async function (formStore: N3.Store) {
   type PathLink = { predicate: string; node: string };
@@ -45,6 +46,50 @@ const getPathsForFields = async function (formStore: N3.Store) {
   return fullPaths;
 };
 
+const getPathsForGenerators = async function (formStore: N3.Store) {
+  type PathLink = { predicate: string; node: string };
+  const fieldPathStarts: Record<string, PathLink> = {};
+  const previousToNext: Record<string, PathLink> = {};
+
+  const results = await getPathsForGeneratorQuery(formStore);
+
+  results.forEach((result) => {
+    const { predicate, previous, step, field: generatorP } = result;
+    if (!previous) {
+      fieldPathStarts[generatorP] = {
+        predicate,
+        node: step || predicate, // step is undefined if there is no additional scope linked to the generator
+      };
+    } else {
+      previousToNext[previous] = {
+        predicate,
+        node: step,
+      };
+    }
+  });
+
+  const fullPaths: Record<string, string[]> = {};
+  Object.keys(fieldPathStarts).forEach((field) => {
+    const path = fieldPathStarts[field];
+    let current: PathLink = path;
+    const pathSteps: string[] = [];
+    while (current) {
+      const predicate = current.predicate;
+
+      // predicate is null for simple paths without a scope, in that case, we don't want to add this empty node to the path
+      if (predicate) {
+        pathSteps.push(current.predicate);
+      }
+      current = previousToNext[current.node];
+      if (!current) {
+        // for this query, the path is the scope (if any) and we should add the predicate to it to get the full path
+        fullPaths[field] = [...pathSteps, sparqlEscapeUri(field)];
+      }
+    }
+  });
+  return fullPaths;
+};
+
 const pathToConstructVariables = function (
   path: string[],
   fieldIndex: number,
@@ -67,9 +112,11 @@ const pathToConstructVariables = function (
 export const buildFormConstructQuery = async function (formTtl, instanceUri) {
   const formStore = await ttlToStore(formTtl);
   const formPaths = await getPathsForFields(formStore);
+  const generatorPaths = await getPathsForGenerators(formStore);
+  const allPaths = { ...formPaths, ...generatorPaths };
 
-  const constructVariables = Object.keys(formPaths).map((field, index) => {
-    return pathToConstructVariables(formPaths[field], index, instanceUri);
+  const constructVariables = Object.keys(allPaths).map((field, index) => {
+    return pathToConstructVariables(allPaths[field], index, instanceUri);
   });
   const constructPaths = constructVariables.map((path) => {
     return `OPTIONAL { ${path} }`;

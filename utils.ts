@@ -57,3 +57,8 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
     });
   });
 };
+
+export const modifierLookup = {
+  // only inverse path is supported for now
+  'http://www.w3.org/ns/shacl#inversePath': '^',
+};

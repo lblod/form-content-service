@@ -1,6 +1,7 @@
 import { queryStore } from '../utils';
 import N3 from 'n3';
 import { sparqlEscapeUri } from 'mu';
+import { modifierLookup } from '../utils';
 
 /**
  * Broken: union only returns the first branch in this query (but works in smaller example)
@@ -63,10 +64,6 @@ export const getPathsForFieldsQuerySingleQuery = async function (
     } ORDER BY ?field ?step
   `;
   const bindings = await queryStore(query, formStore);
-  const modifierLookup = {
-    // only inverse path is supported for now
-    'http://www.w3.org/ns/shacl#inversePath': '^',
-  };
   return bindings.map((binding) => {
     const field = binding.get('field')?.value || 'cannot be undefined';
     const previous = binding.get('previous')?.value;
@@ -92,7 +89,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
   });
 };
 
-export const getSimplePaths = async function (formStore: N3.Store) {
+const getSimplePaths = async function (formStore: N3.Store) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -124,7 +121,7 @@ export const getSimplePaths = async function (formStore: N3.Store) {
   });
 };
 
-export const getComplexPathHeads = async function (formStore: N3.Store) {
+const getComplexPathHeads = async function (formStore: N3.Store) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -144,10 +141,6 @@ export const getComplexPathHeads = async function (formStore: N3.Store) {
     }
   `;
   const bindings = await queryStore(query, formStore);
-  const modifierLookup = {
-    // only inverse path is supported for now
-    'http://www.w3.org/ns/shacl#inversePath': '^',
-  };
   return bindings.map((binding) => {
     const field = binding.get('field')?.value || 'cannot be undefined';
     const step = binding.get('path')?.value || 'cannot be undefined';
@@ -172,7 +165,7 @@ export const getComplexPathHeads = async function (formStore: N3.Store) {
   });
 };
 
-export const getComplexPathsTails = async function (formStore: N3.Store) {
+const getComplexPathsTails = async function (formStore: N3.Store) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -194,10 +187,6 @@ export const getComplexPathsTails = async function (formStore: N3.Store) {
     } ORDER BY ?field ?step
   `;
   const bindings = await queryStore(query, formStore);
-  const modifierLookup = {
-    // only inverse path is supported for now
-    'http://www.w3.org/ns/shacl#inversePath': '^',
-  };
   return bindings.map((binding) => {
     const field = binding.get('field')?.value || 'cannot be undefined';
     const previous = binding.get('previous')?.value;
