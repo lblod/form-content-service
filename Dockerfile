@@ -1,2 +1,2 @@
-FROM semtech/mu-javascript-template:feature-node-18
+FROM semtech/mu-javascript-template:latest
 LABEL maintainer="karel.kremer@redpencil.io"
