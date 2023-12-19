@@ -7,7 +7,6 @@ import {
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
 import { HttpError, fetchInstanceIdByUri, ttlToInsert } from './utils';
-import { FormDefinition } from './types';
 
 loadFormsFromConfig();
 
