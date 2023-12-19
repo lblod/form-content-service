@@ -90,6 +90,9 @@ export const getPathsForFieldsQuerySingleQuery = async function (
 };
 
 const getSimplePaths = async function (formStore: N3.Store) {
+  // NOTE: we don't support simple paths with modifiers (e.g. inverse path),
+  // in that case, just write it as ( [ sh:inversePath <predicate> ] ) instead of
+  // [ sh:inversePath <predicate> ], i.e. make it a complex path
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>

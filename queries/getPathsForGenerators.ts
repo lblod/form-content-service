@@ -7,6 +7,9 @@ const getSimplePaths = async function (
   fieldWhere: string,
   formStore: N3.Store,
 ) {
+  // NOTE: we don't support simple paths with modifiers (e.g. inverse path),
+  // in that case, just write it as ( [ sh:inversePath <predicate> ] ) instead of
+  // [ sh:inversePath <predicate> ], i.e. make it a complex path
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -159,6 +162,8 @@ const getPathTails = async function (fieldWhere: string, formStore: N3.Store) {
 /**
  * Were are combining 3 different queries. This is to avoid a bug in the union implementation of comunica.
  * This only works because comunica uses consistent blank node identifiers across queries.
+ *
+ * NOTE: we currently only support direct fields in generator shapes, not complex paths
  *
  * here,
  * - step is the current step in the path (blank node) (or if a simple path, the predicate)
