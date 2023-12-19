@@ -1,6 +1,8 @@
-import { query, sparqlEscapeString } from 'mu';
+import { query, sparqlEscapeString, sparqlEscape, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
 import { FormDefinition } from './types';
+import { buildFormConstructQuery } from './form-validator';
+import { datatypeNames, fetchInstanceUriById } from './utils';
 
 const formsFromConfig = {};
 const formDirectory = '/forms';
@@ -53,4 +55,42 @@ export const loadConfigForm = async function (formName: string) {
   } catch (error) {
     console.error(`Failed to load form ${formName}: ${error}`);
   }
+};
+
+export const fetchFormInstanceById = async function (
+  form: FormDefinition,
+  id: string,
+) {
+  const instanceUri = await fetchInstanceUriById(id);
+  if (!instanceUri) {
+    return null;
+  }
+
+  const constructQuery = await buildFormConstructQuery(
+    form.formTtl,
+    instanceUri,
+  );
+
+  const result = await query(constructQuery);
+
+  const ttl = result.results.bindings
+    .map((binding) => {
+      let object;
+      if (binding.o.type === 'uri') {
+        object = sparqlEscapeUri(binding.o.value);
+      } else {
+        object = sparqlEscape(
+          binding.o.value,
+          datatypeNames[binding.o.datatype] || 'string',
+        );
+      }
+      return `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
+        binding.p.value,
+      )} ${object} .`;
+    })
+    .join('\n');
+  return {
+    formDataTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
+    instanceUri,
+  };
 };

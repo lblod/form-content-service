@@ -1,5 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import N3 from 'n3';
+import { query, sparqlEscapeString } from 'mu';
 
 const parser = new N3.Parser();
 const sparql = new QueryEngine();
@@ -58,7 +59,52 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   });
 };
 
+export const fetchInstanceUriById = async function (id: string) {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?instance
+    WHERE {
+      ?instance mu:uuid ${sparqlEscapeString(id)} .
+    } LIMIT 1
+  `);
+
+  if (result.results.bindings.length) {
+    const binding = result.results.bindings[0];
+    return binding.instance.value;
+  } else {
+    return null;
+  }
+};
+
+export const fetchInstanceIdByUri = async function (uri: string) {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?id
+    WHERE {
+      <${uri}> mu:uuid ?id.
+    } LIMIT 1
+  `);
+
+  if (result.results.bindings.length) {
+    const binding = result.results.bindings[0];
+    return binding.id.value;
+  } else {
+    return null;
+  }
+};
+
 export const modifierLookup = {
   // only inverse path is supported for now
   'http://www.w3.org/ns/shacl#inversePath': '^',
+};
+
+export const datatypeNames = {
+  'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
+  'http://www.w3.org/2001/XMLSchema#date': 'date',
+  'http://www.w3.org/2001/XMLSchema#decimal': 'decimal',
+  'http://www.w3.org/2001/XMLSchema#integer': 'int',
+  'http://www.w3.org/2001/XMLSchema#float': 'float',
+  'http://www.w3.org/2001/XMLSchema#boolean': 'bool',
 };

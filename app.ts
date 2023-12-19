@@ -1,10 +1,11 @@
 import { app, errorHandler, query } from 'mu';
 import {
   fetchFormDefinitionById,
+  fetchFormInstanceById,
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { ttlToInsert } from './utils';
+import { fetchInstanceIdByUri, ttlToInsert } from './utils';
 
 loadFormsFromConfig();
 
@@ -36,9 +37,27 @@ app.post('/:id', async function (req, res) {
     instanceUri,
   );
 
-  query(ttlToInsert(validatedContent));
+  await query(ttlToInsert(validatedContent));
 
-  res.send(form);
+  const id = await fetchInstanceIdByUri(instanceUri);
+
+  res.send({ id });
+});
+
+app.get('/:id/instances/:instanceId', async function (req, res) {
+  const form = await fetchFormDefinitionById(req.params.id);
+  if (!form) {
+    res.send(404);
+    return;
+  }
+  const instance = await fetchFormInstanceById(form, req.params.instanceId);
+
+  if (!instance) {
+    res.send(404);
+    return;
+  }
+
+  res.send(instance);
 });
 
 app.use(errorHandler);
