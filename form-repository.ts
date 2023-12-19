@@ -137,10 +137,14 @@ export const computeInstanceDeltaQuery = async function (
 
   const remove = `
   DELETE DATA {
-    ${removed.map((quad) => quadToString(quad)).join('\n')}
-  }`;
-  const insert = `INSERT DATA {
-    ${added.map((quad) => quadToString(quad)).join('\n')}
+    GRAPH <http://mu.semte.ch/graphs/application> {
+      ${removed.map((quad) => quadToString(quad)).join('\n')}
+    }
+  };`;
+  const insert = `\nINSERT DATA {
+    GRAPH <http://mu.semte.ch/graphs/application> {
+      ${added.map((quad) => quadToString(quad)).join('\n')}
+    }
   }`;
 
   let query = '';
