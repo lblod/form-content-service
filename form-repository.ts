@@ -2,7 +2,13 @@ import { query, sparqlEscapeString, sparqlEscape, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
 import { FormDefinition } from './types';
 import { buildFormConstructQuery } from './form-validator';
-import { datatypeNames, fetchInstanceUriById } from './utils';
+import {
+  datatypeNames,
+  fetchInstanceUriById,
+  quadToString,
+  ttlToStore,
+} from './utils';
+import { Quad } from 'n3';
 
 const formsFromConfig = {};
 const formDirectory = '/forms';
@@ -93,4 +99,58 @@ export const fetchFormInstanceById = async function (
     formDataTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
     instanceUri,
   };
+};
+
+export const computeInstanceDeltaQuery = async function (
+  oldInstanceTtl: string,
+  newInstanceTtl: string,
+) {
+  const oldStore = await ttlToStore(oldInstanceTtl);
+  const newStore = await ttlToStore(newInstanceTtl);
+
+  const removed: Quad[] = [];
+  const added: Quad[] = [];
+
+  oldStore.forEach(
+    (quad) => {
+      if (!newStore.has(quad)) {
+        removed.push(quad);
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+  );
+
+  newStore.forEach(
+    (quad) => {
+      if (!oldStore.has(quad)) {
+        added.push(quad);
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+  );
+
+  const remove = `
+  DELETE DATA {
+    ${removed.map((quad) => quadToString(quad)).join('\n')}
+  }`;
+  const insert = `INSERT DATA {
+    ${added.map((quad) => quadToString(quad)).join('\n')}
+  }`;
+
+  let query = '';
+
+  if (removed.length > 0) {
+    query += remove;
+  }
+  if (added.length > 0) {
+    query += insert;
+  }
+
+  return query.length > 0 ? query : null;
 };

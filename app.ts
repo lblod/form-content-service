@@ -1,11 +1,13 @@
 import { app, errorHandler, query } from 'mu';
 import {
+  computeInstanceDeltaQuery,
   fetchFormDefinitionById,
   fetchFormInstanceById,
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { fetchInstanceIdByUri, ttlToInsert } from './utils';
+import { HttpError, fetchInstanceIdByUri, ttlToInsert } from './utils';
+import { FormDefinition } from './types';
 
 loadFormsFromConfig();
 
@@ -44,20 +46,55 @@ app.post('/:id', async function (req, res) {
   res.send({ id });
 });
 
-app.get('/:id/instances/:instanceId', async function (req, res) {
-  const form = await fetchFormDefinitionById(req.params.id);
+const fetchInstanceAndForm = async function (formId: string, id: string) {
+  const form = await fetchFormDefinitionById(formId);
   if (!form) {
-    res.send(404);
-    return;
+    throw new HttpError('Form not found', 404);
   }
-  const instance = await fetchFormInstanceById(form, req.params.instanceId);
+  const instance = await fetchFormInstanceById(form, id);
 
   if (!instance) {
-    res.send(404);
+    throw new HttpError('Instance not found', 404);
+  }
+  return { form, instance };
+};
+
+app.get('/:id/instances/:instanceId', async function (req, res) {
+  const { instance } = await fetchInstanceAndForm(
+    req.params.id,
+    req.params.instanceId,
+  );
+  res.send(instance);
+});
+
+app.put('/:id/instances/:instanceId', async function (req, res) {
+  const instanceId = req.params.instanceId;
+  const { form, instance } = await fetchInstanceAndForm(
+    req.params.id,
+    instanceId,
+  );
+
+  const validatedContentTtl = await cleanAndValidateFormInstance(
+    req.body.contentTtl,
+    form,
+    instance.instanceUri,
+  );
+
+  const deltaQuery = await computeInstanceDeltaQuery(
+    instance.formDataTtl,
+    validatedContentTtl,
+  );
+
+  if (!deltaQuery) {
+    res.send({ instance });
     return;
   }
 
-  res.send(instance);
+  await query(deltaQuery);
+
+  const newInstance = await fetchFormInstanceById(form, instanceId);
+
+  res.send({ instance: newInstance });
 });
 
 app.use(errorHandler);
