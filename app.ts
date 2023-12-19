@@ -37,7 +37,7 @@ app.post('/:id', async function (req, res) {
     instanceUri,
   );
 
-  query(ttlToInsert(validatedContent));
+  await query(ttlToInsert(validatedContent));
 
   const id = await fetchInstanceIdByUri(instanceUri);
 
