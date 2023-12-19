@@ -8,27 +8,33 @@ import { ttlToStore } from './utils';
 import { getPathsForFieldsQuery } from './queries/getPathsForFields';
 import { getPathsForGeneratorQuery } from './queries/getPathsForGenerators';
 
-const getPathsForFields = async function (formStore: N3.Store) {
-  type PathLink = { predicate: string; node: string };
-  const fieldPathStarts: Record<string, PathLink> = {};
-  const previousToNext: Record<string, PathLink> = {};
+type PathSegment = { predicate?: string; step?: string };
+type PathQueryResultItem = PathSegment & { previous?: string; field: string };
 
-  const results = await getPathsForFieldsQuery(formStore);
-
+const buildPathChain = function (results: PathQueryResultItem[]) {
+  const fieldPathStarts: Record<string, PathSegment> = {};
+  const previousToNext: Record<string, PathSegment> = {};
   results.forEach((result) => {
-    const { predicate, previous, node, field } = result;
+    const { predicate, previous, step, field } = result;
     if (!previous) {
       fieldPathStarts[field] = {
         predicate,
-        node,
+        step,
       };
     } else {
       previousToNext[previous] = {
         predicate,
-        node,
+        step,
       };
     }
   });
+
+  return { fieldPathStarts, previousToNext };
+};
+
+const getPathsForFields = async function (formStore: N3.Store) {
+  const results = await getPathsForFieldsQuery(formStore);
+  const { fieldPathStarts, previousToNext } = buildPathChain(results);
 
   const fullPaths: Record<string, string[]> = {};
   Object.keys(fieldPathStarts).forEach((field) => {
@@ -36,8 +42,11 @@ const getPathsForFields = async function (formStore: N3.Store) {
     let current = path;
     const pathSteps: string[] = [];
     while (current) {
+      if (!current.predicate) {
+        break; // this can never happen for fields, but it can for generators
+      }
       pathSteps.push(current.predicate);
-      current = previousToNext[current.node];
+      current = previousToNext[current.step || ''];
       if (!current) {
         fullPaths[field] = pathSteps;
       }
@@ -47,40 +56,22 @@ const getPathsForFields = async function (formStore: N3.Store) {
 };
 
 const getPathsForGenerators = async function (formStore: N3.Store) {
-  type PathLink = { predicate: string; node: string };
-  const fieldPathStarts: Record<string, PathLink> = {};
-  const previousToNext: Record<string, PathLink> = {};
-
   const results = await getPathsForGeneratorQuery(formStore);
-
-  results.forEach((result) => {
-    const { predicate, previous, step, field: generatorP } = result;
-    if (!previous) {
-      fieldPathStarts[generatorP] = {
-        predicate,
-        node: step || predicate, // step is undefined if there is no additional scope linked to the generator
-      };
-    } else {
-      previousToNext[previous] = {
-        predicate,
-        node: step,
-      };
-    }
-  });
+  const { fieldPathStarts, previousToNext } = buildPathChain(results);
 
   const fullPaths: Record<string, string[]> = {};
   Object.keys(fieldPathStarts).forEach((field) => {
     const path = fieldPathStarts[field];
-    let current: PathLink = path;
+    let current: PathSegment = path;
     const pathSteps: string[] = [];
     while (current) {
       const predicate = current.predicate;
 
       // predicate is null for simple paths without a scope, in that case, we don't want to add this empty node to the path
       if (predicate) {
-        pathSteps.push(current.predicate);
+        pathSteps.push(current.predicate as string);
       }
-      current = previousToNext[current.node];
+      current = previousToNext[current.step || ''];
       if (!current) {
         // for this query, the path is the scope (if any) and we should add the predicate to it to get the full path
         fullPaths[field] = [...pathSteps, sparqlEscapeUri(field)];

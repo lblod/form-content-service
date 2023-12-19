@@ -21,11 +21,11 @@ export const getPathsForFieldsQuerySingleQuery = async function (
    * for instance, if the path has this shape:
    * fields:1 sh:path ( [ sh:inversePath prov:generated ] dct:subject [ sh:inversePath besluit:behandelt ]  prov:startedAtTime ) ;
    * the result will be:
-   * "field","previous","step","node","modifier","predicate"
-   * "fields:1",,"nodeID://b10098","nodeID://b10099","sh:inversePath","prov:generated"
+   * "field","previous(optional)","step","node","modifier(optional)","predicate(optional)"
+   * "fields:1",<void>,"nodeID://b10098","nodeID://b10099","sh:inversePath","prov:generated"
    * "fields:1","nodeID://b10100","nodeID://b10101","nodeID://b10102","sh:inversePath","besluit:behandelt"
-   * "fields:1","nodeID://b10098","nodeID://b10100","dct:subject",,
-   * "fields:1","nodeID://b10101","nodeID://b10103","prov:startedAtTime",,
+   * "fields:1","nodeID://b10098","nodeID://b10100","dct:subject",<void>,<void>
+   * "fields:1","nodeID://b10101","nodeID://b10103","prov:startedAtTime",<void>,<void>
    */
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
@@ -61,7 +61,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
       OPTIONAL {
         ?node ?modifier ?predicate.
       }
-    } ORDER BY ?field ?step
+    }
   `;
   const bindings = await queryStore(query, formStore);
   return bindings.map((binding) => {
@@ -84,7 +84,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
       field,
       predicate: realPredicate,
       previous,
-      node: step,
+      step,
     };
   });
 };
@@ -116,7 +116,7 @@ const getSimplePaths = async function (formStore: N3.Store) {
       field,
       predicate,
       previous: undefined,
-      node: path,
+      step: path,
     };
   });
 };
@@ -160,7 +160,7 @@ const getComplexPathHeads = async function (formStore: N3.Store) {
       field,
       predicate: realPredicate,
       previous: undefined,
-      node: step,
+      step,
     };
   });
 };
@@ -184,7 +184,7 @@ const getComplexPathsTails = async function (formStore: N3.Store) {
       OPTIONAL {
         ?node ?modifier ?predicate.
       }
-    } ORDER BY ?field ?step
+    }
   `;
   const bindings = await queryStore(query, formStore);
   return bindings.map((binding) => {
@@ -207,7 +207,7 @@ const getComplexPathsTails = async function (formStore: N3.Store) {
       field,
       predicate: realPredicate,
       previous,
-      node: step,
+      step,
     };
   });
 };
