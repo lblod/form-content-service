@@ -2,7 +2,7 @@ import { query, sparqlEscapeString, sparqlEscape, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
 import { FormDefinition } from './types';
 import { buildFormConstructQuery } from './form-validator';
-import { datatypeNames } from './utils';
+import { datatypeNames, fetchInstanceUriById } from './utils';
 
 const formsFromConfig = {};
 const formDirectory = '/forms';
@@ -54,24 +54,6 @@ export const loadConfigForm = async function (formName: string) {
     return { formTtl: specification, metaTtl: meta };
   } catch (error) {
     console.error(`Failed to load form ${formName}: ${error}`);
-  }
-};
-
-const fetchInstanceUriById = async function (id: string) {
-  const result = await query(`
-    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-
-    SELECT ?instance
-    WHERE {
-      ?instance mu:uuid ${sparqlEscapeString(id)} .
-    } LIMIT 1
-  `);
-
-  if (result.results.bindings.length) {
-    const binding = result.results.bindings[0];
-    return binding.instance.value;
-  } else {
-    return null;
   }
 };
 

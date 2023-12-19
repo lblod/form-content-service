@@ -5,7 +5,7 @@ import {
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { ttlToInsert } from './utils';
+import { fetchInstanceIdByUri, ttlToInsert } from './utils';
 
 loadFormsFromConfig();
 
@@ -39,7 +39,9 @@ app.post('/:id', async function (req, res) {
 
   query(ttlToInsert(validatedContent));
 
-  res.send(form);
+  const id = await fetchInstanceIdByUri(instanceUri);
+
+  res.send({ id });
 });
 
 app.get('/:id/instances/:instanceId', async function (req, res) {
