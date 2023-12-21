@@ -130,7 +130,7 @@ const extractFormDataTtl = async function (
   dataTtl: string,
   formTtl: string,
   instanceUri: string,
-) {
+): Promise<string> {
   const constructQuery = await buildFormConstructQuery(formTtl, instanceUri);
   const constructStore = await ttlToStore(dataTtl);
   const engine = new QueryEngine();

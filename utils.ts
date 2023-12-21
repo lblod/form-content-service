@@ -1,6 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import N3 from 'n3';
-import { query, sparqlEscapeString } from 'mu';
+import N3, { Quad } from 'n3';
+import { query, sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
 
 const parser = new N3.Parser();
 const sparql = new QueryEngine();
@@ -94,6 +94,32 @@ export const fetchInstanceIdByUri = async function (uri: string) {
     return null;
   }
 };
+
+/**
+ * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
+ */
+export const quadToString = function (quad: Quad) {
+  let object;
+  if (quad.object.termType === 'Literal') {
+    const datatype = quad.object.datatype;
+    const dataTypeName = datatypeNames[datatype.value];
+    object = sparqlEscape(quad.object.value, dataTypeName || 'string');
+  } else {
+    object = sparqlEscapeUri(quad.object.value);
+  }
+  return `${sparqlEscapeUri(quad.subject.value)} ${sparqlEscapeUri(
+    quad.predicate.value,
+  )} ${object} .`;
+};
+
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
 
 export const modifierLookup = {
   // only inverse path is supported for now
