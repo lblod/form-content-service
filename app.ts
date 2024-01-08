@@ -1,4 +1,5 @@
 import { app, errorHandler, query } from 'mu';
+import Router from 'express-promise-router';
 import {
   computeInstanceDeltaQuery,
   fetchFormDefinitionById,
@@ -14,13 +15,17 @@ import {
   ttlToInsert,
 } from './utils';
 
+const router = Router();
+
 loadFormsFromConfig();
 
-app.get('/', async function (_req, res) {
+app.use(router);
+
+router.get('/', async function (_req, res) {
   res.send({ status: 'ok' });
 });
 
-app.get('/:id', async function (_req, res) {
+router.get('/:id', async function (_req, res) {
   const form = await fetchFormDefinitionById(_req.params.id);
   if (!form) {
     res.send(404);
@@ -29,7 +34,7 @@ app.get('/:id', async function (_req, res) {
   res.send(form);
 });
 
-app.post('/:id', async function (req, res) {
+router.post('/:id', async function (req, res) {
   const form = await fetchFormDefinitionById(req.params.id);
   if (!form) {
     res.send(404);
@@ -77,7 +82,7 @@ const fetchInstanceAndForm = async function (formId: string, id: string) {
   return { form, instance };
 };
 
-app.get('/:formId/instances', async function (req, res, next) {
+router.get('/:formId/instances', async function (req, res, next) {
   const form = await fetchFormDefinitionById(req.params.formId);
   if (!form) {
     res.send(404);
@@ -95,7 +100,7 @@ app.get('/:formId/instances', async function (req, res, next) {
   res.send(formInstances);
 });
 
-app.get('/:id/instances/:instanceId', async function (req, res) {
+router.get('/:id/instances/:instanceId', async function (req, res) {
   const { instance } = await fetchInstanceAndForm(
     req.params.id,
     req.params.instanceId,
@@ -103,7 +108,7 @@ app.get('/:id/instances/:instanceId', async function (req, res) {
   res.send(instance);
 });
 
-app.put('/:id/instances/:instanceId', async function (req, res) {
+router.put('/:id/instances/:instanceId', async function (req, res) {
   const instanceId = req.params.instanceId;
   const { form, instance } = await fetchInstanceAndForm(
     req.params.id,
