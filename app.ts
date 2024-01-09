@@ -6,7 +6,15 @@ import {
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { HttpError, fetchInstanceIdByUri, ttlToInsert } from './utils';
+import { getFormLabel, getFormInstancesQuery } from './queries/formInstances';
+import {
+  HttpError,
+  addTripleToTtl,
+  executeQuery,
+  fetchInstanceIdByUri,
+  ttlToInsert,
+} from './utils';
+import { Instance } from './types';
 
 loadFormsFromConfig();
 
@@ -38,7 +46,20 @@ app.post('/:id', async function (req, res) {
     instanceUri,
   );
 
-  await query(ttlToInsert(validatedContent));
+  const formLabel = await getFormLabel(form.formTtl);
+  if (!formLabel) {
+    res.send(500);
+    return;
+  }
+  const predicate = 'http://mu.semte.ch/vocabularies/ext/label';
+  const updatedContent = addTripleToTtl(
+    validatedContent,
+    instanceUri,
+    predicate,
+    formLabel,
+  );
+
+  await query(ttlToInsert(updatedContent));
 
   const id = await fetchInstanceIdByUri(instanceUri);
 
@@ -57,6 +78,38 @@ const fetchInstanceAndForm = async function (formId: string, id: string) {
   }
   return { form, instance };
 };
+
+app.get('/:formId/instances', async function (req, res, next) {
+  const form = await fetchFormDefinitionById(req.params.formId);
+  if (!form) {
+    res.send(404);
+    return;
+  }
+
+  const formLabel = await getFormLabel(form.formTtl);
+  if (!formLabel) {
+    res.send(500);
+    return;
+  }
+
+  const getInstanceIdQuery = getFormInstancesQuery(formLabel);
+  const queryResult = await executeQuery(getInstanceIdQuery, next);
+
+  const instance_values: Instance[] = [];
+
+  queryResult.results.bindings.map((binding) => {
+    const instance = {
+      uri: binding.uri.value,
+      id: binding.id.value,
+      label: formLabel,
+    };
+    instance_values.push(instance);
+  });
+
+  const result = { instances: instance_values };
+
+  res.send(result);
+});
 
 app.get('/:id/instances/:instanceId', async function (req, res) {
   const { instance } = await fetchInstanceAndForm(

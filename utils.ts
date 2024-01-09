@@ -34,6 +34,14 @@ export const ttlToInsert = function (ttl) {
   }`;
 };
 
+export const executeQuery = async (queryString, next) => {
+  try {
+    return await query(queryString);
+  } catch (error) {
+    next(new Error(error));
+  }
+};
+
 export const queryStore = async function (query: string, store: N3.Store) {
   const bindingStream = await sparql.queryBindings(query, {
     sources: [store],
@@ -110,6 +118,15 @@ export const quadToString = function (quad: Quad) {
   return `${sparqlEscapeUri(quad.subject.value)} ${sparqlEscapeUri(
     quad.predicate.value,
   )} ${object} .`;
+};
+
+export const addTripleToTtl = function (
+  ttl: string,
+  s: string,
+  p: string,
+  o: string,
+) {
+  return `${ttl} <${s}> <${p}> "${o}" .`;
 };
 
 export class HttpError extends Error {
