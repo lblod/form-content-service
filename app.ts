@@ -7,18 +7,16 @@ import {
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
 import { getFormLabel, getFormInstancesQuery } from './queries/formInstances';
-import { HttpError, fetchInstanceIdByUri, ttlToInsert } from './utils';
+import {
+  HttpError,
+  addTripleToTtl,
+  executeQuery,
+  fetchInstanceIdByUri,
+  ttlToInsert,
+} from './utils';
 import { Instance } from './types';
 
 loadFormsFromConfig();
-
-const executeQuery = async (queryString, next) => {
-  try {
-    return await query(queryString);
-  } catch (error) {
-    next(new Error(error));
-  }
-};
 
 app.get('/', async function (_req, res) {
   res.send({ status: 'ok' });
@@ -49,7 +47,17 @@ app.post('/:id', async function (req, res) {
   );
 
   const formLabel = await getFormLabel(form.formTtl);
-  const updatedContent = `${validatedContent} <${instanceUri}> <http://mu.semte.ch/vocabularies/ext/label> "${formLabel}" .`;
+  if (!formLabel) {
+    res.send(500);
+    return;
+  }
+  const predicate = 'http://mu.semte.ch/vocabularies/ext/label';
+  const updatedContent = addTripleToTtl(
+    validatedContent,
+    instanceUri,
+    predicate,
+    formLabel,
+  );
 
   await query(ttlToInsert(updatedContent));
 
