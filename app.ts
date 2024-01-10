@@ -90,7 +90,7 @@ app.get('/:formId/instances', async function (req, res, next) {
     return;
   }
 
-  const formInstances = getFormInstances(formLabel, next);
+  const formInstances = await getFormInstances(formLabel, next);
 
   res.send(formInstances);
 });
