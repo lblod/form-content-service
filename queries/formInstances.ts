@@ -1,6 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import { ttlToStore } from '../utils';
+import { executeQuery, ttlToStore } from '../utils';
 import { sparqlEscapeString } from 'mu';
+import { Instance } from '../types';
 
 export const getFormLabel = async function (formTtl: string) {
   const q = `
@@ -30,7 +31,7 @@ export const getFormLabel = async function (formTtl: string) {
   }
 };
 
-export const getFormInstancesQuery = (formId: string) => {
+export const getFormInstances = async (formLabel: string, next) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/> 
@@ -38,10 +39,24 @@ export const getFormInstancesQuery = (formId: string) => {
 
     SELECT DISTINCT ?uri ?id
     WHERE {
-        ?uri ext:label ${sparqlEscapeString(formId)} .
+        ?uri ext:label ${sparqlEscapeString(formLabel)} .
         ?uri mu:uuid ?id .
     }
     `;
 
-  return q;
+  const queryResult = await executeQuery(q, next);
+
+  const instance_values: Instance[] = [];
+
+  queryResult.results.bindings.map((binding) => {
+    const instance = {
+      uri: binding.uri.value,
+      id: binding.id.value,
+      label: formLabel,
+    };
+    instance_values.push(instance);
+  });
+
+  const result = { instances: instance_values };
+  return result;
 };

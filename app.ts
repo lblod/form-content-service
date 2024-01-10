@@ -6,15 +6,13 @@ import {
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { getFormLabel, getFormInstancesQuery } from './queries/formInstances';
+import { getFormLabel, getFormInstances } from './queries/formInstances';
 import {
   HttpError,
   addTripleToTtl,
-  executeQuery,
   fetchInstanceIdByUri,
   ttlToInsert,
 } from './utils';
-import { Instance } from './types';
 
 loadFormsFromConfig();
 
@@ -92,23 +90,9 @@ app.get('/:formId/instances', async function (req, res, next) {
     return;
   }
 
-  const getInstanceIdQuery = getFormInstancesQuery(formLabel);
-  const queryResult = await executeQuery(getInstanceIdQuery, next);
+  const formInstances = getFormInstances(formLabel, next);
 
-  const instance_values: Instance[] = [];
-
-  queryResult.results.bindings.map((binding) => {
-    const instance = {
-      uri: binding.uri.value,
-      id: binding.id.value,
-      label: formLabel,
-    };
-    instance_values.push(instance);
-  });
-
-  const result = { instances: instance_values };
-
-  res.send(result);
+  res.send(formInstances);
 });
 
 app.get('/:id/instances/:instanceId', async function (req, res) {
