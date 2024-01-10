@@ -14,7 +14,6 @@ import { Quad } from 'n3';
 const formsFromConfig = {};
 const formDirectory = '/forms';
 
-
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -31,14 +30,14 @@ const fetchFormTtlById = async (formId: string): Promise<string | null> => {
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return  binding.formTtl.value;
+    return binding.formTtl.value;
   } else {
     return null;
   }
-}
+};
 
 // Caution: form:options ?object contains a JSON, not a URI
-const buildSelectConceptSchemeUriQuery = () => 
+const buildSelectConceptSchemeUriQuery = () =>
   `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -46,13 +45,13 @@ const buildSelectConceptSchemeUriQuery = () =>
   WHERE {
     ?s form:options ?o
   }
-  `
+  `;
 
 const formOptionsToConceptSchemeUri = (binding): string => {
   const formOptionsJson: string = binding.get('o').value;
   const { conceptScheme } = JSON.parse(formOptionsJson);
   return conceptScheme;
-}
+};
 
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const query = buildSelectConceptSchemeUriQuery();
@@ -60,9 +59,11 @@ const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const bindings = await queryStore(query, store);
 
   return bindings.map(formOptionsToConceptSchemeUri);
-}
+};
 
-const buildConstructConceptSchemesQuery = (conceptSchemeUris: string[]): string => {
+const buildConstructConceptSchemesQuery = (
+  conceptSchemeUris: string[],
+): string => {
   // TODO loop over list of concept schemes
   return `
     CONSTRUCT {
@@ -71,24 +72,41 @@ const buildConstructConceptSchemesQuery = (conceptSchemeUris: string[]): string 
         ?s ?p ${sparqlEscapeUri(conceptSchemeUris[0])}.
         ?s ?r ?t
     }
-    `
-}
+    `;
+};
 
-const fetchMetaTtlBy = async (formTtl: string): Promise<string | undefined> => {
+const sparqlEscapeObject = (bindingObject): string =>
+  bindingObject.type === 'uri'
+    ? sparqlEscapeUri(bindingObject.value)
+    : sparqlEscape(
+        bindingObject.value,
+        datatypeNames[bindingObject.datatype] || 'string',
+      );
+
+const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
   const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
+  if (!conceptSchemeUris.length) return null;
   const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
 
   const result = await query(constructQuery);
-  const ttl = result.results.bindings;
-  console.log(ttl);
-}
+
+  return result.results.bindings
+    .map(
+      (binding) =>
+        `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
+          binding.p.value,
+        )} ${sparqlEscapeObject(binding.o)} .`,
+    )
+    .join('\n');
+};
 
 export const fetchFormDefinitionById = async function (
   formId: string,
 ): Promise<FormDefinition | null> {
-  const definitionFromConfig: FormDefinition | undefined = formsFromConfig[formId];
+  const definitionFromConfig: FormDefinition | undefined =
+    formsFromConfig[formId];
 
-  const formTtl = definitionFromConfig?.formTtl 
+  const formTtl = definitionFromConfig?.formTtl
     ? definitionFromConfig.formTtl
     : await fetchFormTtlById(formId);
 
@@ -100,7 +118,7 @@ export const fetchFormDefinitionById = async function (
 
   return {
     formTtl,
-    metaTtl
+    metaTtl,
   };
 };
 
