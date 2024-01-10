@@ -6,7 +6,11 @@ import {
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { getFormLabel, getFormInstances } from './queries/formInstances';
+import {
+  getFormLabel,
+  getFormInstances,
+  getFormPrefix,
+} from './queries/formInstances';
 import {
   HttpError,
   addTripleToTtl,
@@ -26,7 +30,7 @@ app.get('/:id', async function (_req, res) {
     res.send(404);
     return;
   }
-  const prefix = 'http://data.lblod.info/form-data/instances/';
+  const prefix = await getFormPrefix(form.formTtl);
   res.send({ formTtl: form.formTtl, metaTtl: form.metaTtl, prefix });
 });
 

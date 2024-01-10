@@ -31,6 +31,36 @@ export const getFormLabel = async function (formTtl: string) {
   }
 };
 
+export const getFormPrefix = async function (formTtl: string) {
+  const q = `
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT DISTINCT *
+    WHERE {
+        ?s ext:prefix ?o .
+    }
+    `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const defaultPrefix = 'http://data.lblod.info/form-data/instances';
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length) {
+    const binding = bindings[0].get('o');
+    if (binding) {
+      return binding.value;
+    } else {
+      return defaultPrefix;
+    }
+  } else {
+    return defaultPrefix;
+  }
+};
+
 export const getFormInstances = async (formLabel: string, next) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
