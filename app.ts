@@ -26,7 +26,8 @@ app.get('/:id', async function (_req, res) {
     res.send(404);
     return;
   }
-  res.send(form);
+  const prefix = 'http://data.lblod.info/form-data/instances/';
+  res.send({ formTtl: form.formTtl, metaTtl: form.metaTtl, prefix });
 });
 
 app.post('/:id', async function (req, res) {
