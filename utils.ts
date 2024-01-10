@@ -126,7 +126,7 @@ export const addTripleToTtl = function (
   p: string,
   o: string,
 ) {
-  return `${ttl} <${s}> <${p}> "${o}" .`;
+  return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(p)} ${sparqlEscapeString(o)} .`;
 };
 
 export class HttpError extends Error {
