@@ -6,6 +6,7 @@ import {
   datatypeNames,
   fetchInstanceUriById,
   quadToString,
+  queryStore,
   ttlToStore,
 } from './utils';
 import { Quad } from 'n3';
@@ -13,13 +14,8 @@ import { Quad } from 'n3';
 const formsFromConfig = {};
 const formDirectory = '/forms';
 
-export const fetchFormDefinitionById = async function (
-  id: string,
-): Promise<FormDefinition | null> {
-  if (formsFromConfig[id]) {
-    return formsFromConfig[id];
-  }
 
+const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -28,19 +24,84 @@ export const fetchFormDefinitionById = async function (
     SELECT ?formDefinition ?formTtl
     WHERE {
       ?formDefinition a ext:GeneratedForm ;
-        mu:uuid ${sparqlEscapeString(id)} ;
+        mu:uuid ${sparqlEscapeString(formId)} ;
         ext:ttlCode ?formTtl .
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return {
-      formTtl: binding.formTtl.value,
-    };
+    return  binding.formTtl.value;
   } else {
     return null;
   }
+}
+
+// Caution: form:options ?object contains a JSON, not a URI
+const buildSelectConceptSchemeUriQuery = () => 
+  `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  SELECT ?o
+  WHERE {
+    ?s form:options ?o
+  }
+  `
+
+const formOptionsToConceptSchemeUri = (binding): string => {
+  const formOptionsJson: string = binding.get('o').value;
+  const { conceptScheme } = JSON.parse(formOptionsJson);
+  return conceptScheme;
+}
+
+const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
+  const query = buildSelectConceptSchemeUriQuery();
+  const store = await ttlToStore(formTtl);
+  const bindings = await queryStore(query, store);
+
+  return bindings.map(formOptionsToConceptSchemeUri);
+}
+
+const buildConstructConceptSchemesQuery = (conceptSchemeUris: string[]): string => {
+  // TODO loop over list of concept schemes
+  return `
+    CONSTRUCT {
+      ?s ?r ?t
+    } WHERE {
+        ?s ?p ${sparqlEscapeUri(conceptSchemeUris[0])}.
+        ?s ?r ?t
+    }
+    `
+}
+
+const fetchMetaTtlBy = async (formTtl: string): Promise<string | undefined> => {
+  const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
+  const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
+
+  const result = await query(constructQuery);
+  const ttl = result.results.bindings;
+  console.log(ttl);
+}
+
+export const fetchFormDefinitionById = async function (
+  formId: string,
+): Promise<FormDefinition | null> {
+  const definitionFromConfig: FormDefinition | undefined = formsFromConfig[formId];
+
+  const formTtl = definitionFromConfig?.formTtl 
+    ? definitionFromConfig.formTtl
+    : await fetchFormTtlById(formId);
+
+  if (!formTtl) return null;
+
+  const metaTtl = definitionFromConfig?.metaTtl
+    ? definitionFromConfig.metaTtl
+    : await fetchMetaTtlBy(formTtl);
+
+  return {
+    formTtl,
+    metaTtl
+  };
 };
 
 export const loadFormsFromConfig = async function () {
