@@ -6,7 +6,7 @@ export const getFormLabel = async function (formTtl: string) {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT *
+    SELECT DISTINCT *
     WHERE {
         ?s ext:label ?o .
     }
@@ -36,7 +36,7 @@ export const getFormInstancesQuery = (formId: string) => {
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/> 
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT ?uri ?id
+    SELECT DISTINCT ?uri ?id
     WHERE {
         ?uri ext:label ${sparqlEscapeString(formId)} .
         ?uri mu:uuid ?id .
