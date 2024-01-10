@@ -126,6 +126,7 @@ export const addTripleToTtl = function (
   p: string,
   o: string,
 ) {
+  // eslint-disable-next-line prettier/prettier
   return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(p)} ${sparqlEscapeString(o)} .`;
 };
 
