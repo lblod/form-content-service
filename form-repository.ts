@@ -6,6 +6,7 @@ import {
   datatypeNames,
   fetchInstanceUriById,
   quadToString,
+  queryStore,
   ttlToStore,
 } from './utils';
 import { Quad } from 'n3';
@@ -13,13 +14,7 @@ import { Quad } from 'n3';
 const formsFromConfig = {};
 const formDirectory = '/forms';
 
-export const fetchFormDefinitionById = async function (
-  id: string,
-): Promise<FormDefinition | null> {
-  if (formsFromConfig[id]) {
-    return formsFromConfig[id];
-  }
-
+const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -28,19 +23,111 @@ export const fetchFormDefinitionById = async function (
     SELECT ?formDefinition ?formTtl
     WHERE {
       ?formDefinition a ext:GeneratedForm ;
-        mu:uuid ${sparqlEscapeString(id)} ;
+        mu:uuid ${sparqlEscapeString(formId)} ;
         ext:ttlCode ?formTtl .
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return {
-      formTtl: binding.formTtl.value,
-    };
+    return binding.formTtl.value;
   } else {
     return null;
   }
+};
+
+// Caution: form:options ?object contains a JSON, not a URI
+const buildSelectConceptSchemeUriQuery = () =>
+  `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  SELECT ?o
+  WHERE {
+    ?s form:options ?o
+  }
+  `;
+
+const formOptionsToConceptSchemeUri = (binding): string => {
+  const formOptionsJson: string = binding.get('o').value;
+  const { conceptScheme } = JSON.parse(formOptionsJson);
+  return conceptScheme;
+};
+
+const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
+  const query = buildSelectConceptSchemeUriQuery();
+  const store = await ttlToStore(formTtl);
+  const bindings = await queryStore(query, store);
+
+  return bindings.map(formOptionsToConceptSchemeUri);
+};
+
+const buildConstructConceptSchemesQuery = (
+  conceptSchemeUris: string[],
+): string => {
+  const buildPattern = (conceptSchemeUri: string): string =>
+    `
+    { ?s skos:topConceptOf ${sparqlEscapeUri(conceptSchemeUri)}.
+    ?s ?p ?o }
+    `;
+
+  const patterns = conceptSchemeUris.map(buildPattern).join('\nUNION\n');
+
+  return `
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  
+    CONSTRUCT {
+      ?s ?p ?o
+    } WHERE {
+      ${patterns}
+    }
+    `;
+};
+
+const sparqlEscapeObject = (bindingObject): string =>
+  bindingObject.type === 'uri'
+    ? sparqlEscapeUri(bindingObject.value)
+    : sparqlEscape(
+        bindingObject.value,
+        datatypeNames[bindingObject.datatype] || 'string',
+      );
+
+const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
+  const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
+  if (!conceptSchemeUris.length) return null;
+  const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
+
+  const result = await query(constructQuery);
+
+  return result.results.bindings
+    .map(
+      (binding) =>
+        `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
+          binding.p.value,
+        )} ${sparqlEscapeObject(binding.o)} .`,
+    )
+    .join('\n');
+};
+
+export const fetchFormDefinitionById = async function (
+  formId: string,
+): Promise<FormDefinition | null> {
+  const definitionFromConfig: FormDefinition | undefined =
+    formsFromConfig[formId];
+
+  const formTtl = definitionFromConfig?.formTtl
+    ? definitionFromConfig.formTtl
+    : await fetchFormTtlById(formId);
+
+  if (!formTtl) return null;
+
+  const metaTtl = definitionFromConfig?.metaTtl
+    ? definitionFromConfig.metaTtl
+    : await fetchMetaTtlBy(formTtl);
+
+  return {
+    formTtl,
+    metaTtl,
+  };
 };
 
 export const loadFormsFromConfig = async function () {
