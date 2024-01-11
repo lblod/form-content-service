@@ -64,13 +64,21 @@ const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
 const buildConstructConceptSchemesQuery = (
   conceptSchemeUris: string[],
 ): string => {
-  // TODO loop over list of concept schemes
+  const buildPattern = (conceptSchemeUri: string): string =>
+    `
+    { ?s skos:topConceptOf ${sparqlEscapeUri(conceptSchemeUri)}.
+    ?s ?p ?o }
+    `;
+
+  const patterns = conceptSchemeUris.map(buildPattern).join('\nUNION\n');
+
   return `
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+  
     CONSTRUCT {
-      ?s ?r ?t
+      ?s ?p ?o
     } WHERE {
-        ?s ?p ${sparqlEscapeUri(conceptSchemeUris[0])}.
-        ?s ?r ?t
+      ${patterns}
     }
     `;
 };
