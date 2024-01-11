@@ -1,6 +1,6 @@
 export type FormDefinition = {
   formTtl: string;
-  metaTtl?: string;
+  metaTtl: string | undefined | null;
 };
 
 export type Instance = {
