@@ -25,8 +25,8 @@ router.get('/', async function (_req, res) {
   res.send({ status: 'ok' });
 });
 
-router.get('/:id', async function (_req, res) {
-  const form = await fetchFormDefinitionById(_req.params.id);
+router.get('/:id', async function (req, res) {
+  const form = await fetchFormDefinitionById(req.params.id);
   if (!form) {
     res.send(404);
     return;
