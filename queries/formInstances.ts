@@ -93,16 +93,16 @@ export const getFormInstances = async (formLabel: string, next) => {
   return result;
 };
 
-export const deleteFormInstanceInverseRelations = async function (
+export const deleteFormInstanceTurtles = async function (
   instanceUri: string,
   next,
 ) {
   const q = `
     DELETE {
-      ?s ?p ${sparqlEscapeUri(instanceUri)}.
+      ${sparqlEscapeUri(instanceUri)} ?p ?o.
     }
     WHERE {
-      ?s ?p ${sparqlEscapeUri(instanceUri)}.
+      ${sparqlEscapeUri(instanceUri)} ?p ?o.
     }
     `;
 
