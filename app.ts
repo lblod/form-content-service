@@ -6,16 +6,19 @@ import {
   fetchFormInstanceById,
   loadFormsFromConfig,
 } from './form-repository';
-import { cleanAndValidateFormInstance } from './form-validator';
+import {
+  buildFormDeleteQuery,
+  cleanAndValidateFormInstance,
+} from './form-validator';
 import {
   getFormLabel,
   getFormInstances,
   getFormPrefix,
-  deleteFormInstance,
 } from './queries/formInstances';
 import {
   HttpError,
   addTripleToTtl,
+  executeQuery,
   fetchInstanceIdByUri,
   fetchInstanceUriById,
   ttlToInsert,
@@ -146,13 +149,21 @@ router.put('/:id/instances/:instanceId', async function (req, res) {
 });
 
 router.delete('/:id/instances/:instanceId', async function (req, res, next) {
+  const form = await fetchFormDefinitionById(req.params.id);
+  if (!form) {
+    res.send(404);
+    return;
+  }
+
   const instanceUri = await fetchInstanceUriById(req.params.instanceId);
   if (!instanceUri) {
     res.send(404);
     return;
   }
 
-  await deleteFormInstance(instanceUri, next);
+  const query = await buildFormDeleteQuery(form.formTtl, instanceUri);
+
+  await executeQuery(query, next);
 
   res.send(200);
 });
