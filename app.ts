@@ -14,7 +14,7 @@ import {
   getFormLabel,
   getFormInstances,
   getFormPrefix,
-  deleteFormInstanceInverseRelations,
+  deleteFormInstanceTurtles,
 } from './queries/formInstances';
 import {
   HttpError,
@@ -166,8 +166,8 @@ router.delete('/:id/instances/:instanceId', async function (req, res, next) {
   const query = await buildFormDeleteQuery(form.formTtl, instanceUri);
   await executeQuery(query, next);
 
-  // Delete inverse relations.
-  await deleteFormInstanceInverseRelations(instanceUri, next);
+  // Some turtles are not defined in the form definition (e.g label).
+  await deleteFormInstanceTurtles(instanceUri, next);
 
   res.send(200);
 });
