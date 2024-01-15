@@ -14,7 +14,7 @@ import {
   getFormLabel,
   getFormInstances,
   getFormPrefix,
-  deleteFormInstanceTurtles,
+  deleteFormInstanceTriples,
 } from './queries/formInstances';
 import {
   HttpError,
@@ -166,8 +166,8 @@ router.delete('/:id/instances/:instanceId', async function (req, res, next) {
   const query = await buildFormDeleteQuery(form.formTtl, instanceUri);
   await executeQuery(query, next);
 
-  // Some turtles are not defined in the form definition (e.g label).
-  await deleteFormInstanceTurtles(instanceUri, next);
+  // Some triples are not defined in the form definition (e.g label).
+  await deleteFormInstanceTriples(instanceUri, next);
 
   // TODO at this stage inverse relations are kept intact even if the object gets deleted.
   // Would be better to replace this relation with a tombstone relation.
