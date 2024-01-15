@@ -14,6 +14,7 @@ import {
   getFormLabel,
   getFormInstances,
   getFormPrefix,
+  deleteFormInstanceInverseRelations,
 } from './queries/formInstances';
 import {
   HttpError,
@@ -161,9 +162,12 @@ router.delete('/:id/instances/:instanceId', async function (req, res, next) {
     return;
   }
 
+  // Delete form instance based on form definition.
   const query = await buildFormDeleteQuery(form.formTtl, instanceUri);
-
   await executeQuery(query, next);
+
+  // Delete inverse relations.
+  await deleteFormInstanceInverseRelations(instanceUri, next);
 
   res.send(200);
 });
