@@ -7,7 +7,11 @@ import {
   loadFormsFromConfig,
 } from './form-repository';
 import { cleanAndValidateFormInstance } from './form-validator';
-import { getFormLabel, getFormInstances } from './queries/formInstances';
+import {
+  getFormLabel,
+  getFormInstances,
+  getFormPrefix,
+} from './queries/formInstances';
 import {
   HttpError,
   addTripleToTtl,
@@ -31,7 +35,8 @@ router.get('/:id', async function (req, res) {
     res.send(404);
     return;
   }
-  res.send(form);
+  const prefix = await getFormPrefix(form.formTtl);
+  res.send({ formTtl: form.formTtl, metaTtl: form.metaTtl, prefix });
 });
 
 router.post('/:id', async function (req, res) {

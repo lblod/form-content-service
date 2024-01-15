@@ -32,7 +32,7 @@ To be able to do this the form-definition needs to contain a triple with the fol
 
 ### Defining the URI prefix for form instances
 
-TODO
+The URI prefix of a form instance can be specified in the form.ttl file. This can be done by adding a triple of the following form: `ext:form ext:prefix <prefix>`. The prefix is a variable and should be a string, but otherwise there are no restrictions. If no prefix is defined, the following prefix will be used by default: `https://data.lblod.info/form-data/instances/`.
 
 ### Links to other types
 
