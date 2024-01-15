@@ -59,9 +59,8 @@ export const getFormPrefix = async function (formTtl: string) {
     throw new Error(
       'The form definition you tried to access defines an invalid form prefix!',
     );
-  } else {
-    return binding.value;
   }
+  return binding.value;
 };
 
 export const getFormInstances = async (formLabel: string, next) => {
