@@ -11,11 +11,13 @@ import {
   getFormLabel,
   getFormInstances,
   getFormPrefix,
+  deleteFormInstance,
 } from './queries/formInstances';
 import {
   HttpError,
   addTripleToTtl,
   fetchInstanceIdByUri,
+  fetchInstanceUriById,
   ttlToInsert,
 } from './utils';
 
@@ -141,6 +143,18 @@ router.put('/:id/instances/:instanceId', async function (req, res) {
   const newInstance = await fetchFormInstanceById(form, instanceId);
 
   res.send({ instance: newInstance });
+});
+
+router.delete('/:id/instances/:instanceId', async function (req, res, next) {
+  const instanceUri = await fetchInstanceUriById(req.params.instanceId);
+  if (!instanceUri) {
+    res.send(404);
+    return;
+  }
+
+  await deleteFormInstance(instanceUri, next);
+
+  res.send(200);
 });
 
 app.use(errorHandler);
