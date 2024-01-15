@@ -36,8 +36,7 @@ const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   }
 };
 
-// Caution: form:options ?object contains a JSON, not a URI
-const buildSelectConceptSchemeUriQuery = () =>
+const buildSelectFormOptionsQuery = () =>
   `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -54,7 +53,7 @@ const formOptionsToConceptSchemeUri = (binding): string => {
 };
 
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
-  const query = buildSelectConceptSchemeUriQuery();
+  const query = buildSelectFormOptionsQuery();
   const store = await ttlToStore(formTtl);
   const bindings = await queryStore(query, store);
 
@@ -64,32 +63,27 @@ const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
 const buildConstructConceptSchemesQuery = (
   conceptSchemeUris: string[],
 ): string => {
-  const buildPattern = (conceptSchemeUri: string): string =>
-    `
-    { ?s skos:topConceptOf ${sparqlEscapeUri(conceptSchemeUri)}.
-    ?s ?p ?o }
-    `;
-
-  const patterns = conceptSchemeUris.map(buildPattern).join('\nUNION\n');
+  const uris = conceptSchemeUris.map(sparqlEscapeUri).join(' ');
 
   return `
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-  
+
     CONSTRUCT {
       ?s ?p ?o
     } WHERE {
-      ${patterns}
+      ?s skos:inScheme ?scheme.
+      VALUES ?scheme { ${uris} }
+      ?s ?p ?o.
     }
     `;
 };
 
-const sparqlEscapeObject = (bindingObject): string =>
-  bindingObject.type === 'uri'
+const sparqlEscapeObject = (bindingObject): string => {
+  const escapeType = datatypeNames[bindingObject.datatype] || 'string';
+  return bindingObject.type === 'uri'
     ? sparqlEscapeUri(bindingObject.value)
-    : sparqlEscape(
-        bindingObject.value,
-        datatypeNames[bindingObject.datatype] || 'string',
-      );
+    : sparqlEscape(bindingObject.value, escapeType);
+};
 
 const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
   const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
@@ -108,21 +102,42 @@ const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
     .join('\n');
 };
 
+// Mutates object argument
+export const computeIfAbsent = async <Key, Value>(
+  object,
+  key: Key,
+  mappingFunction: (key: Key) => Promise<Value>,
+): Promise<Value | null> => {
+  const value: Value | undefined = object[key];
+  if (value) return value;
+
+  const newValue = await mappingFunction(key);
+  if (newValue) {
+    object[key] = newValue;
+    return newValue;
+  }
+
+  return null;
+};
+
 export const fetchFormDefinitionById = async function (
   formId: string,
 ): Promise<FormDefinition | null> {
   const definitionFromConfig: FormDefinition | undefined =
     formsFromConfig[formId];
 
-  const formTtl = definitionFromConfig?.formTtl
-    ? definitionFromConfig.formTtl
-    : await fetchFormTtlById(formId);
+  const formTtl = await computeIfAbsent(
+    definitionFromConfig || {},
+    'formTtl',
+    (k) => fetchFormTtlById(formId),
+  );
 
-  if (!formTtl) return null;
+  if (!formTtl) return { formTtl: '' };
+  if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
-  const metaTtl = definitionFromConfig?.metaTtl
-    ? definitionFromConfig.metaTtl
-    : await fetchMetaTtlBy(formTtl);
+  const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', (k) =>
+    fetchMetaTtlBy(formTtl),
+  );
 
   return {
     formTtl,
