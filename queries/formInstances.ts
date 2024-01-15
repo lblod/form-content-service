@@ -93,7 +93,7 @@ export const getFormInstances = async (formLabel: string, next) => {
   return result;
 };
 
-export const deleteFormInstanceTurtles = async function (
+export const deleteFormInstanceTriples = async function (
   instanceUri: string,
   next,
 ) {
