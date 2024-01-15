@@ -101,6 +101,14 @@ const pathToConstructVariables = function (
 };
 
 export const buildFormConstructQuery = async function (formTtl, instanceUri) {
+  return await buildFormQuery(formTtl, instanceUri, 'CONSTRUCT');
+};
+
+export const buildFormDeleteQuery = async function (formTtl, instanceUri) {
+  return await buildFormQuery(formTtl, instanceUri, 'DELETE');
+};
+
+export const buildFormQuery = async function (formTtl, instanceUri, queryType) {
   const formStore = await ttlToStore(formTtl);
   const formPaths = await getPathsForFields(formStore);
   const generatorPaths = await getPathsForGenerators(formStore);
@@ -118,7 +126,7 @@ export const buildFormConstructQuery = async function (formTtl, instanceUri) {
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-    CONSTRUCT {
+    ${queryType} {
       ${constructVariables.join('\n')}
     } WHERE {
       ${constructPaths.join('\n')}
