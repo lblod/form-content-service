@@ -92,19 +92,3 @@ export const getFormInstances = async (formLabel: string, next) => {
   const result = { instances: instance_values };
   return result;
 };
-
-export const deleteFormInstanceTriples = async function (
-  instanceUri: string,
-  next,
-) {
-  const q = `
-    DELETE {
-      ${sparqlEscapeUri(instanceUri)} ?p ?o.
-    }
-    WHERE {
-      ${sparqlEscapeUri(instanceUri)} ?p ?o.
-    }
-    `;
-
-  await executeQuery(q, next);
-};
