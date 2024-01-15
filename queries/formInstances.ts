@@ -1,6 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { executeQuery, ttlToStore } from '../utils';
-import { sparqlEscapeString , sparqlEscapeUri } from 'mu';
+import { sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { Instance } from '../types';
 
 export const getFormLabel = async function (formTtl: string) {
