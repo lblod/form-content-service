@@ -1,6 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { executeQuery, ttlToStore } from '../utils';
-import { sparqlEscapeString } from 'mu';
+import { sparqlEscapeString , sparqlEscapeUri } from 'mu';
 import { Instance } from '../types';
 
 export const getFormLabel = async function (formTtl: string) {
@@ -91,4 +91,17 @@ export const getFormInstances = async (formLabel: string, next) => {
 
   const result = { instances: instance_values };
   return result;
+};
+
+export const deleteFormInstance = async function (instanceUri: string, next) {
+  const q = `
+    DELETE {
+      ${sparqlEscapeUri(instanceUri)} ?p ?o.
+    }
+    WHERE {
+      ${sparqlEscapeUri(instanceUri)} ?p ?o.
+    }
+    `;
+
+  await executeQuery(q, next);
 };
