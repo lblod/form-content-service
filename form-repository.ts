@@ -1,6 +1,6 @@
 import { query, sparqlEscapeString, sparqlEscape, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
-import { FormDefinition } from './types';
+import { FormDefinition, FormsFromConfig } from './types';
 import { buildFormConstructQuery } from './form-validator';
 import {
   datatypeNames,
@@ -11,7 +11,7 @@ import {
 } from './utils';
 import { Quad } from 'n3';
 
-const formsFromConfig = {};
+const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
