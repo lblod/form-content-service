@@ -8,3 +8,7 @@ export type Instance = {
   id: string;
   label: string;
 };
+
+export type FormsFromConfig = {
+  [key: string]: FormDefinition | undefined;
+};
