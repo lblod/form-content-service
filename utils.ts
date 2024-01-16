@@ -127,7 +127,9 @@ export const addTripleToTtl = function (
   o: string,
 ) {
   // eslint-disable-next-line prettier/prettier
-  return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(p)} ${sparqlEscapeString(o)} .`;
+  return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(
+    p,
+  )} ${sparqlEscapeString(o)} .`;
 };
 
 export class HttpError extends Error {
@@ -138,6 +140,31 @@ export class HttpError extends Error {
     super(message);
   }
 }
+
+export const sparqlEscapeObject = (bindingObject): string => {
+  const escapeType = datatypeNames[bindingObject.datatype] || 'string';
+  return bindingObject.type === 'uri'
+    ? sparqlEscapeUri(bindingObject.value)
+    : sparqlEscape(bindingObject.value, escapeType);
+};
+
+// Mutates object argument
+export const computeIfAbsent = async <Key, Value>(
+  object,
+  key: Key,
+  mappingFunction: (key: Key) => Promise<Value>,
+): Promise<Value | null> => {
+  const value: Value | undefined = object[key];
+  if (value) return value;
+
+  const newValue = await mappingFunction(key);
+  if (newValue) {
+    object[key] = newValue;
+    return newValue;
+  }
+
+  return null;
+};
 
 export const modifierLookup = {
   // only inverse path is supported for now
