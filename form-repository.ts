@@ -3,10 +3,12 @@ import { promises as fs } from 'fs';
 import { FormDefinition, FormsFromConfig } from './types';
 import { buildFormConstructQuery } from './form-validator';
 import {
+  computeIfAbsent,
   datatypeNames,
   fetchInstanceUriById,
   quadToString,
   queryStore,
+  sparqlEscapeObject,
   ttlToStore,
 } from './utils';
 import { Quad } from 'n3';
@@ -78,13 +80,6 @@ const buildConstructConceptSchemesQuery = (
     `;
 };
 
-const sparqlEscapeObject = (bindingObject): string => {
-  const escapeType = datatypeNames[bindingObject.datatype] || 'string';
-  return bindingObject.type === 'uri'
-    ? sparqlEscapeUri(bindingObject.value)
-    : sparqlEscape(bindingObject.value, escapeType);
-};
-
 const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
   const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
   if (!conceptSchemeUris.length) return null;
@@ -100,24 +95,6 @@ const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
         )} ${sparqlEscapeObject(binding.o)} .`,
     )
     .join('\n');
-};
-
-// Mutates object argument
-export const computeIfAbsent = async <Key, Value>(
-  object,
-  key: Key,
-  mappingFunction: (key: Key) => Promise<Value>,
-): Promise<Value | null> => {
-  const value: Value | undefined = object[key];
-  if (value) return value;
-
-  const newValue = await mappingFunction(key);
-  if (newValue) {
-    object[key] = newValue;
-    return newValue;
-  }
-
-  return null;
 };
 
 export const fetchFormDefinitionById = async function (
@@ -183,18 +160,9 @@ export const fetchFormInstanceById = async function (
 
   const ttl = result.results.bindings
     .map((binding) => {
-      let object;
-      if (binding.o.type === 'uri') {
-        object = sparqlEscapeUri(binding.o.value);
-      } else {
-        object = sparqlEscape(
-          binding.o.value,
-          datatypeNames[binding.o.datatype] || 'string',
-        );
-      }
       return `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
         binding.p.value,
-      )} ${object} .`;
+      )} ${sparqlEscapeObject(binding.o)} .`;
     })
     .join('\n');
   return {
