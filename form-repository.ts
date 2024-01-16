@@ -106,13 +106,13 @@ export const fetchFormDefinitionById = async function (
   const formTtl = await computeIfAbsent(
     definitionFromConfig || {},
     'formTtl',
-    (_k) => fetchFormTtlById(formId),
+    () => fetchFormTtlById(formId),
   );
 
   if (!formTtl) return { formTtl: '' };
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
-  const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', (_k) =>
+  const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', () =>
     fetchMetaTtlBy(formTtl),
   );
 
