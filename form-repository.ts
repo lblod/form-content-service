@@ -1,10 +1,9 @@
-import { query, sparqlEscapeString, sparqlEscape, sparqlEscapeUri } from 'mu';
+import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
 import { FormDefinition, FormsFromConfig } from './types';
 import { buildFormConstructQuery } from './form-validator';
 import {
   computeIfAbsent,
-  datatypeNames,
   fetchInstanceUriById,
   quadToString,
   queryStore,
