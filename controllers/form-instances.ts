@@ -1,18 +1,27 @@
 import express from 'express';
+import { query } from 'mu';
 import {
   computeInstanceDeltaQuery,
   fetchFormDefinitionById,
   fetchFormInstanceById,
 } from '../form-repository';
-import { query } from 'mu';
-import { HttpError, executeQuery, fetchInstanceUriById } from '../utils';
-import { getFormInstances, getFormLabel } from '../queries/formInstances';
 import {
   buildFormDeleteQuery,
   cleanAndValidateFormInstance,
 } from '../form-validator';
+import {
+  getInstancesForForm,
+  postFormInstance,
+} from '../services/form-instances';
+import { HttpError, executeQuery, fetchInstanceUriById } from '../utils';
 
 const formInstanceRouter = express.Router();
+
+// should this be a post to /:id/instances?
+formInstanceRouter.post('/:id', async function (req, res) {
+  const id = await postFormInstance(req.params.id, req.body);
+  res.send({ id });
+});
 
 const fetchInstanceAndForm = async function (formId: string, id: string) {
   const form = await fetchFormDefinitionById(formId);
@@ -28,20 +37,7 @@ const fetchInstanceAndForm = async function (formId: string, id: string) {
 };
 
 formInstanceRouter.get('/:formId/instances', async function (req, res, next) {
-  const form = await fetchFormDefinitionById(req.params.formId);
-  if (!form) {
-    res.send(404);
-    return;
-  }
-
-  const formLabel = await getFormLabel(form.formTtl);
-  if (!formLabel) {
-    res.send(500);
-    return;
-  }
-
-  const formInstances = await getFormInstances(formLabel, next);
-
+  const formInstances = await getInstancesForForm(req.params.formId);
   res.send(formInstances);
 });
 
@@ -85,7 +81,7 @@ formInstanceRouter.put('/:id/instances/:instanceId', async function (req, res) {
 
 formInstanceRouter.delete(
   '/:id/instances/:instanceId',
-  async function (req, res, next) {
+  async function (req, res) {
     const form = await fetchFormDefinitionById(req.params.id);
     if (!form) {
       res.send(404);
@@ -100,7 +96,7 @@ formInstanceRouter.delete(
 
     // Delete form instance based on form definition.
     const query = await buildFormDeleteQuery(form.formTtl, instanceUri);
-    await executeQuery(query, next);
+    await executeQuery(query);
 
     // TODO at this stage inverse relations are kept intact even if the object gets deleted.
     // Would be better to replace this relation with a tombstone relation.

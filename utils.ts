@@ -34,12 +34,8 @@ export const ttlToInsert = function (ttl) {
   }`;
 };
 
-export const executeQuery = async (queryString, next) => {
-  try {
-    return await query(queryString);
-  } catch (error) {
-    next(new Error(error));
-  }
+export const executeQuery = async (queryString) => {
+  return await query(queryString);
 };
 
 export const queryStore = async function (query: string, store: N3.Store) {
