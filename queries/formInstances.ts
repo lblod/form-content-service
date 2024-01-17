@@ -1,5 +1,5 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import { executeQuery, ttlToStore } from '../utils';
+import { ttlToStore } from '../utils';
 import { sparqlEscapeString, query } from 'mu';
 import { Instance } from '../types';
 
