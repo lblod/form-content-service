@@ -1,9 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { ttlToStore } from '../../utils';
-import { sparqlEscapeString, query } from 'mu';
-import { Instance } from '../../types';
 
-export const getFormPrefix = async function (formTtl: string) {
+export const getFormPrefix = async (formTtl: string) => {
   const q = `
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   
@@ -33,4 +31,32 @@ export const getFormPrefix = async function (formTtl: string) {
     );
   }
   return binding.value;
+};
+
+export const getFormLabel = async (formTtl: string) => {
+  const q = `
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT DISTINCT *
+    WHERE {
+        ?s ext:label ?o .
+    }
+    `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length) {
+    const binding = bindings[0].get('o');
+    if (binding) {
+      return binding.value;
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
 };

@@ -5,8 +5,8 @@ import { sparqlEscapeUri } from 'mu';
 import { QueryEngine } from '@comunica/query-sparql';
 import N3 from 'n3';
 import { ttlToStore } from './utils';
-import { getPathsForFieldsQuery } from './queries/getPathsForFields';
-import { getPathsForGeneratorQuery } from './queries/getPathsForGenerators';
+import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
+import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
 
 type PathSegment = { predicate?: string; step?: string };
 type PathQueryResultItem = PathSegment & { previous?: string; field: string };
