@@ -1,6 +1,6 @@
 import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
-import { FormDefinition, FormsFromConfig } from '../../types';
+import { FormDefinition, FormsFromConfig, Instance } from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
@@ -8,7 +8,6 @@ import {
 import {
   addTripleToTtl,
   computeIfAbsent,
-  fetchInstanceUriById,
   quadToString,
   queryStore,
   sparqlEscapeObject,
@@ -101,9 +100,9 @@ const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
     .join('\n');
 };
 
-export const fetchFormDefinitionById = async function (
+export const fetchFormDefinitionById = async (
   formId: string,
-): Promise<FormDefinition | null> {
+): Promise<FormDefinition | null> => {
   const definitionFromConfig: FormDefinition | undefined =
     formsFromConfig[formId];
 
@@ -126,7 +125,7 @@ export const fetchFormDefinitionById = async function (
   };
 };
 
-export const loadFormsFromConfig = async function () {
+export const loadFormsFromConfig = async () => {
   const formDirectories = await fs.readdir(formDirectory);
   formDirectories.forEach(async (formDirectory) => {
     const form = await loadConfigForm(formDirectory);
@@ -134,7 +133,7 @@ export const loadFormsFromConfig = async function () {
   });
 };
 
-export const loadConfigForm = async function (formName: string) {
+export const loadConfigForm = async (formName: string) => {
   const filePath = `${formDirectory}/${formName}/form.ttl`;
   const metaPath = `${formDirectory}/${formName}/meta.ttl`;
   try {
@@ -146,11 +145,11 @@ export const loadConfigForm = async function (formName: string) {
   }
 };
 
-export const fetchFormInstanceById = async function (
+// TODO should probably return Instance type, but currently declared Instance type doesn't fit here
+export const fetchFormInstanceById = async (
   form: FormDefinition,
   id: string,
-) {
-  // TODO should probably return Instance type, but current Instance type doesn't fit here
+) => {
   const instanceUri = await fetchInstanceUriById(id);
   if (!instanceUri) {
     return null;
@@ -176,10 +175,10 @@ export const fetchFormInstanceById = async function (
   };
 };
 
-export const computeInstanceDeltaQuery = async function (
+export const computeInstanceDeltaQuery = async (
   oldInstanceTtl: string,
   newInstanceTtl: string,
-) {
+) => {
   const oldStore = await ttlToStore(oldInstanceTtl);
   const newStore = await ttlToStore(newInstanceTtl);
 
@@ -272,4 +271,70 @@ export const deleteFormInstanceDb = async (
 ) => {
   const q = await buildFormDeleteQuery(formTtl, instanceUri);
   await query(q);
+};
+
+export const getFormInstances = async (formLabel: string) => {
+  const q = `
+    PREFIX inst: <http://data.lblod.info/form-data/instances/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT DISTINCT ?uri ?id
+    WHERE {
+        ?uri ext:label ${sparqlEscapeString(formLabel)} .
+        ?uri mu:uuid ?id .
+    }
+    `;
+
+  const queryResult = await query(q);
+
+  const instance_values: Instance[] = [];
+
+  queryResult.results.bindings.map((binding) => {
+    const instance = {
+      uri: binding.uri.value,
+      id: binding.id.value,
+      label: formLabel,
+    };
+    instance_values.push(instance);
+  });
+
+  const result = { instances: instance_values };
+  return result;
+};
+
+export const fetchInstanceIdByUri = async (uri: string) => {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?id
+    WHERE {
+      <${uri}> mu:uuid ?id.
+    } LIMIT 1
+  `);
+
+  if (result.results.bindings.length) {
+    const binding = result.results.bindings[0];
+    return binding.id.value;
+  } else {
+    return null;
+  }
+};
+
+export const fetchInstanceUriById = async (id: string) => {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?instance
+    WHERE {
+      ?instance mu:uuid ${sparqlEscapeString(id)} .
+    } LIMIT 1
+  `);
+
+  if (result.results.bindings.length) {
+    const binding = result.results.bindings[0];
+    return binding.instance.value;
+  } else {
+    return null;
+  }
 };
