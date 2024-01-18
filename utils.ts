@@ -63,42 +63,6 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   });
 };
 
-export const fetchInstanceUriById = async function (id: string) {
-  const result = await query(`
-    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-
-    SELECT ?instance
-    WHERE {
-      ?instance mu:uuid ${sparqlEscapeString(id)} .
-    } LIMIT 1
-  `);
-
-  if (result.results.bindings.length) {
-    const binding = result.results.bindings[0];
-    return binding.instance.value;
-  } else {
-    return null;
-  }
-};
-
-export const fetchInstanceIdByUri = async function (uri: string) {
-  const result = await query(`
-    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-
-    SELECT ?id
-    WHERE {
-      <${uri}> mu:uuid ?id.
-    } LIMIT 1
-  `);
-
-  if (result.results.bindings.length) {
-    const binding = result.results.bindings[0];
-    return binding.id.value;
-  } else {
-    return null;
-  }
-};
-
 /**
  * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
  */
@@ -151,15 +115,6 @@ export const computeIfAbsent = async <Key, Value>(
 
   return null;
 };
-
-export class HttpError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-  }
-}
 
 export const modifierLookup = {
   // only inverse path is supported for now
