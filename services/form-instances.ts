@@ -1,25 +1,27 @@
 import {
+  addFormInstance,
   computeInstanceDeltaQuery,
+  deleteFormInstanceDb,
   fetchFormDefinitionById,
   fetchFormInstanceById,
-} from '../form-repository';
+  updateFormInstanceDelta,
+} from '../domain/data-access/form-repository';
 import {
   buildFormDeleteQuery,
   cleanAndValidateFormInstance,
 } from '../form-validator';
 import { getFormInstances, getFormLabel } from '../queries/formInstances';
+import { InstanceInput } from '../types';
 import {
   HttpError,
-  addTripleToTtl,
   fetchInstanceIdByUri,
   fetchInstanceUriById,
-  ttlToInsert,
 } from '../utils';
 import { query } from 'mu';
 
 export const postFormInstance = async function (
   formId: string,
-  body: { contentTtl: string; instanceUri: string },
+  body: InstanceInput,
 ) {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
@@ -41,15 +43,8 @@ export const postFormInstance = async function (
       500,
     );
   }
-  const predicate = 'http://mu.semte.ch/vocabularies/ext/label';
-  const updatedContent = addTripleToTtl(
-    validatedContent,
-    instanceUri,
-    predicate,
-    formLabel,
-  );
 
-  await query(ttlToInsert(updatedContent));
+  await addFormInstance(validatedContent, instanceUri, formLabel);
 
   const id = await fetchInstanceIdByUri(instanceUri);
 
@@ -102,16 +97,7 @@ export const updateFormInstance = async function (
     instance.instanceUri,
   );
 
-  const deltaQuery = await computeInstanceDeltaQuery(
-    instance.formDataTtl,
-    validatedContentTtl,
-  );
-
-  if (!deltaQuery) {
-    return { instance };
-  }
-
-  await query(deltaQuery);
+  await updateFormInstanceDelta(instance, validatedContentTtl);
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
 
@@ -132,9 +118,7 @@ export const deleteFormInstance = async function (
     throw new HttpError('Instance not found', 404);
   }
 
-  // Delete form instance based on form definition.
-  const q = await buildFormDeleteQuery(form.formTtl, instanceUri);
-  await query(q);
+  await deleteFormInstanceDb(form.formTtl, instanceUri);
 
   // TODO at this stage inverse relations are kept intact even if the object gets deleted.
   // Would be better to replace this relation with a tombstone relation.

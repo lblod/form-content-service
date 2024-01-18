@@ -1,8 +1,8 @@
 import { app, errorHandler } from 'mu';
 import Router from 'express-promise-router';
-import { loadFormsFromConfig } from './form-repository';
 import { formDefinitionRouter } from './controllers/form-definitions';
 import { formInstanceRouter } from './controllers/form-instances';
+import { loadFormsFromConfig } from './domain/data-access/form-repository';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ loadFormsFromConfig();
 
 app.use(router);
 
-router.get('/', async function (_req, res) {
+router.get('/', async (_req, res) => {
   res.send({ status: 'ok' });
 });
 

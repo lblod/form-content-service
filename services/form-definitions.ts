@@ -1,8 +1,8 @@
-import { fetchFormDefinitionById } from '../form-repository';
-import { getFormPrefix } from '../queries/formInstances';
+import { fetchFormDefinitionById } from '../domain/data-access/form-repository';
+import { getFormPrefix } from '../domain/data-access/comunica-repository';
 import { HttpError } from '../utils';
 
-export const fetchFormDefinition = async (id) => {
+export const fetchFormDefinition = async (id: string) => {
   const form = await fetchFormDefinitionById(id);
   if (!form) {
     throw new HttpError('Form not found', 404);

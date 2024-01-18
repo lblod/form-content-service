@@ -1,15 +1,20 @@
 import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
-import { FormDefinition, FormsFromConfig } from './types';
-import { buildFormConstructQuery } from './form-validator';
+import { FormDefinition, FormsFromConfig } from '../../types';
 import {
+  buildFormConstructQuery,
+  buildFormDeleteQuery,
+} from '../../form-validator';
+import {
+  addTripleToTtl,
   computeIfAbsent,
   fetchInstanceUriById,
   quadToString,
   queryStore,
   sparqlEscapeObject,
+  ttlToInsert,
   ttlToStore,
-} from './utils';
+} from '../../utils';
 import { Quad } from 'n3';
 
 const formsFromConfig: FormsFromConfig = {};
@@ -145,6 +150,7 @@ export const fetchFormInstanceById = async function (
   form: FormDefinition,
   id: string,
 ) {
+  // TODO should probably return Instance type, but current Instance type doesn't fit here
   const instanceUri = await fetchInstanceUriById(id);
   if (!instanceUri) {
     return null;
@@ -226,4 +232,44 @@ export const computeInstanceDeltaQuery = async function (
   }
 
   return query.length > 0 ? query : null;
+};
+
+export const updateFormInstanceDelta = async (
+  instance, // TODO specify type
+  validatedContentTtl: string,
+) => {
+  const deltaQuery = await computeInstanceDeltaQuery(
+    instance.formDataTtl,
+    validatedContentTtl,
+  );
+
+  if (!deltaQuery) {
+    return { instance };
+  }
+
+  await query(deltaQuery);
+};
+
+export const addFormInstance = async (
+  validatedContent: string,
+  instanceUri: string,
+  formLabel: string,
+) => {
+  const predicate = 'http://mu.semte.ch/vocabularies/ext/label';
+  const updatedContent = addTripleToTtl(
+    validatedContent,
+    instanceUri,
+    predicate,
+    formLabel,
+  );
+
+  await query(ttlToInsert(updatedContent));
+};
+
+export const deleteFormInstanceDb = async (
+  formTtl: string,
+  instanceUri: string,
+) => {
+  const q = await buildFormDeleteQuery(formTtl, instanceUri);
+  await query(q);
 };
