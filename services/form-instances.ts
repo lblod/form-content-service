@@ -1,28 +1,19 @@
+import { getFormLabel } from '../domain/data-access/comunica-repository';
 import {
   addFormInstance,
-  computeInstanceDeltaQuery,
   deleteFormInstanceDb,
   fetchFormDefinitionById,
   fetchFormInstanceById,
-  updateFormInstanceDelta,
-} from '../domain/data-access/form-repository';
-import {
-  buildFormDeleteQuery,
-  cleanAndValidateFormInstance,
-} from '../form-validator';
-import { getFormInstances, getFormLabel } from '../queries/formInstances';
-import { InstanceInput } from '../types';
-import {
-  HttpError,
   fetchInstanceIdByUri,
   fetchInstanceUriById,
-} from '../utils';
-import { query } from 'mu';
+  getFormInstances,
+  updateFormInstanceDelta,
+} from '../domain/data-access/form-repository';
+import { HttpError } from '../domain/http-error';
+import { cleanAndValidateFormInstance } from '../form-validator';
+import { InstanceInput } from '../types';
 
-export const postFormInstance = async function (
-  formId: string,
-  body: InstanceInput,
-) {
+export const postFormInstance = async (formId: string, body: InstanceInput) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
     throw new HttpError('Form not found', 404);
@@ -51,7 +42,7 @@ export const postFormInstance = async function (
   return id;
 };
 
-export const getInstancesForForm = async function (formId: string) {
+export const getInstancesForForm = async (formId: string) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
     throw new HttpError('Form not found', 404);
@@ -68,10 +59,7 @@ export const getInstancesForForm = async function (formId: string) {
   return await getFormInstances(formLabel);
 };
 
-export const fetchInstanceAndForm = async function (
-  formId: string,
-  id: string,
-) {
+export const fetchInstanceAndForm = async (formId: string, id: string) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
     throw new HttpError('Form not found', 404);
@@ -84,11 +72,11 @@ export const fetchInstanceAndForm = async function (
   return { form, instance };
 };
 
-export const updateFormInstance = async function (
+export const updateFormInstance = async (
   formId: string,
   instanceId: string,
   contentTtl: string,
-) {
+) => {
   const { form, instance } = await fetchInstanceAndForm(formId, instanceId);
 
   const validatedContentTtl = await cleanAndValidateFormInstance(
@@ -104,10 +92,10 @@ export const updateFormInstance = async function (
   return { newInstance };
 };
 
-export const deleteFormInstance = async function (
+export const deleteFormInstance = async (
   formId: string,
   instanceId: string,
-) {
+) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
     throw new HttpError('Form not found', 404);

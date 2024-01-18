@@ -1,6 +1,6 @@
 import { fetchFormDefinitionById } from '../domain/data-access/form-repository';
 import { getFormPrefix } from '../domain/data-access/comunica-repository';
-import { HttpError } from '../utils';
+import { HttpError } from '../domain/http-error';
 
 export const fetchFormDefinition = async (id: string) => {
   const form = await fetchFormDefinitionById(id);
