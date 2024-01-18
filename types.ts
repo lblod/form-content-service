@@ -9,6 +9,11 @@ export type Instance = {
   label: string;
 };
 
+export type InstanceInput = {
+  contentTtl: string;
+  instanceUri: string;
+};
+
 export type FormsFromConfig = {
   [key: string]: FormDefinition | undefined;
 };
