@@ -57,6 +57,7 @@ const formOptionsToConceptSchemeUri = (binding): string => {
   return conceptScheme;
 };
 
+// TODO move to comunica-repository
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const query = buildSelectFormOptionsQuery();
   const store = await ttlToStore(formTtl);
@@ -83,9 +84,7 @@ const buildConstructConceptSchemesQuery = (
     `;
 };
 
-const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
-  const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
-  if (!conceptSchemeUris.length) return null;
+const getConceptSchemesTtl = async (conceptSchemeUris: string[]) => {
   const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
 
   const result = await query(constructQuery);
@@ -100,6 +99,15 @@ const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
     .join('\n');
 };
 
+// TODO move to service
+const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
+  const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
+  if (!conceptSchemeUris.length) return null;
+
+  return await getConceptSchemesTtl(conceptSchemeUris);
+};
+
+// TODO this method can't be moved to a service, because it needs access to formsFromConfig
 export const fetchFormDefinitionById = async (
   formId: string,
 ): Promise<FormDefinition | null> => {
