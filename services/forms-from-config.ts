@@ -2,6 +2,7 @@ import { FormDefinition, FormsFromConfig } from '../types';
 import { promises as fs } from 'fs';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
+import { HttpError } from '../domain/http-error';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
@@ -23,7 +24,9 @@ const computeIfAbsent = async <Key, Value>(
   return null;
 };
 
-const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
+const fetchMetaTtlFromFormTtl = async (
+  formTtl: string,
+): Promise<string | null> => {
   const conceptSchemeUris = await comunicaRepo.fetchConceptSchemeUris(formTtl);
   if (!conceptSchemeUris.length) return null;
 
@@ -42,12 +45,11 @@ export const fetchFormDefinitionById = async (
     () => formRepo.fetchFormTtlById(formId),
   );
 
-  // TODO should null be returned here?
-  if (!formTtl) return { formTtl: '' };
+  if (!formTtl) throw new HttpError('Definition not found', 404);
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
   const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', () =>
-    fetchMetaTtlBy(formTtl),
+    fetchMetaTtlFromFormTtl(formTtl),
   );
 
   return {

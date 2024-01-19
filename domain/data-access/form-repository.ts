@@ -1,20 +1,15 @@
-import { query, sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
+import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { InstanceData, InstanceMinimal } from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
 } from '../../form-validator';
-import { Quad } from 'n3';
-import { ttlToStore } from '../../helpers/ttl-to-store';
-
-export const datatypeNames = {
-  'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
-  'http://www.w3.org/2001/XMLSchema#date': 'date',
-  'http://www.w3.org/2001/XMLSchema#decimal': 'decimal',
-  'http://www.w3.org/2001/XMLSchema#integer': 'int',
-  'http://www.w3.org/2001/XMLSchema#float': 'float',
-  'http://www.w3.org/2001/XMLSchema#boolean': 'bool',
-};
+import {
+  addTripleToTtl,
+  computeInstanceDeltaQuery,
+  sparqlEscapeObject,
+  ttlToInsert,
+} from '../../helpers/ttl-helpers';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -56,13 +51,6 @@ const buildConstructConceptSchemesQuery = (
     `;
 };
 
-export const sparqlEscapeObject = (bindingObject): string => {
-  const escapeType = datatypeNames[bindingObject.datatype] || 'string';
-  return bindingObject.type === 'uri'
-    ? sparqlEscapeUri(bindingObject.value)
-    : sparqlEscape(bindingObject.value, escapeType);
-};
-
 const bindingToTriple = (binding) =>
   `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
     binding.p.value,
@@ -74,7 +62,7 @@ const getConceptSchemeTriples = async (conceptSchemeUris: string[]) => {
   return result.results.bindings.map(bindingToTriple).join('\n');
 };
 
-const fetchFormInstanceById = async (
+const fetchFormInstanceByUri = async (
   formTtl: string,
   instanceUri: string,
 ): Promise<InstanceData | null> => {
@@ -90,83 +78,8 @@ const fetchFormInstanceById = async (
   };
 };
 
-/**
- * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
- */
-export const quadToString = function (quad: Quad) {
-  let object;
-  if (quad.object.termType === 'Literal') {
-    const datatype = quad.object.datatype;
-    const dataTypeName = datatypeNames[datatype.value];
-    object = sparqlEscape(quad.object.value, dataTypeName || 'string');
-  } else {
-    object = sparqlEscapeUri(quad.object.value);
-  }
-  return `${sparqlEscapeUri(quad.subject.value)} ${sparqlEscapeUri(
-    quad.predicate.value,
-  )} ${object} .`;
-};
-
-const computeInstanceDeltaQuery = async (
-  oldInstanceTtl: string,
-  newInstanceTtl: string,
-) => {
-  const oldStore = await ttlToStore(oldInstanceTtl);
-  const newStore = await ttlToStore(newInstanceTtl);
-
-  const removed: Quad[] = [];
-  const added: Quad[] = [];
-
-  oldStore.forEach(
-    (quad) => {
-      if (!newStore.has(quad)) {
-        removed.push(quad);
-      }
-    },
-    null,
-    null,
-    null,
-    null,
-  );
-
-  newStore.forEach(
-    (quad) => {
-      if (!oldStore.has(quad)) {
-        added.push(quad);
-      }
-    },
-    null,
-    null,
-    null,
-    null,
-  );
-
-  const remove = `
-  DELETE DATA {
-    GRAPH <http://mu.semte.ch/graphs/application> {
-      ${removed.map((quad) => quadToString(quad)).join('\n')}
-    }
-  };`;
-  const insert = `\nINSERT DATA {
-    GRAPH <http://mu.semte.ch/graphs/application> {
-      ${added.map((quad) => quadToString(quad)).join('\n')}
-    }
-  }`;
-
-  let query = '';
-
-  if (removed.length > 0) {
-    query += remove;
-  }
-  if (added.length > 0) {
-    query += insert;
-  }
-
-  return query.length > 0 ? query : null;
-};
-
 const updateFormInstance = async (
-  instance, // TODO specify type
+  instance: InstanceData,
   validatedContentTtl: string,
 ) => {
   const deltaQuery = await computeInstanceDeltaQuery(
@@ -174,51 +87,9 @@ const updateFormInstance = async (
     validatedContentTtl,
   );
 
-  if (!deltaQuery) {
-    return { instance };
-  }
+  if (!deltaQuery) return;
 
   await query(deltaQuery);
-};
-
-/**
- * This is a naive implementation that will not work for data of the format:
- * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
- *
- * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
- *
- * We probably don't care.
- */
-export const ttlToInsert = function (ttl) {
-  const lines = ttl.split(/\.\s/);
-  const prefixLines = [] as string[];
-  const insertLines = [] as string[];
-
-  lines.forEach((line) => {
-    const trimmedLine = line.trim();
-    if (trimmedLine.toLowerCase().startsWith('@prefix')) {
-      prefixLines.push(`PREFIX ${trimmedLine.substring(8)}`);
-    } else {
-      insertLines.push(trimmedLine);
-    }
-  });
-
-  return `${prefixLines.join('\n')}
-
-  INSERT DATA {
-    ${insertLines.join('.\n')}
-  }`;
-};
-
-export const addTripleToTtl = function (
-  ttl: string,
-  s: string,
-  p: string,
-  o: string,
-) {
-  // eslint-disable-next-line prettier/prettier
-  // prettier-ignore
-  return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(p)} ${sparqlEscapeString(o)} .`;
 };
 
 const addFormInstance = async (
@@ -268,8 +139,7 @@ const getFormInstances = async (formLabel: string) => {
     instance_values.push(instance);
   });
 
-  const result = { instances: instance_values };
-  return result;
+  return { instances: instance_values };
 };
 
 const fetchInstanceIdByUri = async (uri: string) => {
@@ -311,7 +181,7 @@ const fetchInstanceUriById = async (id: string) => {
 export default {
   fetchFormTtlById,
   getConceptSchemeTriples,
-  fetchFormInstanceById,
+  fetchFormInstanceByUri,
   updateFormInstance,
   addFormInstance,
   deleteFormInstance,
