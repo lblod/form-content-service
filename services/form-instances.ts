@@ -1,17 +1,9 @@
-import { getFormLabel } from '../domain/data-access/comunica-repository';
-import {
-  addFormInstance,
-  deleteFormInstanceDb,
-  fetchFormDefinitionById,
-  fetchFormInstanceById,
-  fetchInstanceIdByUri,
-  fetchInstanceUriById,
-  getFormInstances,
-  updateFormInstanceDelta,
-} from '../domain/data-access/form-repository';
 import { HttpError } from '../domain/http-error';
 import { cleanAndValidateFormInstance } from '../form-validator';
-import { InstanceInput } from '../types';
+import { FormDefinition, InstanceData, InstanceInput } from '../types';
+import { fetchFormDefinitionById } from './forms-from-config';
+import formRepo from '../domain/data-access/form-repository';
+import comunicaRepo from '../domain/data-access/comunica-repository';
 
 export const postFormInstance = async (formId: string, body: InstanceInput) => {
   const form = await fetchFormDefinitionById(formId);
@@ -27,7 +19,7 @@ export const postFormInstance = async (formId: string, body: InstanceInput) => {
     instanceUri,
   );
 
-  const formLabel = await getFormLabel(form.formTtl);
+  const formLabel = await comunicaRepo.getFormLabel(form.formTtl);
   if (!formLabel) {
     throw new HttpError(
       'Form not specified correctly, form label missing',
@@ -35,9 +27,9 @@ export const postFormInstance = async (formId: string, body: InstanceInput) => {
     );
   }
 
-  await addFormInstance(validatedContent, instanceUri, formLabel);
+  await formRepo.addFormInstance(validatedContent, instanceUri, formLabel);
 
-  const id = await fetchInstanceIdByUri(instanceUri);
+  const id = await formRepo.fetchInstanceIdByUri(instanceUri);
 
   return id;
 };
@@ -48,7 +40,7 @@ export const getInstancesForForm = async (formId: string) => {
     throw new HttpError('Form not found', 404);
   }
 
-  const formLabel = await getFormLabel(form.formTtl);
+  const formLabel = await comunicaRepo.getFormLabel(form.formTtl);
   if (!formLabel) {
     throw new HttpError(
       'Form not specified correctly, form label missing',
@@ -56,7 +48,28 @@ export const getInstancesForForm = async (formId: string) => {
     );
   }
 
-  return await getFormInstances(formLabel);
+  return await formRepo.getFormInstances(formLabel);
+};
+
+const fetchFormInstanceById = async (
+  form: FormDefinition,
+  id: string,
+): Promise<InstanceData> => {
+  const instanceUri = await formRepo.fetchInstanceUriById(id);
+  if (!instanceUri) {
+    throw new HttpError('Instance not found', 404);
+  }
+
+  const instance = await formRepo.fetchFormInstanceById(
+    form.formTtl,
+    instanceUri,
+  );
+
+  if (!instance) {
+    throw new HttpError('Instance data not found', 404);
+  }
+
+  return instance;
 };
 
 export const fetchInstanceAndForm = async (formId: string, id: string) => {
@@ -66,9 +79,6 @@ export const fetchInstanceAndForm = async (formId: string, id: string) => {
   }
   const instance = await fetchFormInstanceById(form, id);
 
-  if (!instance) {
-    throw new HttpError('Instance not found', 404);
-  }
   return { form, instance };
 };
 
@@ -85,7 +95,7 @@ export const updateFormInstance = async (
     instance.instanceUri,
   );
 
-  await updateFormInstanceDelta(instance, validatedContentTtl);
+  await formRepo.updateFormInstance(instance, validatedContentTtl);
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
 
@@ -101,12 +111,12 @@ export const deleteFormInstance = async (
     throw new HttpError('Form not found', 404);
   }
 
-  const instanceUri = await fetchInstanceUriById(instanceId);
+  const instanceUri = await formRepo.fetchInstanceUriById(instanceId);
   if (!instanceUri) {
     throw new HttpError('Instance not found', 404);
   }
 
-  await deleteFormInstanceDb(form.formTtl, instanceUri);
+  await formRepo.deleteFormInstance(form.formTtl, instanceUri);
 
   // TODO at this stage inverse relations are kept intact even if the object gets deleted.
   // Would be better to replace this relation with a tombstone relation.

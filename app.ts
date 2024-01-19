@@ -2,7 +2,7 @@ import { app, errorHandler } from 'mu';
 import Router from 'express-promise-router';
 import { formDefinitionRouter } from './controllers/form-definitions';
 import { formInstanceRouter } from './controllers/form-instances';
-import { loadFormsFromConfig } from './domain/data-access/form-repository';
+import { loadFormsFromConfig } from './services/forms-from-config';
 
 const router = Router();
 

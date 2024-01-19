@@ -1,7 +1,7 @@
-import { queryStore } from '../../utils';
 import N3 from 'n3';
 import { sparqlEscapeUri } from 'mu';
-import { modifierLookup } from '../../utils';
+import { queryStore } from '../../helpers/query-store';
+import { modifierLookup } from '../../helpers/modifier-lookup';
 
 /**
  * Broken: union only returns the first branch in this query (but works in smaller example)
@@ -72,7 +72,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
     const modifier = binding.get('modifier')?.value;
     const predicate = binding.get('predicate')?.value;
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }
@@ -151,7 +151,7 @@ const getComplexPathHeads = async function (formStore: N3.Store) {
     const modifier = binding.get('modifier')?.value;
     const predicate = binding.get('predicate')?.value;
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }
@@ -198,7 +198,7 @@ const getComplexPathsTails = async function (formStore: N3.Store) {
     const modifier = binding.get('modifier')?.value;
     const predicate = binding.get('predicate')?.value;
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }

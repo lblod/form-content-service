@@ -1,28 +1,20 @@
-import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
-import { promises as fs } from 'fs';
-import {
-  FormDefinition,
-  FormsFromConfig,
-  InstanceData,
-  InstanceMinimal,
-} from '../../types';
+import { query, sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
+import { InstanceData, InstanceMinimal } from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
 } from '../../form-validator';
-import {
-  addTripleToTtl,
-  computeIfAbsent,
-  quadToString,
-  queryStore,
-  sparqlEscapeObject,
-  ttlToInsert,
-  ttlToStore,
-} from '../../utils';
 import { Quad } from 'n3';
+import { ttlToStore } from '../../helpers/ttl-to-store';
 
-const formsFromConfig: FormsFromConfig = {};
-const formDirectory = '/forms';
+export const datatypeNames = {
+  'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
+  'http://www.w3.org/2001/XMLSchema#date': 'date',
+  'http://www.w3.org/2001/XMLSchema#decimal': 'decimal',
+  'http://www.w3.org/2001/XMLSchema#integer': 'int',
+  'http://www.w3.org/2001/XMLSchema#float': 'float',
+  'http://www.w3.org/2001/XMLSchema#boolean': 'bool',
+};
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -46,31 +38,6 @@ const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   }
 };
 
-const buildSelectFormOptionsQuery = () =>
-  `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  SELECT ?o
-  WHERE {
-    ?s form:options ?o
-  }
-  `;
-
-const formOptionsToConceptSchemeUri = (binding): string => {
-  const formOptionsJson: string = binding.get('o').value;
-  const { conceptScheme } = JSON.parse(formOptionsJson);
-  return conceptScheme;
-};
-
-// TODO move to comunica-repository
-const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
-  const query = buildSelectFormOptionsQuery();
-  const store = await ttlToStore(formTtl);
-  const bindings = await queryStore(query, store);
-
-  return bindings.map(formOptionsToConceptSchemeUri);
-};
-
 const buildConstructConceptSchemesQuery = (
   conceptSchemeUris: string[],
 ): string => {
@@ -89,105 +56,58 @@ const buildConstructConceptSchemesQuery = (
     `;
 };
 
-const getConceptSchemesTtl = async (conceptSchemeUris: string[]) => {
+export const sparqlEscapeObject = (bindingObject): string => {
+  const escapeType = datatypeNames[bindingObject.datatype] || 'string';
+  return bindingObject.type === 'uri'
+    ? sparqlEscapeUri(bindingObject.value)
+    : sparqlEscape(bindingObject.value, escapeType);
+};
+
+const bindingToTriple = (binding) =>
+  `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
+    binding.p.value,
+  )} ${sparqlEscapeObject(binding.o)} .`;
+
+const getConceptSchemeTriples = async (conceptSchemeUris: string[]) => {
   const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
-
   const result = await query(constructQuery);
-
-  return result.results.bindings
-    .map(
-      (binding) =>
-        `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
-          binding.p.value,
-        )} ${sparqlEscapeObject(binding.o)} .`,
-    )
-    .join('\n');
+  return result.results.bindings.map(bindingToTriple).join('\n');
 };
 
-// TODO move to service
-const fetchMetaTtlBy = async (formTtl: string): Promise<string | null> => {
-  const conceptSchemeUris = await fetchConceptSchemeUris(formTtl);
-  if (!conceptSchemeUris.length) return null;
-
-  return await getConceptSchemesTtl(conceptSchemeUris);
-};
-
-// TODO this method can't be moved to a service, because it needs access to formsFromConfig
-export const fetchFormDefinitionById = async (
-  formId: string,
-): Promise<FormDefinition | null> => {
-  const definitionFromConfig: FormDefinition | undefined =
-    formsFromConfig[formId];
-
-  const formTtl = await computeIfAbsent(
-    definitionFromConfig || {},
-    'formTtl',
-    () => fetchFormTtlById(formId),
-  );
-
-  if (!formTtl) return { formTtl: '' };
-  if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
-
-  const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', () =>
-    fetchMetaTtlBy(formTtl),
-  );
-
-  return {
-    formTtl,
-    metaTtl,
-  };
-};
-
-export const loadFormsFromConfig = async () => {
-  const formDirectories = await fs.readdir(formDirectory);
-  formDirectories.forEach(async (formDirectory) => {
-    const form = await loadConfigForm(formDirectory);
-    formsFromConfig[formDirectory] = form;
-  });
-};
-
-export const loadConfigForm = async (formName: string) => {
-  const filePath = `${formDirectory}/${formName}/form.ttl`;
-  const metaPath = `${formDirectory}/${formName}/meta.ttl`;
-  try {
-    const specification = await fs.readFile(filePath, 'utf-8');
-    const meta = await fs.readFile(metaPath, 'utf-8').catch(() => null);
-    return { formTtl: specification, metaTtl: meta };
-  } catch (error) {
-    console.error(`Failed to load form ${formName}: ${error}`);
-  }
-};
-
-export const fetchFormInstanceById = async (
-  form: FormDefinition,
-  id: string,
+const fetchFormInstanceById = async (
+  formTtl: string,
+  instanceUri: string,
 ): Promise<InstanceData | null> => {
-  const instanceUri = await fetchInstanceUriById(id);
-  if (!instanceUri) {
-    return null;
-  }
-
-  const constructQuery = await buildFormConstructQuery(
-    form.formTtl,
-    instanceUri,
-  );
-
+  const constructQuery = await buildFormConstructQuery(formTtl, instanceUri);
   const result = await query(constructQuery);
+  const ttl = result.results.bindings.map(bindingToTriple).join('\n');
 
-  const ttl = result.results.bindings
-    .map((binding) => {
-      return `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
-        binding.p.value,
-      )} ${sparqlEscapeObject(binding.o)} .`;
-    })
-    .join('\n');
+  if (!ttl) return null;
+
   return {
     formDataTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
     instanceUri,
   };
 };
 
-export const computeInstanceDeltaQuery = async (
+/**
+ * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
+ */
+export const quadToString = function (quad: Quad) {
+  let object;
+  if (quad.object.termType === 'Literal') {
+    const datatype = quad.object.datatype;
+    const dataTypeName = datatypeNames[datatype.value];
+    object = sparqlEscape(quad.object.value, dataTypeName || 'string');
+  } else {
+    object = sparqlEscapeUri(quad.object.value);
+  }
+  return `${sparqlEscapeUri(quad.subject.value)} ${sparqlEscapeUri(
+    quad.predicate.value,
+  )} ${object} .`;
+};
+
+const computeInstanceDeltaQuery = async (
   oldInstanceTtl: string,
   newInstanceTtl: string,
 ) => {
@@ -245,7 +165,7 @@ export const computeInstanceDeltaQuery = async (
   return query.length > 0 ? query : null;
 };
 
-export const updateFormInstanceDelta = async (
+const updateFormInstance = async (
   instance, // TODO specify type
   validatedContentTtl: string,
 ) => {
@@ -261,7 +181,47 @@ export const updateFormInstanceDelta = async (
   await query(deltaQuery);
 };
 
-export const addFormInstance = async (
+/**
+ * This is a naive implementation that will not work for data of the format:
+ * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
+ *
+ * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
+ *
+ * We probably don't care.
+ */
+export const ttlToInsert = function (ttl) {
+  const lines = ttl.split(/\.\s/);
+  const prefixLines = [] as string[];
+  const insertLines = [] as string[];
+
+  lines.forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine.toLowerCase().startsWith('@prefix')) {
+      prefixLines.push(`PREFIX ${trimmedLine.substring(8)}`);
+    } else {
+      insertLines.push(trimmedLine);
+    }
+  });
+
+  return `${prefixLines.join('\n')}
+
+  INSERT DATA {
+    ${insertLines.join('.\n')}
+  }`;
+};
+
+export const addTripleToTtl = function (
+  ttl: string,
+  s: string,
+  p: string,
+  o: string,
+) {
+  // eslint-disable-next-line prettier/prettier
+  // prettier-ignore
+  return `${ttl} ${sparqlEscapeUri(s)} ${sparqlEscapeUri(p)} ${sparqlEscapeString(o)} .`;
+};
+
+const addFormInstance = async (
   validatedContent: string,
   instanceUri: string,
   formLabel: string,
@@ -277,15 +237,12 @@ export const addFormInstance = async (
   await query(ttlToInsert(updatedContent));
 };
 
-export const deleteFormInstanceDb = async (
-  formTtl: string,
-  instanceUri: string,
-) => {
+const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
   const q = await buildFormDeleteQuery(formTtl, instanceUri);
   await query(q);
 };
 
-export const getFormInstances = async (formLabel: string) => {
+const getFormInstances = async (formLabel: string) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -315,7 +272,7 @@ export const getFormInstances = async (formLabel: string) => {
   return result;
 };
 
-export const fetchInstanceIdByUri = async (uri: string) => {
+const fetchInstanceIdByUri = async (uri: string) => {
   const result = await query(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
@@ -333,7 +290,7 @@ export const fetchInstanceIdByUri = async (uri: string) => {
   }
 };
 
-export const fetchInstanceUriById = async (id: string) => {
+const fetchInstanceUriById = async (id: string) => {
   const result = await query(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
@@ -349,4 +306,16 @@ export const fetchInstanceUriById = async (id: string) => {
   } else {
     return null;
   }
+};
+
+export default {
+  fetchFormTtlById,
+  getConceptSchemeTriples,
+  fetchFormInstanceById,
+  updateFormInstance,
+  addFormInstance,
+  deleteFormInstance,
+  getFormInstances,
+  fetchInstanceIdByUri,
+  fetchInstanceUriById,
 };

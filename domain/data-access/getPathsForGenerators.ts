@@ -1,7 +1,7 @@
-import { queryStore } from '../../utils';
 import N3 from 'n3';
 import { sparqlEscapeUri } from 'mu';
-import { modifierLookup } from '../../utils';
+import { queryStore } from '../../helpers/query-store';
+import { modifierLookup } from '../../helpers/modifier-lookup';
 
 const getSimplePaths = async function (
   fieldWhere: string,
@@ -46,7 +46,7 @@ const getSimplePaths = async function (
       };
     }
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }
@@ -81,10 +81,6 @@ const getPathHeads = async function (fieldWhere: string, formStore: N3.Store) {
     }
 `;
   const bindings = await queryStore(query, formStore);
-  const modifierLookup = {
-    // only inverse path is supported for now
-    'http://www.w3.org/ns/shacl#inversePath': '^',
-  };
   return bindings.map((binding) => {
     const path = binding.get('path')?.value || 'cannot be undefined';
     const field = binding.get('field')?.value || 'cannot be undefined';
@@ -92,7 +88,7 @@ const getPathHeads = async function (fieldWhere: string, formStore: N3.Store) {
     const modifier = binding.get('modifier')?.value;
     const truePredicate = binding.get('truePredicate')?.value;
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }
@@ -130,10 +126,6 @@ const getPathTails = async function (fieldWhere: string, formStore: N3.Store) {
     }
   `;
   const bindings = await queryStore(query, formStore);
-  const modifierLookup = {
-    // only inverse path is supported for now
-    'http://www.w3.org/ns/shacl#inversePath': '^',
-  };
   return bindings.map((binding) => {
     const path = binding.get('path')?.value || 'cannot be undefined';
     const field = binding.get('field')?.value || 'cannot be undefined';
@@ -142,7 +134,7 @@ const getPathTails = async function (fieldWhere: string, formStore: N3.Store) {
     const modifier = binding.get('modifier')?.value;
     const truePredicate = binding.get('truePredicate')?.value;
 
-    const sparqlModifier = modifier && modifierLookup[modifier];
+    const sparqlModifier = modifier && modifierLookup(modifier);
     if (modifier && !sparqlModifier) {
       throw new Error(`Unsupported modifier ${modifier}`);
     }
