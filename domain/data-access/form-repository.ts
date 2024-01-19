@@ -1,6 +1,11 @@
 import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
 import { promises as fs } from 'fs';
-import { FormDefinition, FormsFromConfig, Instance } from '../../types';
+import {
+  FormDefinition,
+  FormsFromConfig,
+  InstanceData,
+  InstanceMinimal,
+} from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
@@ -153,11 +158,10 @@ export const loadConfigForm = async (formName: string) => {
   }
 };
 
-// TODO should probably return Instance type, but currently declared Instance type doesn't fit here
 export const fetchFormInstanceById = async (
   form: FormDefinition,
   id: string,
-) => {
+): Promise<InstanceData | null> => {
   const instanceUri = await fetchInstanceUriById(id);
   if (!instanceUri) {
     return null;
@@ -296,7 +300,7 @@ export const getFormInstances = async (formLabel: string) => {
 
   const queryResult = await query(q);
 
-  const instance_values: Instance[] = [];
+  const instance_values: InstanceMinimal[] = [];
 
   queryResult.results.bindings.map((binding) => {
     const instance = {

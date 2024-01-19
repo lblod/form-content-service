@@ -3,10 +3,15 @@ export type FormDefinition = {
   metaTtl?: string | null;
 };
 
-export type Instance = {
+export type InstanceMinimal = {
   uri: string;
   id: string;
   label: string;
+};
+
+export type InstanceData = {
+  formDataTtl: string;
+  instanceUri: string;
 };
 
 export type InstanceInput = {
