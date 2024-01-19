@@ -1,6 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
-import { ttlToStore } from '../../helpers/ttl-to-store';
+import { ttlToStore } from '../../helpers/ttl-helpers';
 
 const getFormPrefix = async (formTtl: string) => {
   const q = `

@@ -60,7 +60,7 @@ const fetchFormInstanceById = async (
     throw new HttpError('Instance not found', 404);
   }
 
-  const instance = await formRepo.fetchFormInstanceById(
+  const instance = await formRepo.fetchFormInstanceByUri(
     form.formTtl,
     instanceUri,
   );
@@ -99,7 +99,7 @@ export const updateFormInstance = async (
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
 
-  return { newInstance };
+  return { instance: newInstance };
 };
 
 export const deleteFormInstance = async (

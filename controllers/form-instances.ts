@@ -42,7 +42,7 @@ formInstanceRouter.put(
       req.params.instanceId,
       req.body.contentTtl,
     );
-    res.send({ instance: instance });
+    res.send({ instance });
   },
 );
 

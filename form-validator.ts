@@ -6,7 +6,7 @@ import { QueryEngine } from '@comunica/query-sparql';
 import N3 from 'n3';
 import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
 import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
-import { ttlToStore } from './helpers/ttl-to-store';
+import { ttlToStore } from './helpers/ttl-helpers';
 
 type PathSegment = { predicate?: string; step?: string };
 type PathQueryResultItem = PathSegment & { previous?: string; field: string };
