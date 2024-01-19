@@ -1,7 +1,8 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import { ttlToStore } from '../../utils';
+import { queryStore } from '../../helpers/query-store';
+import { ttlToStore } from '../../helpers/ttl-to-store';
 
-export const getFormPrefix = async (formTtl: string) => {
+const getFormPrefix = async (formTtl: string) => {
   const q = `
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   
@@ -33,7 +34,7 @@ export const getFormPrefix = async (formTtl: string) => {
   return binding.value;
 };
 
-export const getFormLabel = async (formTtl: string) => {
+const getFormLabel = async (formTtl: string) => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
@@ -60,3 +61,29 @@ export const getFormLabel = async (formTtl: string) => {
     return null;
   }
 };
+
+const buildSelectFormOptionsQuery = () =>
+  `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  SELECT ?o
+  WHERE {
+    ?s form:options ?o
+  }
+  `;
+
+const formOptionsToConceptSchemeUri = (binding): string => {
+  const formOptionsJson: string = binding.get('o').value;
+  const { conceptScheme } = JSON.parse(formOptionsJson);
+  return conceptScheme;
+};
+
+const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
+  const query = buildSelectFormOptionsQuery();
+  const store = await ttlToStore(formTtl);
+  const bindings = await queryStore(query, store);
+
+  return bindings.map(formOptionsToConceptSchemeUri);
+};
+
+export default { getFormPrefix, getFormLabel, fetchConceptSchemeUris };
