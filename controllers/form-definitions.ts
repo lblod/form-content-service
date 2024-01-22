@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { fetchFormDefinition } from '../services/form-definitions';
 import Router from 'express-promise-router';
+import { fetchFormDefinition } from '../services/form-definitions';
 
 const formDefinitionRouter = Router();
 

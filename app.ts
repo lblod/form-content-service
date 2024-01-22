@@ -1,25 +1,20 @@
 import { app } from 'mu';
 import { ErrorRequestHandler } from 'express';
-import Router from 'express-promise-router';
 import { formDefinitionRouter } from './controllers/form-definitions';
 import { formInstanceRouter } from './controllers/form-instances';
 import { loadFormsFromConfig } from './services/forms-from-config';
 
-const router = Router();
-
 loadFormsFromConfig();
 
-app.use(router);
-
-router.get('/', async (_req, res) => {
+app.get('/', async (_req, res) => {
   res.send({ status: 'ok' });
 });
 
-router.use('/', formDefinitionRouter);
+app.use('/', formDefinitionRouter);
 
-router.use('/', formInstanceRouter);
+app.use('/', formInstanceRouter);
 
-const errorHandler: ErrorRequestHandler = function (err, req, res) {
+const errorHandler: ErrorRequestHandler = function (err, _req, res, _next) {
   // custom error handler to have a default 500 error code instead of 400 as in the template
   res.status(err.status || 500);
   res.json({
@@ -27,4 +22,4 @@ const errorHandler: ErrorRequestHandler = function (err, req, res) {
   });
 };
 
-router.use(errorHandler);
+app.use(errorHandler);
