@@ -5,7 +5,6 @@ import {
   buildFormDeleteQuery,
 } from '../../form-validator';
 import {
-  addTripleToTtl,
   computeInstanceDeltaQuery,
   sparqlEscapeObject,
   ttlToInsert,
