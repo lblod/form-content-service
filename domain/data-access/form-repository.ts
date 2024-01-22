@@ -92,20 +92,8 @@ const updateFormInstance = async (
   await query(deltaQuery);
 };
 
-const addFormInstance = async (
-  validatedContent: string,
-  instanceUri: string,
-  formLabel: string,
-) => {
-  const predicate = 'http://mu.semte.ch/vocabularies/ext/label';
-  const updatedContent = addTripleToTtl(
-    validatedContent,
-    instanceUri,
-    predicate,
-    formLabel,
-  );
-
-  await query(ttlToInsert(updatedContent));
+const addFormInstance = async (instanceContent: string) => {
+  await query(ttlToInsert(instanceContent));
 };
 
 const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
@@ -113,17 +101,46 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
   await query(q);
 };
 
-const getFormInstances = async (formLabel: string) => {
+const getFormInstanceCount = async (
+  targetType: string,
+  labelPredicate: string,
+) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-
-    SELECT DISTINCT ?uri ?id
+    SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
-        ?uri ext:label ${sparqlEscapeString(formLabel)} .
+        ?uri a ${sparqlEscapeUri(targetType)} .
+        ?uri ${sparqlEscapeUri(labelPredicate)} ?label .
         ?uri mu:uuid ?id .
-    }
+    }`;
+
+  const queryResult = await query(q);
+
+  let result = 0;
+  queryResult.results.bindings.forEach((binding) => {
+    result = parseInt(binding.count.value || '0', 10);
+  });
+
+  return result;
+};
+
+const getFormInstances = async (
+  targetType: string,
+  labelPredicate: string,
+  options?: { limit?: number; offset?: number },
+) => {
+  const q = `
+    PREFIX inst: <http://data.lblod.info/form-data/instances/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    SELECT DISTINCT ?uri ?label ?id
+    WHERE {
+        ?uri a ${sparqlEscapeUri(targetType)} .
+        ?uri ${sparqlEscapeUri(labelPredicate)} ?label .
+        ?uri mu:uuid ?id .
+    } ORDER BY ?uri LIMIT ${options?.limit || 20} OFFSET ${options?.offset || 0}
     `;
 
   const queryResult = await query(q);
@@ -134,12 +151,25 @@ const getFormInstances = async (formLabel: string) => {
     const instance = {
       uri: binding.uri.value,
       id: binding.id.value,
-      label: formLabel,
+      label: binding.label.value,
     };
     instance_values.push(instance);
   });
 
-  return { instances: instance_values };
+  return instance_values;
+};
+
+const getFormInstancesWithCount = async (
+  targetType: string,
+  labelPredicate: string,
+  options?: { limit?: number; offset?: number },
+) => {
+  const [instances, count] = await Promise.all([
+    getFormInstances(targetType, labelPredicate, options),
+    getFormInstanceCount(targetType, labelPredicate),
+  ]);
+
+  return { instances, count };
 };
 
 const fetchInstanceIdByUri = async (uri: string) => {
@@ -185,7 +215,7 @@ export default {
   updateFormInstance,
   addFormInstance,
   deleteFormInstance,
-  getFormInstances,
+  getFormInstancesWithCount,
   fetchInstanceIdByUri,
   fetchInstanceUriById,
 };

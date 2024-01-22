@@ -19,36 +19,27 @@ export const postFormInstance = async (formId: string, body: InstanceInput) => {
     instanceUri,
   );
 
-  const formLabel = await comunicaRepo.getFormLabel(form.formTtl);
-  if (!formLabel) {
-    throw new HttpError(
-      'Form not specified correctly, form label missing',
-      500,
-    );
-  }
-
-  await formRepo.addFormInstance(validatedContent, instanceUri, formLabel);
+  await formRepo.addFormInstance(validatedContent);
 
   const id = await formRepo.fetchInstanceIdByUri(instanceUri);
 
   return id;
 };
 
-export const getInstancesForForm = async (formId: string) => {
+export const getInstancesForForm = async (
+  formId: string,
+  options: { limit: number; offset: number },
+) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
     throw new HttpError('Form not found', 404);
   }
 
-  const formLabel = await comunicaRepo.getFormLabel(form.formTtl);
-  if (!formLabel) {
-    throw new HttpError(
-      'Form not specified correctly, form label missing',
-      500,
-    );
-  }
+  const { type, label } = await comunicaRepo.getFormTargetAndLabel(
+    form.formTtl,
+  );
 
-  return await formRepo.getFormInstances(formLabel);
+  return await formRepo.getFormInstancesWithCount(type, label, options);
 };
 
 const fetchFormInstanceById = async (
