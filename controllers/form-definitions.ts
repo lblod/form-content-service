@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import Router from 'express-promise-router';
 import { fetchFormDefinition } from '../services/form-definitions';
 import { fetchFormDirectories } from '../services/forms-from-config';
+import Router from 'express-promise-router';
 
 const formDefinitionRouter = Router();
 
