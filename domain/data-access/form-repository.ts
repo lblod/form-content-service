@@ -118,12 +118,7 @@ const getFormInstanceCount = async (
 
   const queryResult = await query(q);
 
-  let result = 0;
-  queryResult.results.bindings.forEach((binding) => {
-    result = parseInt(binding.count.value || '0', 10);
-  });
-
-  return result;
+  return parseInt(queryResult.results.bindings[0]?.count?.value || '0');
 };
 
 const getFormInstances = async (
