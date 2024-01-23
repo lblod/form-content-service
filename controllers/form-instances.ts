@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import { Request, Response } from 'express';
+import Router from 'express-promise-router';
 import {
   deleteFormInstance,
   fetchInstanceAndForm,
@@ -7,7 +8,7 @@ import {
   updateFormInstance,
 } from '../services/form-instances';
 
-const formInstanceRouter = express.Router();
+const formInstanceRouter = Router();
 
 // should this be a post to /:id/instances?
 formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
@@ -18,8 +19,12 @@ formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
 formInstanceRouter.get(
   '/:formId/instances',
   async (req: Request, res: Response) => {
-    const formInstances = await getInstancesForForm(req.params.formId);
-    res.send(formInstances);
+    const formInstances = await getInstancesForForm(req.params.formId, {
+      limit: parseInt(req.query.limit || 0, 10),
+      offset: parseInt(req.query.offset || 0, 10),
+    });
+    res.set('X-Total-Count', formInstances.count);
+    res.send({ instances: formInstances.instances });
   },
 );
 

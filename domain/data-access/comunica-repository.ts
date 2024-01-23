@@ -5,7 +5,7 @@ import { ttlToStore } from '../../helpers/ttl-helpers';
 const getFormPrefix = async (formTtl: string) => {
   const q = `
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  
+
       SELECT DISTINCT *
       WHERE {
           ?s ext:prefix ?o .
@@ -34,13 +34,15 @@ const getFormPrefix = async (formTtl: string) => {
   return binding.value;
 };
 
-const getFormLabel = async (formTtl: string) => {
+export const getFormTargetAndLabel = async (formTtl: string) => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
 
-    SELECT DISTINCT *
+    SELECT DISTINCT ?type ?label
     WHERE {
-        ?s ext:label ?o .
+        ?form form:targetType ?type .
+        ?form form:targetLabel ?label.
     }
     `;
   const store = await ttlToStore(formTtl);
@@ -50,16 +52,18 @@ const getFormLabel = async (formTtl: string) => {
   });
 
   const bindings = await bindingStream.toArray();
-  if (bindings.length) {
-    const binding = bindings[0].get('o');
-    if (binding) {
-      return binding.value;
-    } else {
-      return null;
-    }
-  } else {
-    return null;
+  if (!bindings.length) {
+    throw new Error(
+      'Unsupported Form: did not specify both target type and label',
+    );
   }
+
+  const type = bindings[0].get('type')?.value;
+  const label = bindings[0].get('label')?.value;
+  if (!type || !label || type.trim().length < 1 || label.trim().length < 1) {
+    throw new Error('Empty type or label for form');
+  }
+  return { type, label };
 };
 
 const buildSelectFormOptionsQuery = () =>
@@ -86,4 +90,4 @@ const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   return bindings.map(formOptionsToConceptSchemeUri);
 };
 
-export default { getFormPrefix, getFormLabel, fetchConceptSchemeUris };
+export default { getFormPrefix, getFormTargetAndLabel, fetchConceptSchemeUris };

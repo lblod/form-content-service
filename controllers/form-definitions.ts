@@ -1,7 +1,8 @@
-import express, { Request, Response } from 'express';
+import { Request, Response } from 'express';
+import Router from 'express-promise-router';
 import { fetchFormDefinition } from '../services/form-definitions';
 
-const formDefinitionRouter = express.Router();
+const formDefinitionRouter = Router();
 
 formDefinitionRouter.get('/:id', async (req: Request, res: Response) => {
   const { formTtl, metaTtl, prefix } = await fetchFormDefinition(req.params.id);

@@ -27,8 +27,7 @@ This service follows the semantic forms model and to that end uses the ember-sub
 
 ### Listing Form Instances
 
-Listing of form instances is done based on a label. When a form instance is pushed to this service the form-definition is parsed to find an associated label. This label is then coupled to the form instance, so these instances can be easily returned based on the form id.
-To be able to do this the form-definition needs to contain a triple with the following subject and predicate: `ext:form ext:label <labelID>`. The labelID is variable and should be a string, but otherwise does not have any restrictions. This id should be unique, this is not checked in the service. If you have a duplicate id, both forms and their instances will be linked to that label.
+Listing of form instances is done based on a the form definition. The form definition specifies the type of instances it acts on and the way these instances are to be rendered using `form:targetType` and `form:targetLabel` respectively. The targetLabel specifies the predicate to be used to fetch a label to use when rendering the form instance. In the future this can be extended to multiple paths to render different labels. Form instances are paginated, with a default of 20 instances per page. Pagination is controlled through a `?limit` and `?offset` query parameter. The total number of instances is returned in the `x-total-count` header.
 
 ### Defining the URI prefix for form instances
 
