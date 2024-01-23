@@ -71,9 +71,13 @@ const loadConfigForm = async (formName: string) => {
 };
 
 export const loadFormsFromConfig = async () => {
-  const formDirectories = await fs.readdir(formDirectory);
+  const formDirectories = await fetchFormDirectories();
   formDirectories.forEach(async (formDirectory) => {
     const form = await loadConfigForm(formDirectory);
     formsFromConfig[formDirectory] = form;
   });
+};
+
+export const fetchFormDirectories = async () => {
+  return await fs.readdir(formDirectory);
 };
