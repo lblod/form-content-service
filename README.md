@@ -39,8 +39,8 @@ The URI prefix of a form instance can be specified in the form.ttl file. This ca
 To link to instances of another type, the form needs to be able to:
 
 - search instances based on a string
-- visualize instances using some string
-- fetch instances based on their uri
+- visualize instances using some string (form:instanceLabelProperty)
+- fetch instances based on their uri (form:instanceApiUrl)
 
 All of these capabilities are supported by resources, BUT since we will need to support custom forms as well in the future and users may want to link to those forms, we will need to be slightly more general. We cannot assume that the instances of these forms will be represented in resources. Therefore, we will allow links to form instances to define a base url where to fetch the instances and a property to use as a label to render the result. The service handling requests to this base url MUST therefore follow the resources input and JSON-API response format.
 
