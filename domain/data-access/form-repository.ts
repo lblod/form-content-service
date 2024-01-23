@@ -117,7 +117,7 @@ const getFormInstanceCount = async (
 
   const queryResult = await query(q);
 
-  return parseInt(queryResult.results.bindings[0]?.count?.value || '0');
+  return parseInt(queryResult.results.bindings[0]?.count?.value, 10) || 0;
 };
 
 const getFormInstances = async (
@@ -125,6 +125,8 @@ const getFormInstances = async (
   labelPredicate: string,
   options?: { limit?: number; offset?: number },
 ) => {
+  const defaultPageSize = 20;
+  const defaultOffset = 0;
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -134,7 +136,9 @@ const getFormInstances = async (
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri ${sparqlEscapeUri(labelPredicate)} ?label .
         ?uri mu:uuid ?id .
-    } ORDER BY ?uri LIMIT ${options?.limit || 20} OFFSET ${options?.offset || 0}
+    }
+    ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
+    OFFSET ${options?.offset || defaultOffset}
     `;
 
   const queryResult = await query(q);
