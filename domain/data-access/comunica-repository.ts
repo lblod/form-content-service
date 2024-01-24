@@ -17,7 +17,7 @@ const getFormPrefix = async (formTtl: string) => {
     sources: [store],
   });
 
-  const defaultPrefix = 'http://data.lblod.info/form-data/instances';
+  const defaultPrefix = 'http://data.lblod.info/form-data/instances/';
 
   const bindings = await bindingStream.toArray();
   if (bindings.length === 0) {
@@ -31,7 +31,13 @@ const getFormPrefix = async (formTtl: string) => {
       'The form definition you tried to access defines an invalid form prefix!',
     );
   }
-  return binding.value;
+
+  let prefix = binding.value;
+
+  if (!prefix.endsWith('#') && !prefix.endsWith('/')) {
+    prefix += '/';
+  }
+  return prefix;
 };
 
 export const getFormTargetAndLabel = async (formTtl: string) => {
