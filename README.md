@@ -38,14 +38,14 @@ The URI prefix of a form instance can be specified in the form.ttl file. This ca
 To link to instances of another type, the form needs to be able to:
 
 - search instances based on a string
-- visualize instances using some string
-- fetch instances based on their uri
+- visualize instances using some string (form:instanceLabelProperty)
+- fetch instances based on their uri (form:instanceApiUrl)
 
 All of these capabilities are supported by resources, BUT since we will need to support custom forms as well in the future and users may want to link to those forms, we will need to be slightly more general. We cannot assume that the instances of these forms will be represented in resources. Therefore, we will allow links to form instances to define a base url where to fetch the instances and a property to use as a label to render the result. The service handling requests to this base url MUST therefore follow the resources input and JSON-API response format.
 
 If a form field with uri `field:1` represents a link to another instance, it MUST use the triple `field:1 form:displayType displayTypes:instanceSelector .` or a single instance selector OR `field:1 form:displayType displayTypes:instanceMultiSelector .` for a multi-instance selector.
 For fields with this display type, the field MUST define the base url to fetch instances using `field:1 form:instanceApiUrl "http://some-endpoint.example.com/path/with/hops"` OR `field:1 form:instanceApiUrl "/path/with/hops"`. The url here can be either a fully qualified domain OR an url relative to where the frontend is running. We will call the endpoint running at this url the `instance endpoint` below.
-Furthermore, fields with this display type MUST define the property used to render options using `field:1 form:instanceLabelProperty "propertyName"` and this property MUST be a property returned in the JSON api response of the endpoint.
+Furthermore, fields with this display type MUST define the property used to render options using `field:1 form:instanceLabelProperty "propertyName"` and this property MUST be a property returned in the JSON api response of the endpoint. This is the poperty/attribute of the instance that will be displayed to represent the instance in the dropdown of the corresponding component of this form field.
 
 The `instance endpoint` MUST only ever return instances that can be connected to the form instance through the form field that specifies it. It MUST support search by adding a`?filter=search string` query parameter to the url. If such a string is passed in, it MUST return all instances that contain this string (case-insensitive) in any property.
 
