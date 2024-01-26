@@ -1,4 +1,9 @@
-import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
+import {
+  query,
+  sparqlEscapeString,
+  sparqlEscapeUri,
+  sparqlEscapeDateTime,
+} from 'mu';
 import { InstanceData, InstanceMinimal } from '../../types';
 import {
   buildFormConstructQuery,
@@ -95,8 +100,35 @@ const addFormInstance = async (instanceContent: string) => {
   await query(ttlToInsert(instanceContent));
 };
 
-const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
-  const q = await buildFormDeleteQuery(formTtl, instanceUri);
+const computeTombstoneInserts = (
+  typesForTombstone: Array<{ uri: string; type: string }>,
+) => {
+  const inserts: string[] = [];
+  const deletedAt = sparqlEscapeDateTime(new Date());
+
+  typesForTombstone.forEach(({ type, uri }) => {
+    const escapedType = sparqlEscapeUri(type);
+    const escapedUri = sparqlEscapeUri(uri);
+    inserts.push(`
+  ${escapedUri} a <http://www.w3.org/ns/activitystreams#Tombstone> ;
+         <http://www.w3.org/ns/activitystreams#deleted> ${deletedAt} ;
+         <http://www.w3.org/ns/activitystreams#formerType> ${escapedType} .
+    `);
+  });
+  return `INSERT {
+    ${inserts.join('\n')}
+  } `;
+};
+
+const deleteFormInstance = async (
+  formTtl: string,
+  instanceUri: string,
+  typesForTombstone: Array<{ uri: string; type: string }>,
+) => {
+  const tombstoneInserts = computeTombstoneInserts(typesForTombstone);
+  const q = await buildFormDeleteQuery(formTtl, instanceUri, {
+    beforeWhere: tombstoneInserts,
+  });
   await query(q);
 };
 

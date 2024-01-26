@@ -100,15 +100,33 @@ const pathToConstructVariables = function (
   return variables.join('\n');
 };
 
-export const buildFormConstructQuery = async function (formTtl, instanceUri) {
-  return await buildFormQuery(formTtl, instanceUri, 'CONSTRUCT');
+export type QueryOptions = {
+  afterPrefixes?: string;
+  beforeWhere?: string;
 };
 
-export const buildFormDeleteQuery = async function (formTtl, instanceUri) {
-  return await buildFormQuery(formTtl, instanceUri, 'DELETE');
+export const buildFormConstructQuery = async function (
+  formTtl,
+  instanceUri,
+  options?: QueryOptions,
+) {
+  return await buildFormQuery(formTtl, instanceUri, 'CONSTRUCT', options);
 };
 
-export const buildFormQuery = async function (formTtl, instanceUri, queryType) {
+export const buildFormDeleteQuery = async function (
+  formTtl: string,
+  instanceUri: string,
+  options?: QueryOptions,
+) {
+  return await buildFormQuery(formTtl, instanceUri, 'DELETE', options);
+};
+
+export const buildFormQuery = async function (
+  formTtl: string,
+  instanceUri: string,
+  queryType: 'CONSTRUCT' | 'DELETE',
+  options?: QueryOptions,
+) {
   const formStore = await ttlToStore(formTtl);
   const formPaths = await getPathsForFields(formStore);
   const generatorPaths = await getPathsForGenerators(formStore);
@@ -125,10 +143,12 @@ export const buildFormQuery = async function (formTtl, instanceUri, queryType) {
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
+    ${options?.afterPrefixes || ''}
     ${queryType} {
       ${constructVariables.join('\n')}
-    } WHERE {
+    }
+    ${options?.beforeWhere || ''}
+    WHERE {
       ${constructPaths.join('\n')}
     }
   `;

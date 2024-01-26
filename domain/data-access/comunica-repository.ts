@@ -96,4 +96,32 @@ const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   return bindings.map(formOptionsToConceptSchemeUri);
 };
 
-export default { getFormPrefix, getFormTargetAndLabel, fetchConceptSchemeUris };
+const getUriTypes = async (ttl: string) => {
+  const store = await ttlToStore(ttl);
+  const types = await queryStore(
+    `SELECT ?s ?type WHERE {
+      ?s a ?type
+    }`,
+    store,
+  );
+  return types
+    .map((binding) => {
+      const type = binding.get('type')?.value;
+      const uri = binding.get('s')?.value;
+      if (!type || !uri) {
+        return null;
+      }
+      return {
+        uri,
+        type,
+      };
+    })
+    .filter((binding) => binding !== null) as { uri: string; type: string }[];
+};
+
+export default {
+  getFormPrefix,
+  getFormTargetAndLabel,
+  fetchConceptSchemeUris,
+  getUriTypes,
+};
