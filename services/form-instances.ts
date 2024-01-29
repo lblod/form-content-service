@@ -93,16 +93,6 @@ export const updateFormInstance = async (
   return { instance: newInstance };
 };
 
-const getInstanceTypes = async (formTtl: string, instanceUri: string) => {
-  const instance = await formRepo.fetchFormInstanceByUri(formTtl, instanceUri);
-
-  if (!instance) {
-    throw new HttpError('Instance data not found', 404);
-  }
-
-  return await comunicaRepo.getUriTypes(instance.formInstanceTtl);
-};
-
 export const deleteFormInstance = async (
   formId: string,
   instanceId: string,
@@ -117,6 +107,5 @@ export const deleteFormInstance = async (
     throw new HttpError('Instance not found', 404);
   }
 
-  const instanceTypes = await getInstanceTypes(form.formTtl, instanceUri);
-  await formRepo.deleteFormInstance(form.formTtl, instanceUri, instanceTypes);
+  await formRepo.deleteFormInstance(form.formTtl, instanceUri);
 };

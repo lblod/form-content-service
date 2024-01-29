@@ -14,6 +14,7 @@ import {
   sparqlEscapeObject,
   ttlToInsert,
 } from '../../helpers/ttl-helpers';
+import comunicaRepo from './comunica-repository';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -120,12 +121,20 @@ const computeTombstoneInserts = (
   } `;
 };
 
-const deleteFormInstance = async (
-  formTtl: string,
-  instanceUri: string,
-  typesForTombstone: Array<{ uri: string; type: string }>,
-) => {
-  const tombstoneInserts = computeTombstoneInserts(typesForTombstone);
+const getInstanceTypes = async (formTtl: string, instanceUri: string) => {
+  const instance = await fetchFormInstanceByUri(formTtl, instanceUri);
+
+  if (!instance) {
+    return [];
+  }
+
+  return await comunicaRepo.getUriTypes(instance.formInstanceTtl);
+};
+
+const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
+  const instanceTypes = await getInstanceTypes(formTtl, instanceUri);
+
+  const tombstoneInserts = computeTombstoneInserts(instanceTypes);
   const q = await buildFormDeleteQuery(formTtl, instanceUri, {
     beforeWhereSnippet: tombstoneInserts,
   });
