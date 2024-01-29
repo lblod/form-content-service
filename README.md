@@ -55,6 +55,22 @@ The endpoint MUST allow fetching a specific instance using a query parameter `?f
 
 The specification above for the `instance endpoint` is a subset of the specification for mu-cl-resources. So using a resources endpoint will always be a correct value for the instance endpoint. It is allowed to define your own endpoint as long as you follow this spec though. This is useful in case your instances cannot be fetched through resources for instance, e.g. for custom forms created by the form builder.
 
+### Deleting form instances
+
+When a form instance is deleted, a [tombstone](https://www.stevebate.net/ontologies/activitystreams2/class-astombstone.html) is erected for every uri where a triple was removed that expresses the type for that uri. E.g. if on delete of a form instance, the following triple is removed
+
+```
+  ext:1 a foaf:Person .
+```
+
+Then the following data is inserted in the store:
+
+```
+  ext:1 a as:Tombstone ;
+        as:formerType foaf:Person ;
+        as:deleted "thetimeofdelete"^^xsd:dateTime  .
+```
+
 ## Limitations
 
 ### No Generator Shape Paths

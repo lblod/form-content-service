@@ -1,4 +1,9 @@
-import { query, sparqlEscapeString, sparqlEscapeUri } from 'mu';
+import {
+  query,
+  sparqlEscapeString,
+  sparqlEscapeUri,
+  sparqlEscapeDateTime,
+} from 'mu';
 import { InstanceData, InstanceMinimal } from '../../types';
 import {
   buildFormConstructQuery,
@@ -9,6 +14,7 @@ import {
   sparqlEscapeObject,
   ttlToInsert,
 } from '../../helpers/ttl-helpers';
+import comunicaRepo from './comunica-repository';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -72,7 +78,7 @@ const fetchFormInstanceByUri = async (
   if (!ttl) return null;
 
   return {
-    formDataTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
+    formInstanceTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
     instanceUri,
   };
 };
@@ -82,7 +88,7 @@ const updateFormInstance = async (
   validatedContentTtl: string,
 ) => {
   const deltaQuery = await computeInstanceDeltaQuery(
-    instance.formDataTtl,
+    instance.formInstanceTtl,
     validatedContentTtl,
   );
 
@@ -95,8 +101,43 @@ const addFormInstance = async (instanceContent: string) => {
   await query(ttlToInsert(instanceContent));
 };
 
+const computeTombstoneInserts = (
+  typesForTombstone: Array<{ uri: string; type: string }>,
+) => {
+  const inserts: string[] = [];
+  const deletedAt = sparqlEscapeDateTime(new Date());
+
+  typesForTombstone.forEach(({ type, uri }) => {
+    const escapedType = sparqlEscapeUri(type);
+    const escapedUri = sparqlEscapeUri(uri);
+    inserts.push(`
+  ${escapedUri} a <http://www.w3.org/ns/activitystreams#Tombstone> ;
+         <http://www.w3.org/ns/activitystreams#deleted> ${deletedAt} ;
+         <http://www.w3.org/ns/activitystreams#formerType> ${escapedType} .
+    `);
+  });
+  return `INSERT {
+    ${inserts.join('\n')}
+  } `;
+};
+
+const getInstanceTypes = async (formTtl: string, instanceUri: string) => {
+  const instance = await fetchFormInstanceByUri(formTtl, instanceUri);
+
+  if (!instance) {
+    return [];
+  }
+
+  return await comunicaRepo.getUriTypes(instance.formInstanceTtl);
+};
+
 const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
-  const q = await buildFormDeleteQuery(formTtl, instanceUri);
+  const instanceTypes = await getInstanceTypes(formTtl, instanceUri);
+
+  const tombstoneInserts = computeTombstoneInserts(instanceTypes);
+  const q = await buildFormDeleteQuery(formTtl, instanceUri, {
+    beforeWhereSnippet: tombstoneInserts,
+  });
   await query(q);
 };
 

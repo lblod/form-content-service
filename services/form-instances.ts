@@ -108,7 +108,4 @@ export const deleteFormInstance = async (
   }
 
   await formRepo.deleteFormInstance(form.formTtl, instanceUri);
-
-  // TODO at this stage inverse relations are kept intact even if the object gets deleted.
-  // Would be better to replace this relation with a tombstone relation.
 };
