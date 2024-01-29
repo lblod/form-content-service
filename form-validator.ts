@@ -101,8 +101,8 @@ const pathToConstructVariables = function (
 };
 
 export type QueryOptions = {
-  afterPrefixes?: string;
-  beforeWhere?: string;
+  afterPrefixesSnippet?: string;
+  beforeWhereSnippet?: string;
 };
 
 export const buildFormConstructQuery = async function (
@@ -143,11 +143,11 @@ export const buildFormQuery = async function (
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-    ${options?.afterPrefixes || ''}
+    ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
       ${constructVariables.join('\n')}
     }
-    ${options?.beforeWhere || ''}
+    ${options?.beforeWhereSnippet || ''}
     WHERE {
       ${constructPaths.join('\n')}
     }

@@ -127,7 +127,7 @@ const deleteFormInstance = async (
 ) => {
   const tombstoneInserts = computeTombstoneInserts(typesForTombstone);
   const q = await buildFormDeleteQuery(formTtl, instanceUri, {
-    beforeWhere: tombstoneInserts,
+    beforeWhereSnippet: tombstoneInserts,
   });
   await query(q);
 };
