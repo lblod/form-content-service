@@ -77,7 +77,7 @@ const fetchFormInstanceByUri = async (
   if (!ttl) return null;
 
   return {
-    formDataTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
+    formInstanceTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${ttl}`,
     instanceUri,
   };
 };
@@ -87,7 +87,7 @@ const updateFormInstance = async (
   validatedContentTtl: string,
 ) => {
   const deltaQuery = await computeInstanceDeltaQuery(
-    instance.formDataTtl,
+    instance.formInstanceTtl,
     validatedContentTtl,
   );
 

@@ -100,7 +100,7 @@ const getInstanceTypes = async (formTtl: string, instanceUri: string) => {
     throw new HttpError('Instance data not found', 404);
   }
 
-  return await comunicaRepo.getUriTypes(instance.formDataTtl);
+  return await comunicaRepo.getUriTypes(instance.formInstanceTtl);
 };
 
 export const deleteFormInstance = async (
@@ -119,7 +119,4 @@ export const deleteFormInstance = async (
 
   const instanceTypes = await getInstanceTypes(form.formTtl, instanceUri);
   await formRepo.deleteFormInstance(form.formTtl, instanceUri, instanceTypes);
-
-  // TODO at this stage inverse relations are kept intact even if the object gets deleted.
-  // Would be better to replace this relation with a tombstone relation.
 };

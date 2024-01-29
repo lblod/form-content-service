@@ -10,7 +10,7 @@ export type InstanceMinimal = {
 };
 
 export type InstanceData = {
-  formDataTtl: string;
+  formInstanceTtl: string;
   instanceUri: string;
 };
 
