@@ -71,6 +71,45 @@ Then the following data is inserted in the store:
         as:deleted "thetimeofdelete"^^xsd:dateTime  .
 ```
 
+## Extending Forms
+
+### Predicates and Types
+
+Use the same model as regular forms, with the following differences:
+-   don't use the `sh:group` predicate to denote connections to the owning form (or its sections/listings). Instead use `ext:extendsGroup`
+-   don't use the `form:includes` predicate to denote that a field is part of a form. Instead use `ext:extendsForm`
+
+An extension is represented by 
+
+    <extensionUri> a form:Extension ;
+                   form:includes <fieldUri> ;
+                   form:extends <formUri> ;
+                   mu:uuid "b5a86f3a-aac8-4911-a3fb-37f9f194b58e" .
+
+### Order
+
+We want fields to be added to the original form in a specific order, intermixed with the existing fields (before, after, between). Unfortunately, the order property is an integer and loses float/double precision if it is added to it. Therefore we should leave gaps of e.g. 100 between the order properties of our forms.
+
+### Extending the form with direct properties
+
+Some properties are defined directly on the form, e.g. the generator. If we want to extend the form with such properties, we should define them on the `form:Extension`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself. 
+
+### Transparency of `form:Extensions`
+
+To clients of the form-content service, instances of the `form:Extension` class will be presented as instances of the `form:Form` class. To the client, the only difference is the existence of the extra `form:Extension` class, which they should be able to ignore.
+
+### Recursive Extension
+
+Because a form extension is translated directly into something a regular form, it is straight forward to create an extension of an extension. In that case, the `form:extends` predicate points to the URI of another `form:Extension`. The translation to a form follows the following algorithm:
+
+    def extension_to_form(uri):
+      extended = get_extended(uri)
+      if is_extension(extended):
+        extended_as_form = extension_to_form(extended)
+        return merge_into_form(extended_as_form, uri)
+      else:
+        return merge_into_form(extended, uri)
+
 ## Limitations
 
 ### No Generator Shape Paths
