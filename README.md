@@ -76,14 +76,15 @@ Then the following data is inserted in the store:
 ### Predicates and Types
 
 Use the same model as regular forms, with the following differences:
--   don't use the `sh:group` predicate to denote connections to the owning form (or its sections/listings). Instead use `ext:extendsGroup`
--   don't use the `form:includes` predicate to denote that a field is part of a form. Instead use `ext:extendsForm`
 
-An extension is represented by 
+- don't use the `sh:group` predicate to denote connections to the owning form (or its sections/listings). Instead use `ext:extendsGroup`
+- don't use the `form:includes` predicate to denote that a field is part of a form. Instead use `ext:extendsForm`
+
+An extension is represented by
 
     <extensionUri> a form:Extension ;
                    form:includes <fieldUri> ;
-                   form:extends <formUri> ;
+                   ext:extendsForm <formUri> ;
                    mu:uuid "b5a86f3a-aac8-4911-a3fb-37f9f194b58e" .
 
 ### Order
@@ -92,7 +93,7 @@ We want fields to be added to the original form in a specific order, intermixed 
 
 ### Extending the form with direct properties
 
-Some properties are defined directly on the form, e.g. the generator. If we want to extend the form with such properties, we should define them on the `form:Extension`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself. 
+Some properties are defined directly on the form, e.g. the generator. If we want to extend the form with such properties, we should define them on the `form:Extension`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself.
 
 ### Transparency of `form:Extensions`
 
