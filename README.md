@@ -78,6 +78,7 @@ Then the following data is inserted in the store:
 Use the same model as regular forms, with the following differences:
 
 - don't use the `sh:group` predicate to denote connections to the owning form (or its sections/listings). Instead use `ext:extendsGroup`
+- still use `sh:group` to specify the extension's new property groups if any
 - don't use the `form:includes` predicate to denote that a field is part of a form. Instead use `ext:extendsForm`
 
 An extension is represented by
