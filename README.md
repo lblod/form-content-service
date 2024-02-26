@@ -88,6 +88,8 @@ An extension is represented by
                    ext:extendsForm <formUri> ;
                    mu:uuid "b5a86f3a-aac8-4911-a3fb-37f9f194b58e" .
 
+Note that if you want to add a field to an existing Section, there is no need to define that section again using a `sh:group` from the extension to the section. This link is already specified in the original form. You only need to add a link like this for entirely new sections that you create.
+
 ### Order
 
 We want fields to be added to the original form in a specific order, intermixed with the existing fields (before, after, between). Unfortunately, the order property is an integer and loses float/double precision if it is added to it. Therefore we should leave gaps of e.g. 100 between the order properties of our forms.
