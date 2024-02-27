@@ -77,11 +77,11 @@ Then the following data is inserted in the store:
 
 Use the same model as regular forms, with the following differences:
 
-- don't use the `sh:group` predicate to denote connections to the owning form (or its sections/listings). Instead use `ext:extendsGroup`
-- still use `sh:group` to specify the extension's new property groups if any
-- don't use the `form:includes` predicate to denote that a field is part of a form. Instead use `ext:extendsForm`
+- To connect a field/section to a section of the owning form, use `ext:extendsGroup` instead of `sh:group`.
+- If you want to introduce a new section in your extension, still use `sh:group`.
+- Use `ext:extendsForm` to connect to the owning form by specifying its URI.
 
-An extension is represented by
+An extension (type: `form:Extension`) is represented by
 
     <extensionUri> a form:Extension ;
                    form:includes <fieldUri> ;
@@ -96,7 +96,7 @@ We want fields to be added to the original form in a specific order, intermixed 
 
 ### Extending the form with direct properties
 
-Some properties are defined directly on the form, e.g. the generator. If we want to extend the form with such properties, we should define them on the `form:Extension`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself.
+For our extension, we want to be able to specify the same direct properties as we do with a normal form. In the case of our extension, we should define them on the `form:Extension`, instead of on the `form:Form`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself.
 
 ### Transparency of `form:Extensions`
 
@@ -104,7 +104,7 @@ To clients of the form-content service, instances of the `form:Extension` class 
 
 ### Recursive Extension
 
-Because a form extension is translated directly into something a regular form, it is straight forward to create an extension of an extension. In that case, the `form:extends` predicate points to the URI of another `form:Extension`. The translation to a form follows the following algorithm:
+Because a form extension is translated directly into a regular form, it is straight forward to create an extension of an extension. In that case, the `form:extends` predicate points to the URI of another `form:Extension`. The translation to a form follows the following algorithm:
 
     def extension_to_form(uri):
       extended = get_extended(uri)
