@@ -79,7 +79,7 @@ Use the same model as regular forms, with the following differences:
 
 - To connect a field/section to a section of the owning form, use `ext:extendsGroup` instead of `sh:group`.
 - If you want to introduce a new section in your extension, still use `sh:group`.
-- Use `ext:extendsForm` to connect to the owning form by specifying its URI.
+- Use `ext:extendsForm` to connect to the URI of the form being extended.
 
 An extension (type: `form:Extension`) is represented by
 
@@ -96,9 +96,9 @@ We want fields to be added to the original form in a specific order, intermixed 
 
 ### Extending the form with direct properties
 
-For our extension, we want to be able to specify the same direct properties as we do with a normal form. In the case of our extension, we should define them on the `form:Extension`, instead of on the `form:Form`. The form-content service will take the `form:Extension` instance and treat it as a `form:Form` instance. It will examine the form instance it extends and add all of its predicates to itself.
+In an extension, we should be able to specify the same direct properties that we use in a regular form. In that case, we should define them on the `form:Extension`, instead of on the `form:Form`, using the same predicates as the ones used on the `form:Form`. The form-content service will take the `form:Extension` instance and transform it into a `form:Form` instance that contains the combination of the new properties and the properties that exist on the form that is being extended.
 
-### Transparency of `form:Extensions`
+### Transparency of `form:Extension`s
 
 To clients of the form-content service, instances of the `form:Extension` class will be presented as instances of the `form:Form` class. To the client, the only difference is the existence of the extra `form:Extension` class, which they should be able to ignore.
 
