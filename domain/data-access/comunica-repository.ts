@@ -1,6 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
+import N3 from 'n3';
 
 const getFormPrefix = async (formTtl: string) => {
   const q = `
@@ -225,6 +226,50 @@ const getFormId = async (formTtl: string) => {
   return binding.value;
 };
 
+const mergeExtensionIntoBaseTtl = async (
+  baseFormTtl: string,
+  extensionFormTtl: string,
+) => {
+  const engine = new QueryEngine();
+  const destinationStore = new N3.Store();
+  const baseStore = await ttlToStore(baseFormTtl);
+
+  const baseGraph = 'http://base';
+
+  const query = `
+  INSERT {
+    GRAPH <${baseGraph}> {
+      ?s ?p ?o.
+    }
+  } WHERE {
+    ?s ?p ?o.
+  }
+  `;
+
+  engine.queryVoid(query, {
+    sources: [baseStore],
+    destination: destinationStore,
+  });
+
+  const selectAllFromGraph = (graph: string) =>
+    `SELECT * 
+    WHERE { 
+      GRAPH <${graph}> { 
+        ?s ?p ?o. 
+      } 
+    }`;
+
+  const bindingStream = await engine.queryBindings(
+    selectAllFromGraph(baseGraph),
+    {
+      sources: [destinationStore],
+    },
+  );
+
+  const bindings = await bindingStream.toArray();
+  console.log(bindings);
+};
+
 export default {
   getFormPrefix,
   getFormTargetAndLabel,
@@ -234,4 +279,5 @@ export default {
   getBaseFormUri,
   getFormUri,
   getFormId,
+  mergeExtensionIntoBaseTtl,
 };
