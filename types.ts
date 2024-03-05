@@ -22,3 +22,7 @@ export type InstanceInput = {
 export type FormsFromConfig = {
   [key: string]: FormDefinition | undefined;
 };
+
+export type UriToIdMap = {
+  [key: string]: string | undefined;
+};

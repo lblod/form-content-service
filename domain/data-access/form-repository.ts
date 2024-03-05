@@ -38,6 +38,25 @@ const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   }
 };
 
+const fetchFormTtlByUri = async (formUri: string): Promise<string | null> => {
+  const result = await query(`
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT ?formTtl
+    WHERE {
+      ${sparqlEscapeUri(formUri)} a ext:GeneratedForm ;
+        ext:ttlCode ?formTtl .
+    } LIMIT 1
+  `);
+
+  if (result.results.bindings.length) {
+    const binding = result.results.bindings[0];
+    return binding.formTtl.value;
+  } else {
+    return null;
+  }
+};
+
 const buildConstructConceptSchemesQuery = (
   conceptSchemeUris: string[],
 ): string => {
@@ -249,6 +268,7 @@ const fetchInstanceUriById = async (id: string) => {
 
 export default {
   fetchFormTtlById,
+  fetchFormTtlByUri,
   getConceptSchemeTriples,
   fetchFormInstanceByUri,
   updateFormInstance,

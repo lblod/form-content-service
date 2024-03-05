@@ -165,6 +165,66 @@ const getBaseFormUri = async (formTtl: string) => {
   return binding.value;
 };
 
+const getFormUri = async (formTtl: string) => {
+  const q = `
+      PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+
+      SELECT DISTINCT *
+      WHERE {
+          ?s a ?o .
+          VALUES ?o { form:Form form:Extension }
+      }
+      `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) {
+    throw new Error('Form does not contain a valid URI');
+  }
+
+  const binding = bindings[0].get('s');
+
+  if (!binding || binding.value.length < 1) {
+    throw new Error('Form does not contain a valid URI');
+  }
+
+  return binding.value;
+};
+
+const getFormId = async (formTtl: string) => {
+  const q = `
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+      SELECT DISTINCT *
+      WHERE {
+          ?s mu:uuid ?o .
+      }
+      `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) {
+    throw new Error('Form does not have a valid ID');
+  }
+
+  const binding = bindings[0].get('o');
+
+  if (!binding || binding.value.length < 1) {
+    throw new Error('Form does not have a valid ID');
+  }
+
+  return binding.value;
+};
+
 export default {
   getFormPrefix,
   getFormTargetAndLabel,
@@ -172,4 +232,6 @@ export default {
   getUriTypes,
   isFormExtension,
   getBaseFormUri,
+  getFormUri,
+  getFormId,
 };
