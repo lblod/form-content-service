@@ -136,10 +136,40 @@ const isFormExtension = async (formTtl: string) => {
   return hasMatches;
 };
 
+const getBaseFormUri = async (formTtl: string) => {
+  const q = `
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+      SELECT DISTINCT *
+      WHERE {
+          ?s ext:extendsForm ?o .
+      }
+      `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) {
+    throw new Error('Should contain ext:extendsForm predicate.');
+  }
+
+  const binding = bindings[0].get('o');
+
+  if (!binding || binding.value.length < 1) {
+    throw new Error('Should contain ext:extendsForm predicate.');
+  }
+
+  return binding.value;
+};
+
 export default {
   getFormPrefix,
   getFormTargetAndLabel,
   fetchConceptSchemeUris,
   getUriTypes,
   isFormExtension,
+  getBaseFormUri,
 };

@@ -9,7 +9,8 @@ export const fetchFormDefinition = async (id: string) => {
   }
 
   if (await comunicaRepo.isFormExtension(form.formTtl)) {
-    console.log('true');
+    const baseFormUri = await comunicaRepo.getBaseFormUri(form.formTtl);
+    console.log(baseFormUri);
   }
   const prefix = await comunicaRepo.getFormPrefix(form.formTtl);
   return { formTtl: form.formTtl, metaTtl: form.metaTtl, prefix };
