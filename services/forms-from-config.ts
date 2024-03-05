@@ -37,7 +37,7 @@ const fetchMetaTtlFromFormTtl = async (
 
 export const fetchFormDefinitionById = async (
   formId: string,
-): Promise<FormDefinition | null> => {
+): Promise<FormDefinition> => {
   const definitionFromConfig: FormDefinition | undefined =
     formsFromConfig[formId];
 
@@ -62,7 +62,7 @@ export const fetchFormDefinitionById = async (
 
 export const fetchFormDefinitionByUri = async (
   formUri: string,
-): Promise<FormDefinition | null> => {
+): Promise<FormDefinition> => {
   let formId = formsUriToId[formUri];
 
   if (formId) {
