@@ -119,9 +119,27 @@ const getUriTypes = async (ttl: string) => {
     .filter((binding) => binding !== null) as { uri: string; type: string }[];
 };
 
+const isFormExtension = async (formTtl: string) => {
+  const q = `
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+      ASK {
+          ?s ?p form:Extension .
+      }
+      `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const hasMatches = await engine.queryBoolean(q, {
+    sources: [store],
+  });
+
+  return hasMatches;
+};
+
 export default {
   getFormPrefix,
   getFormTargetAndLabel,
   fetchConceptSchemeUris,
   getUriTypes,
+  isFormExtension,
 };
