@@ -1,4 +1,4 @@
-import { FormDefinition, FormsFromConfig } from '../types';
+import { FormDefinition, FormsFromConfig, UriToIdMap } from '../types';
 import { promises as fs } from 'fs';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
@@ -6,6 +6,8 @@ import { HttpError } from '../domain/http-error';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
+
+const formsUriToId: UriToIdMap = {};
 
 const computeIfAbsent = async <Key, Value>(
   object,
@@ -58,6 +60,31 @@ export const fetchFormDefinitionById = async (
   };
 };
 
+export const fetchFormDefinitionByUri = async (
+  formUri: string,
+): Promise<FormDefinition | null> => {
+  let formId = formsUriToId[formUri];
+
+  if (formId) {
+    return fetchFormDefinitionById(formId);
+  }
+
+  const formTtl = await formRepo.fetchFormTtlByUri(formUri);
+
+  if (!formTtl) throw new HttpError('Definition not found', 404);
+  const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
+
+  formId = await comunicaRepo.getFormId(formTtl);
+
+  formsUriToId[formUri] = formId;
+  formsFromConfig[formId] = { formTtl };
+
+  return {
+    formTtl,
+    metaTtl,
+  };
+};
+
 const loadConfigForm = async (formName: string) => {
   const filePath = `${formDirectory}/${formName}/form.ttl`;
   const metaPath = `${formDirectory}/${formName}/meta.ttl`;
@@ -75,6 +102,11 @@ export const loadFormsFromConfig = async () => {
   formDirectories.forEach(async (formDirectory) => {
     const form = await loadConfigForm(formDirectory);
     formsFromConfig[formDirectory] = form;
+    if (!form) {
+      return;
+    }
+    const formUri = await comunicaRepo.getFormUri(form.formTtl);
+    formsUriToId[formUri] = formDirectory;
   });
 };
 
