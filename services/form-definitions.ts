@@ -12,7 +12,7 @@ export const fetchFormDefinition = async (id: string) => {
       formDefinition.formTtl,
     );
     const baseFormDefinition = await fetchFormDefinitionByUri(baseFormUri);
-    comunicaRepo.mergeExtensionIntoBaseTtl(
+    await comunicaRepo.mergeExtensionIntoBaseTtl(
       baseFormDefinition.formTtl,
       formDefinition.formTtl,
     );

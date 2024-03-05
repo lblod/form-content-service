@@ -246,7 +246,7 @@ const mergeExtensionIntoBaseTtl = async (
   }
   `;
 
-  engine.queryVoid(query, {
+  await engine.queryVoid(query, {
     sources: [baseStore],
     destination: destinationStore,
   });
