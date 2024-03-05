@@ -7,6 +7,10 @@ export const fetchFormDefinition = async (id: string) => {
   if (!form) {
     throw new HttpError('Form not found', 404);
   }
+
+  if (await comunicaRepo.isFormExtension(form.formTtl)) {
+    console.log('true');
+  }
   const prefix = await comunicaRepo.getFormPrefix(form.formTtl);
   return { formTtl: form.formTtl, metaTtl: form.metaTtl, prefix };
 };
