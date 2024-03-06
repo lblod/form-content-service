@@ -19,9 +19,11 @@ formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
 formInstanceRouter.get(
   '/:formId/instances',
   async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.page?.size || 0, 10);
+    const offset = parseInt(req.query.page?.number || 0, 10) * limit;
     const formInstances = await getInstancesForForm(req.params.formId, {
-      limit: parseInt(req.query.limit || 0, 10),
-      offset: parseInt(req.query.offset || 0, 10),
+      limit,
+      offset,
     });
     res.set('X-Total-Count', formInstances.count);
     res.send({ instances: formInstances.instances });
