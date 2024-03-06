@@ -3,6 +3,8 @@ import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
 import N3 from 'n3';
 
+const myEngine = new QueryEngine();
+
 const getFormPrefix = async (formTtl: string) => {
   const q = `
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -226,19 +228,16 @@ const getFormId = async (formTtl: string) => {
   return binding.value;
 };
 
-const mergeExtensionIntoBaseTtl = async (
-  baseFormTtl: string,
-  extensionFormTtl: string,
+const loadTtlIntoGraph = async (
+  ttl: string,
+  graphName: string,
+  store: N3.Store,
 ) => {
-  const engine = new QueryEngine();
-  const destinationStore = new N3.Store();
-  const baseStore = await ttlToStore(baseFormTtl);
-
-  const baseGraph = 'http://base';
+  const baseStore = await ttlToStore(ttl);
 
   const query = `
   INSERT {
-    GRAPH <${baseGraph}> {
+    GRAPH <${graphName}> {
       ?s ?p ?o.
     }
   } WHERE {
@@ -246,24 +245,24 @@ const mergeExtensionIntoBaseTtl = async (
   }
   `;
 
-  await engine.queryVoid(query, {
+  await myEngine.queryVoid(query, {
     sources: [baseStore],
-    destination: destinationStore,
+    destination: store,
   });
+};
 
-  const constructAllFromGraph = (graph: string) =>
-    `CONSTRUCT { ?s ?p ?o }
+const graphToTtl = async (graphName: string, store: N3.Store) => {
+  const query = `CONSTRUCT { ?s ?p ?o }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH <${graphName}> {
         ?s ?p ?o
       } .
     }`;
 
-  const result = await engine.queryQuads(constructAllFromGraph(baseGraph), {
-    sources: [destinationStore],
+  const result = await myEngine.queryQuads(query, {
+    sources: [store],
   });
   const writer = new N3.Writer();
-  writer.addPrefix('form', 'http://lblod.data.gift/vocabularies/forms/');
   const quads = await result.toArray();
   for (const quad of quads) {
     writer.addQuad(quad);
@@ -271,6 +270,30 @@ const mergeExtensionIntoBaseTtl = async (
   let formTtl;
   writer.end((error, result) => (formTtl = result));
   return formTtl;
+};
+
+const mergeExtensionIntoBaseTtl = async (
+  baseFormTtl: string,
+  extensionFormTtl: string,
+) => {
+  const store = new N3.Store();
+
+  const baseGraph = 'http://base';
+  const extensionGraph = 'http://extension';
+
+  // Load forms into seperate graphs
+  await loadTtlIntoGraph(baseFormTtl, baseGraph, store);
+  await loadTtlIntoGraph(extensionFormTtl, extensionGraph, store);
+
+  // Transfer form fields
+  // Tranfer form sections
+  // Transfer direct form properties
+  // Transfer generator
+
+  const baseTtl = await graphToTtl(baseGraph, store);
+  const extensionTtl = await graphToTtl(extensionGraph, store);
+
+  return baseTtl;
 };
 
 export default {
