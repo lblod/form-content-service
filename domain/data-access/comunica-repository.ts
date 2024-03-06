@@ -251,23 +251,38 @@ const mergeExtensionIntoBaseTtl = async (
     destination: destinationStore,
   });
 
-  const selectAllFromGraph = (graph: string) =>
-    `SELECT * 
-    WHERE { 
-      GRAPH <${graph}> { 
-        ?s ?p ?o. 
-      } 
+  const constructAllFromGraph = (graph: string) =>
+    `CONSTRUCT { ?s ?p ?o }
+    WHERE {
+      GRAPH <${graph}> {
+        ?s ?p ?o
+      } .
     }`;
 
-  const bindingStream = await engine.queryBindings(
-    selectAllFromGraph(baseGraph),
-    {
-      sources: [destinationStore],
-    },
-  );
+  // Attempt 3
+  // const result = await engine.query(constructAllFromGraph(baseGraph), {
+  //   sources: [destinationStore],
+  // });
+  // const { data } = await engine.resultToString(
+  //   result,
+  //   // 'application/sparql-results+json',
+  //   // 'simple',
+  //   'text/turtle',
+  // );
+  // Consume this data (is a N3StreamWriter)
 
-  const bindings = await bindingStream.toArray();
-  console.log(bindings);
+  const result = await engine.queryQuads(constructAllFromGraph(baseGraph), {
+    sources: [destinationStore],
+  });
+  const writer = new N3.Writer();
+  writer.addPrefix('form', 'http://lblod.data.gift/vocabularies/forms/');
+  const quads = await result.toArray();
+  for (const quad of quads) {
+    writer.addQuad(quad);
+  }
+  let formTtl;
+  writer.end((error, result) => (formTtl = result));
+  return formTtl;
 };
 
 export default {
