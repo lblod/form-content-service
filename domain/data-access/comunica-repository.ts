@@ -259,18 +259,6 @@ const mergeExtensionIntoBaseTtl = async (
       } .
     }`;
 
-  // Attempt 3
-  // const result = await engine.query(constructAllFromGraph(baseGraph), {
-  //   sources: [destinationStore],
-  // });
-  // const { data } = await engine.resultToString(
-  //   result,
-  //   // 'application/sparql-results+json',
-  //   // 'simple',
-  //   'text/turtle',
-  // );
-  // Consume this data (is a N3StreamWriter)
-
   const result = await engine.queryQuads(constructAllFromGraph(baseGraph), {
     sources: [destinationStore],
   });
