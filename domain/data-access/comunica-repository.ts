@@ -295,6 +295,53 @@ const transferFormFields = async (
   await myEngine.queryVoid(query, { sources: [store] });
 };
 
+// TODO calling it "section" here as it is the new name, but our sections are still property groups
+const transferSections = async (
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s a form:PropertyGroup;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+const transferGenerators = async (
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s a form:Generator;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
 const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
   const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -337,18 +384,29 @@ const mergeExtensionIntoBaseTtl = async (
   await loadTtlIntoGraph(extensionFormTtl, extensionGraph, store);
   console.log(store.size);
 
-  // Transfer form fields
+  // Merge form fields
   await transferFormFields(baseGraph, mergeGraph, store);
   console.log(store.size);
   await transferFormFields(extensionGraph, mergeGraph, store);
   console.log(store.size);
+
+  // Merge form sections
   await replaceExtendsGroup(mergeGraph, store);
   console.log(store.size);
-  // Tranfer form sections
-  // Transfer direct form properties
-  // Transfer generator
+  await transferSections(baseGraph, mergeGraph, store);
+  console.log(store.size);
+  await transferSections(extensionGraph, mergeGraph, store);
+  console.log(store.size);
 
-  //const baseTtl = await graphToTtl(baseGraph, store);
+  // Transfer generators
+  await transferGenerators(baseGraph, mergeGraph, store);
+  console.log(store.size);
+  await transferGenerators(extensionGraph, mergeGraph, store);
+  console.log(store.size);
+
+  // Transfer direct form properties
+
+  const baseTtl = await graphToTtl(baseGraph, store);
   //const extensionTtl = await graphToTtl(extensionGraph, store);
   const mergeTtl = await graphToTtl(mergeGraph, store);
 
