@@ -272,6 +272,55 @@ const graphToTtl = async (graphName: string, store: N3.Store) => {
   return formTtl;
 };
 
+const transferFormFields = async (
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s a form:Field;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+  DELETE {
+    GRAPH <${graph}> {
+      ?s ext:extendsGroup ?o
+    }
+  }
+  INSERT {
+    GRAPH <${graph}> {
+      ?s sh:group ?o
+    }
+  }
+  WHERE {
+    GRAPH <${graph}> {
+      ?s a form:Field;
+      ext:extendsGroup ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
 const mergeExtensionIntoBaseTtl = async (
   baseFormTtl: string,
   extensionFormTtl: string,
@@ -280,20 +329,30 @@ const mergeExtensionIntoBaseTtl = async (
 
   const baseGraph = 'http://base';
   const extensionGraph = 'http://extension';
+  const mergeGraph = 'http://merge';
 
   // Load forms into seperate graphs
   await loadTtlIntoGraph(baseFormTtl, baseGraph, store);
+  console.log(store.size);
   await loadTtlIntoGraph(extensionFormTtl, extensionGraph, store);
+  console.log(store.size);
 
   // Transfer form fields
+  await transferFormFields(baseGraph, mergeGraph, store);
+  console.log(store.size);
+  await transferFormFields(extensionGraph, mergeGraph, store);
+  console.log(store.size);
+  await replaceExtendsGroup(mergeGraph, store);
+  console.log(store.size);
   // Tranfer form sections
   // Transfer direct form properties
   // Transfer generator
 
-  const baseTtl = await graphToTtl(baseGraph, store);
-  const extensionTtl = await graphToTtl(extensionGraph, store);
+  //const baseTtl = await graphToTtl(baseGraph, store);
+  //const extensionTtl = await graphToTtl(extensionGraph, store);
+  const mergeTtl = await graphToTtl(mergeGraph, store);
 
-  return baseTtl;
+  return mergeTtl;
 };
 
 export default {
