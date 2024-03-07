@@ -252,7 +252,8 @@ const loadTtlIntoGraph = async (
 };
 
 const graphToTtl = async (graphName: string, store: N3.Store) => {
-  const query = `CONSTRUCT { ?s ?p ?o }
+  const query = `
+    CONSTRUCT { ?s ?p ?o }
     WHERE {
       GRAPH <${graphName}> {
         ?s ?p ?o
@@ -342,6 +343,79 @@ const transferGenerators = async (
   await myEngine.queryVoid(query, { sources: [store] });
 };
 
+const transferFormIncludes = async (
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s form:includes ?o;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+const transferInitGenerator = async (
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s form:initGenerator ?o;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+const copyTriplesWithPredicate = async (
+  predicate: string,
+  sourceGraph: string,
+  destinationGraph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+  INSERT {
+    GRAPH <${destinationGraph}> {
+      ?s ?p ?o
+    }
+  }
+  WHERE {
+    GRAPH <${sourceGraph}> {
+      ?s ${predicate} ?o;
+      ?p ?o.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
 const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
   const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -368,6 +442,35 @@ const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
   await myEngine.queryVoid(query, { sources: [store] });
 };
 
+const replaceFormUri = async (graph: string, store: N3.Store) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+  DELETE {
+    GRAPH <${graph}> {
+      ?s ?p ?o.
+      ?sE a form:Extension.
+    }
+  }
+  INSERT {
+    GRAPH <${graph}> {
+      ?sE ?p ?o;
+      a form:Form.
+    }
+  }
+  WHERE {
+    GRAPH <${graph}> {
+      ?s a form:Form;
+      ?p ?o.
+      ?sE a form:Extension.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
 const mergeExtensionIntoBaseTtl = async (
   baseFormTtl: string,
   extensionFormTtl: string,
@@ -384,13 +487,13 @@ const mergeExtensionIntoBaseTtl = async (
   await loadTtlIntoGraph(extensionFormTtl, extensionGraph, store);
   console.log(store.size);
 
-  // Merge form fields
+  // Transfer form fields
   await transferFormFields(baseGraph, mergeGraph, store);
   console.log(store.size);
   await transferFormFields(extensionGraph, mergeGraph, store);
   console.log(store.size);
 
-  // Merge form sections
+  // Transfer form sections
   await replaceExtendsGroup(mergeGraph, store);
   console.log(store.size);
   await transferSections(baseGraph, mergeGraph, store);
@@ -405,6 +508,45 @@ const mergeExtensionIntoBaseTtl = async (
   console.log(store.size);
 
   // Transfer direct form properties
+  await transferFormIncludes(baseGraph, mergeGraph, store);
+  console.log(store.size);
+  await transferFormIncludes(extensionGraph, mergeGraph, store);
+  console.log(store.size);
+
+  await transferInitGenerator(baseGraph, mergeGraph, store);
+  console.log(store.size);
+  await transferInitGenerator(extensionGraph, mergeGraph, store);
+  console.log(store.size);
+
+  await copyTriplesWithPredicate(
+    'form:targetType',
+    extensionGraph,
+    mergeGraph,
+    store,
+  );
+  console.log(store.size);
+
+  await copyTriplesWithPredicate(
+    'form:targetLabel',
+    extensionGraph,
+    mergeGraph,
+    store,
+  );
+  console.log(store.size);
+
+  await copyTriplesWithPredicate(
+    'ext:prefix',
+    extensionGraph,
+    mergeGraph,
+    store,
+  );
+  console.log(store.size);
+
+  await copyTriplesWithPredicate('mu:uuid', extensionGraph, mergeGraph, store);
+  console.log(store.size);
+
+  //await replaceFormUri(mergeGraph, store);
+  //console.log(store.size);
 
   const baseTtl = await graphToTtl(baseGraph, store);
   //const extensionTtl = await graphToTtl(extensionGraph, store);
