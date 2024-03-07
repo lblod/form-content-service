@@ -256,7 +256,7 @@ const graphToTtl = async (graphName: string, store: N3.Store) => {
     CONSTRUCT { ?s ?p ?o }
     WHERE {
       GRAPH <${graphName}> {
-        ?s ?p ?o
+        ?s ?p ?o.
       } .
     }`;
 
@@ -273,169 +273,24 @@ const graphToTtl = async (graphName: string, store: N3.Store) => {
   return formTtl;
 };
 
-const transferFormFields = async (
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s a form:Field;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
-// TODO calling it "section" here as it is the new name, but our sections are still property groups
-const transferSections = async (
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s a form:PropertyGroup;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
-const transferGenerators = async (
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s a form:Generator;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
-const transferFormIncludes = async (
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s form:includes ?o;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
-const transferInitGenerator = async (
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s form:initGenerator ?o;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
-const copyTriplesWithPredicate = async (
-  predicate: string,
-  sourceGraph: string,
-  destinationGraph: string,
-  store: N3.Store,
-) => {
-  const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  PREFIX sh: <http://www.w3.org/ns/shacl#>
-  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-
-  INSERT {
-    GRAPH <${destinationGraph}> {
-      ?s ?p ?o
-    }
-  }
-  WHERE {
-    GRAPH <${sourceGraph}> {
-      ?s ${predicate} ?o;
-      ?p ?o.
-    }
-  }
-  `;
-  await myEngine.queryVoid(query, { sources: [store] });
-};
-
 const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
   const query = `
-  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX sh: <http://www.w3.org/ns/shacl#>
 
   DELETE {
     GRAPH <${graph}> {
-      ?s ext:extendsGroup ?o
+      ?s ext:extendsGroup ?o.
     }
   }
   INSERT {
     GRAPH <${graph}> {
-      ?s sh:group ?o
+      ?s sh:group ?o.
     }
   }
   WHERE {
     GRAPH <${graph}> {
-      ?s a form:Field;
-      ext:extendsGroup ?o.
+      ?s ext:extendsGroup ?o.
     }
   }
   `;
@@ -443,6 +298,8 @@ const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
 };
 
 const replaceFormUri = async (graph: string, store: N3.Store) => {
+  await replaceFormUriObject(graph, store);
+
   const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -450,21 +307,78 @@ const replaceFormUri = async (graph: string, store: N3.Store) => {
 
   DELETE {
     GRAPH <${graph}> {
-      ?s ?p ?o.
-      ?sE a form:Extension.
+      ?form ?p ?o.
+      ?extension a form:Extension.
     }
   }
   INSERT {
     GRAPH <${graph}> {
-      ?sE ?p ?o;
-      a form:Form.
+      ?extension ?p ?o;
+                 a form:Form.
+    }
+  }
+  WHERE {
+    GRAPH <${graph}> {
+      ?form a form:Form;
+            ?p ?o.
+      ?extension a form:Extension.
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+// Separate query from replaceFormUri due to a comunica issue.
+// If the case where the form is used as an object is in an optional clause,
+// the whole graph turns up empty.
+const replaceFormUriObject = async (graph: string, store: N3.Store) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+  DELETE {
+    GRAPH <${graph}> {
+      ?s ?p ?form.
+    }
+  }
+  INSERT {
+    GRAPH <${graph}> {
+      ?s ?p ?extension.
+    }
+  }
+  WHERE {
+    GRAPH <${graph}> {
+      ?form a form:Form.
+      ?extension a form:Extension.
+      ?s ?p ?form.
+      # We still want ext:extendsForm to point to the base form
+      FILTER (?p != ext:extendsForm)
+    }
+  }
+  `;
+  await myEngine.queryVoid(query, { sources: [store] });
+};
+
+const deleteAllFromBaseForm = async (
+  predicates: string[],
+  graph: string,
+  store: N3.Store,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+  DELETE {
+    GRAPH <${graph}> {
+      ?s ?p ?o.
     }
   }
   WHERE {
     GRAPH <${graph}> {
       ?s a form:Form;
       ?p ?o.
-      ?sE a form:Extension.
+      VALUES ?p { ${predicates.join(' ')} }
     }
   }
   `;
@@ -476,82 +390,21 @@ const mergeExtensionIntoBaseTtl = async (
   extensionFormTtl: string,
 ) => {
   const store = new N3.Store();
-
-  const baseGraph = 'http://base';
-  const extensionGraph = 'http://extension';
   const mergeGraph = 'http://merge';
 
-  // Load forms into seperate graphs
-  await loadTtlIntoGraph(baseFormTtl, baseGraph, store);
-  console.log(store.size);
-  await loadTtlIntoGraph(extensionFormTtl, extensionGraph, store);
-  console.log(store.size);
+  await loadTtlIntoGraph(baseFormTtl, mergeGraph, store);
+  await loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
 
-  // Transfer form fields
-  await transferFormFields(baseGraph, mergeGraph, store);
-  console.log(store.size);
-  await transferFormFields(extensionGraph, mergeGraph, store);
-  console.log(store.size);
+  await deleteAllFromBaseForm(
+    ['form:targetType', 'form:targetLabel', 'ext:prefix', 'mu:uuid'],
+    mergeGraph,
+    store,
+  );
 
-  // Transfer form sections
+  await replaceFormUri(mergeGraph, store);
   await replaceExtendsGroup(mergeGraph, store);
-  console.log(store.size);
-  await transferSections(baseGraph, mergeGraph, store);
-  console.log(store.size);
-  await transferSections(extensionGraph, mergeGraph, store);
-  console.log(store.size);
 
-  // Transfer generators
-  await transferGenerators(baseGraph, mergeGraph, store);
-  console.log(store.size);
-  await transferGenerators(extensionGraph, mergeGraph, store);
-  console.log(store.size);
-
-  // Transfer direct form properties
-  await transferFormIncludes(baseGraph, mergeGraph, store);
-  console.log(store.size);
-  await transferFormIncludes(extensionGraph, mergeGraph, store);
-  console.log(store.size);
-
-  await transferInitGenerator(baseGraph, mergeGraph, store);
-  console.log(store.size);
-  await transferInitGenerator(extensionGraph, mergeGraph, store);
-  console.log(store.size);
-
-  await copyTriplesWithPredicate(
-    'form:targetType',
-    extensionGraph,
-    mergeGraph,
-    store,
-  );
-  console.log(store.size);
-
-  await copyTriplesWithPredicate(
-    'form:targetLabel',
-    extensionGraph,
-    mergeGraph,
-    store,
-  );
-  console.log(store.size);
-
-  await copyTriplesWithPredicate(
-    'ext:prefix',
-    extensionGraph,
-    mergeGraph,
-    store,
-  );
-  console.log(store.size);
-
-  await copyTriplesWithPredicate('mu:uuid', extensionGraph, mergeGraph, store);
-  console.log(store.size);
-
-  //await replaceFormUri(mergeGraph, store);
-  //console.log(store.size);
-
-  const baseTtl = await graphToTtl(baseGraph, store);
-  //const extensionTtl = await graphToTtl(extensionGraph, store);
   const mergeTtl = await graphToTtl(mergeGraph, store);
-
   return mergeTtl;
 };
 
