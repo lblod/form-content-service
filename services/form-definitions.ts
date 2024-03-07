@@ -44,7 +44,7 @@ export const fetchFormDefinition = async (id: string) => {
 
     return {
       formTtl,
-      metaTtl: null,
+      metaTtl: formDefinition.metaTtl ?? baseFormDefinition.metaTtl,
       prefix,
     };
   }

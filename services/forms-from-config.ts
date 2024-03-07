@@ -2,6 +2,7 @@ import { FormDefinition, FormsFromConfig, UriToIdMap } from '../types';
 import { promises as fs } from 'fs';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
+import formExtRepo from '../domain/data-access/form-extension-repository';
 import { HttpError } from '../domain/http-error';
 
 const formsFromConfig: FormsFromConfig = {};
@@ -74,7 +75,7 @@ export const fetchFormDefinitionByUri = async (
   if (!formTtl) throw new HttpError('Definition not found', 404);
   const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
 
-  formId = await comunicaRepo.getFormId(formTtl);
+  formId = await formExtRepo.getFormId(formTtl);
 
   formsUriToId[formUri] = formId;
   formsFromConfig[formId] = { formTtl };
@@ -105,7 +106,7 @@ export const loadFormsFromConfig = async () => {
     if (!form) {
       return;
     }
-    const formUri = await comunicaRepo.getFormUri(form.formTtl);
+    const formUri = await formExtRepo.getFormUri(form.formTtl);
     formsUriToId[formUri] = formDirectory;
   });
 };
