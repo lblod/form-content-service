@@ -44,8 +44,8 @@ const fetchFormTtlByUri = async (formUri: string): Promise<string | null> => {
 
     SELECT ?formTtl
     WHERE {
-      ${sparqlEscapeUri(formUri)} a ext:GeneratedForm ;
-        ext:ttlCode ?formTtl .
+      ${sparqlEscapeUri(formUri)} a ext:GeneratedForm;
+        ext:ttlCode ?formTtl.
     } LIMIT 1
   `);
 
