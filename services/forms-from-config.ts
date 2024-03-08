@@ -86,14 +86,13 @@ export const fetchFormDefinitionById = async (
 
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
-  // TODO this seems wrong, should metaTtl not combine all sources.
-  // const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', () =>
-  //   fetchMetaTtlFromFormTtl(formTtl),
-  // );
+  // TODO check how the meta ttl should be handled.
+  let metaTtl = definitionFromConfig?.metaTtl ?? '';
+  metaTtl += await fetchMetaTtlFromFormTtl(formTtl);
 
   return {
     formTtl,
-    metaTtl: null,
+    metaTtl,
   };
 };
 
