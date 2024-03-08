@@ -106,9 +106,21 @@ export const fetchFormDefinitionByUri = async (
     return fetchFormDefinitionById(formId);
   }
 
-  const formTtl = await formRepo.fetchFormTtlByUri(formUri);
+  let formTtl = await formRepo.fetchFormTtlByUri(formUri);
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
+
+  if (await formExtRepo.isFormExtension(formTtl)) {
+    const extendedFormTtl = formTtl;
+    const baseFormUri = await formExtRepo.getBaseFormUri(formTtl);
+    const baseFormTtl = await fetchFormDefinitionByUri(baseFormUri);
+    if (!baseFormTtl) throw new HttpError('Definition not found', 404);
+    formTtl = await mergeExtensionIntoBaseTtl(
+      baseFormTtl.formTtl,
+      extendedFormTtl,
+    );
+  }
+
   const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
 
   formId = await formExtRepo.getFormId(formTtl);
