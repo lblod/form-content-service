@@ -87,6 +87,7 @@ export const fetchFormDefinitionById = async (
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
   // TODO check how the meta ttl should be handled.
+  // Probably want to combine meta ttl you fet from base graph with new meta ttl...
   let metaTtl = definitionFromConfig?.metaTtl ?? '';
   metaTtl += await fetchMetaTtlFromFormTtl(formTtl);
 
@@ -120,6 +121,7 @@ export const fetchFormDefinitionByUri = async (
     );
   }
 
+  // TODO this should be reviewed as well.
   const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
 
   formId = await formExtRepo.getFormId(formTtl);
