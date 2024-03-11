@@ -5,6 +5,7 @@ import comunicaRepo from '../domain/data-access/comunica-repository';
 import formExtRepo from '../domain/data-access/form-extension-repository';
 import { HttpError } from '../domain/http-error';
 import N3 from 'n3';
+import { extendFormTtl } from './form-extensions';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
@@ -35,29 +36,6 @@ const fetchMetaTtlFromFormTtl = async (
   if (!conceptSchemeUris.length) return null;
 
   return await formRepo.getConceptSchemeTriples(conceptSchemeUris);
-};
-
-const extendFormTtl = async (extensionFormTtl: string): Promise<string> => {
-  const store = new N3.Store();
-  const mergeGraph = 'http://merge';
-
-  const baseFormUri = await formExtRepo.getBaseFormUri(extensionFormTtl);
-  const baseForm = await fetchFormDefinitionByUri(baseFormUri);
-  if (!baseForm) throw new HttpError('Definition not found', 404);
-
-  await formExtRepo.loadTtlIntoGraph(baseForm.formTtl, mergeGraph, store);
-  await formExtRepo.loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
-
-  await formExtRepo.deleteAllFromBaseForm(
-    ['form:targetType', 'form:targetLabel', 'ext:prefix', 'mu:uuid'],
-    mergeGraph,
-    store,
-  );
-
-  await formExtRepo.replaceFormUri(mergeGraph, store);
-  await formExtRepo.replaceExtendsGroup(mergeGraph, store);
-
-  return await formExtRepo.graphToTtl(mergeGraph, store);
 };
 
 export const fetchFormDefinitionById = async (
