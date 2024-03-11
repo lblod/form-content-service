@@ -62,7 +62,7 @@ export const fetchFormDefinitionById = async (
   metaTtl += form.metaTtl ?? '';
 
   return {
-    formTtl,
+    formTtl: form.formTtl,
     metaTtl,
   };
 };
@@ -91,7 +91,7 @@ export const fetchFormDefinitionByUri = async (
   formsFromConfig[formId] = { formTtl: form.formTtl };
 
   return {
-    formTtl,
+    formTtl: form.formTtl,
     metaTtl,
   };
 };
