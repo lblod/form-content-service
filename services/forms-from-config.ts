@@ -4,8 +4,7 @@ import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import formExtRepo from '../domain/data-access/form-extension-repository';
 import { HttpError } from '../domain/http-error';
-import N3 from 'n3';
-import { extendFormTtl } from './form-extensions';
+import { extendForm } from './form-extensions';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
@@ -44,7 +43,7 @@ export const fetchFormDefinitionById = async (
   const definitionFromConfig: FormDefinition | undefined =
     formsFromConfig[formId];
 
-  let formTtl = await computeIfAbsent(
+  const formTtl = await computeIfAbsent(
     definitionFromConfig || {},
     'formTtl',
     () => formRepo.fetchFormTtlById(formId),
@@ -52,14 +51,15 @@ export const fetchFormDefinitionById = async (
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
-  formTtl = await extendFormTtl(formTtl);
+  const form = await extendForm(formTtl);
 
-  if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
+  if (!definitionFromConfig) {
+    formsFromConfig[formId] = { formTtl: form.formTtl };
+  }
 
-  // TODO check how the meta ttl should be handled.
-  // Probably want to combine meta ttl you fet from base graph with new meta ttl...
   let metaTtl = definitionFromConfig?.metaTtl ?? '';
-  metaTtl += await fetchMetaTtlFromFormTtl(formTtl);
+  metaTtl += (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
+  metaTtl += form.metaTtl ?? '';
 
   return {
     formTtl,
@@ -76,19 +76,19 @@ export const fetchFormDefinitionByUri = async (
     return fetchFormDefinitionById(formId);
   }
 
-  let formTtl = await formRepo.fetchFormTtlByUri(formUri);
+  const formTtl = await formRepo.fetchFormTtlByUri(formUri);
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
-  formTtl = await extendFormTtl(formTtl);
+  const form = await extendForm(formTtl);
 
-  // TODO this should be reviewed as well.
-  const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
+  let metaTtl = (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
+  metaTtl += form.metaTtl ?? '';
 
   formId = await formExtRepo.getFormId(formTtl);
 
   formsUriToId[formUri] = formId;
-  formsFromConfig[formId] = { formTtl };
+  formsFromConfig[formId] = { formTtl: form.formTtl };
 
   return {
     formTtl,

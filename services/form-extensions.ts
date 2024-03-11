@@ -2,15 +2,19 @@ import formExtRepo from '../domain/data-access/form-extension-repository';
 import { HttpError } from '../domain/http-error';
 import N3 from 'n3';
 import { fetchFormDefinitionByUri } from './forms-from-config';
+import { FormDefinition } from '../types';
 
-export const extendFormTtl = async (
+export const extendForm = async (
   extensionFormTtl: string,
-): Promise<string> => {
+): Promise<FormDefinition> => {
   const store = new N3.Store();
   const mergeGraph = 'http://merge';
 
   if (!(await formExtRepo.isFormExtension(extensionFormTtl))) {
-    return extensionFormTtl;
+    return {
+      formTtl: extensionFormTtl,
+      metaTtl: null,
+    };
   }
 
   const baseFormUri = await formExtRepo.getBaseFormUri(extensionFormTtl);
@@ -29,5 +33,10 @@ export const extendFormTtl = async (
   await formExtRepo.replaceFormUri(mergeGraph, store);
   await formExtRepo.replaceExtendsGroup(mergeGraph, store);
 
-  return await formExtRepo.graphToTtl(mergeGraph, store);
+  const extendedFormTtl = await formExtRepo.graphToTtl(mergeGraph, store);
+
+  return {
+    formTtl: extendedFormTtl,
+    metaTtl: baseForm.metaTtl,
+  };
 };
