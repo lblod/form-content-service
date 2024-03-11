@@ -171,7 +171,7 @@ const getFormInstanceCount = async (
     SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        ?uri ${sparqlEscapeUri(labelPredicate)} ?label .
+        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
         ?uri mu:uuid ?id .
     }`;
 
@@ -194,7 +194,7 @@ const getFormInstances = async (
     SELECT DISTINCT ?uri ?label ?id
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        ?uri ${sparqlEscapeUri(labelPredicate)} ?label .
+        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
         ?uri mu:uuid ?id .
     }
     ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
@@ -209,7 +209,7 @@ const getFormInstances = async (
     const instance = {
       uri: binding.uri.value,
       id: binding.id.value,
-      label: binding.label.value,
+      label: binding.label ? binding.label.value : null,
     };
     instance_values.push(instance);
   });
