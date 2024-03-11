@@ -18,10 +18,14 @@ export const extendForm = async (
   }
 
   const baseFormUri = await formExtRepo.getBaseFormUri(extensionFormTtl);
-  const baseForm = await fetchFormDefinitionByUri(baseFormUri);
-  if (!baseForm) throw new HttpError('Definition not found', 404);
+  const baseFormDefinition = await fetchFormDefinitionByUri(baseFormUri);
+  if (!baseFormDefinition) throw new HttpError('Definition not found', 404);
 
-  await formExtRepo.loadTtlIntoGraph(baseForm.formTtl, mergeGraph, store);
+  await formExtRepo.loadTtlIntoGraph(
+    baseFormDefinition.formTtl,
+    mergeGraph,
+    store,
+  );
   await formExtRepo.loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
 
   await formExtRepo.deleteAllFromBaseForm(
@@ -37,6 +41,6 @@ export const extendForm = async (
 
   return {
     formTtl: extendedFormTtl,
-    metaTtl: baseForm.metaTtl,
+    metaTtl: baseFormDefinition.metaTtl,
   };
 };
