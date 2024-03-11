@@ -37,14 +37,15 @@ const fetchMetaTtlFromFormTtl = async (
   return await formRepo.getConceptSchemeTriples(conceptSchemeUris);
 };
 
-const mergeExtensionIntoBaseTtl = async (
-  baseFormTtl: string,
-  extensionFormTtl: string,
-): Promise<string> => {
+const extendFormTtl = async (extensionFormTtl: string): Promise<string> => {
   const store = new N3.Store();
   const mergeGraph = 'http://merge';
 
-  await formExtRepo.loadTtlIntoGraph(baseFormTtl, mergeGraph, store);
+  const baseFormUri = await formExtRepo.getBaseFormUri(extensionFormTtl);
+  const baseForm = await fetchFormDefinitionByUri(baseFormUri);
+  if (!baseForm) throw new HttpError('Definition not found', 404);
+
+  await formExtRepo.loadTtlIntoGraph(baseForm.formTtl, mergeGraph, store);
   await formExtRepo.loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
 
   await formExtRepo.deleteAllFromBaseForm(
@@ -74,14 +75,7 @@ export const fetchFormDefinitionById = async (
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
   if (await formExtRepo.isFormExtension(formTtl)) {
-    const extendedFormTtl = formTtl;
-    const baseFormUri = await formExtRepo.getBaseFormUri(formTtl);
-    const baseFormTtl = await fetchFormDefinitionByUri(baseFormUri);
-    if (!baseFormTtl) throw new HttpError('Definition not found', 404);
-    formTtl = await mergeExtensionIntoBaseTtl(
-      baseFormTtl.formTtl,
-      extendedFormTtl,
-    );
+    formTtl = await extendFormTtl(formTtl);
   }
 
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
@@ -111,14 +105,7 @@ export const fetchFormDefinitionByUri = async (
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
   if (await formExtRepo.isFormExtension(formTtl)) {
-    const extendedFormTtl = formTtl;
-    const baseFormUri = await formExtRepo.getBaseFormUri(formTtl);
-    const baseFormTtl = await fetchFormDefinitionByUri(baseFormUri);
-    if (!baseFormTtl) throw new HttpError('Definition not found', 404);
-    formTtl = await mergeExtensionIntoBaseTtl(
-      baseFormTtl.formTtl,
-      extendedFormTtl,
-    );
+    formTtl = await extendFormTtl(formTtl);
   }
 
   // TODO this should be reviewed as well.
