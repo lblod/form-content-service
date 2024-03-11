@@ -9,6 +9,10 @@ export const extendFormTtl = async (
   const store = new N3.Store();
   const mergeGraph = 'http://merge';
 
+  if (!(await formExtRepo.isFormExtension(extensionFormTtl))) {
+    return extensionFormTtl;
+  }
+
   const baseFormUri = await formExtRepo.getBaseFormUri(extensionFormTtl);
   const baseForm = await fetchFormDefinitionByUri(baseFormUri);
   if (!baseForm) throw new HttpError('Definition not found', 404);

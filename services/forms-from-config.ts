@@ -52,9 +52,7 @@ export const fetchFormDefinitionById = async (
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
-  if (await formExtRepo.isFormExtension(formTtl)) {
-    formTtl = await extendFormTtl(formTtl);
-  }
+  formTtl = await extendFormTtl(formTtl);
 
   if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
@@ -82,9 +80,7 @@ export const fetchFormDefinitionByUri = async (
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
-  if (await formExtRepo.isFormExtension(formTtl)) {
-    formTtl = await extendFormTtl(formTtl);
-  }
+  formTtl = await extendFormTtl(formTtl);
 
   // TODO this should be reviewed as well.
   const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
