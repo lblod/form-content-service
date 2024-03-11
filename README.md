@@ -96,7 +96,7 @@ We want fields to be added to the original form in a specific order, intermixed 
 
 ### Extending the form with direct properties
 
-In an extension, we should be able to specify the same direct properties that we use in a regular form. In that case, we should define them on the `form:Extension`, instead of on the `form:Form`, using the same predicates as the ones used on the `form:Form`. The form-content service will take the `form:Extension` instance and transform it into a `form:Form` instance that contains the combination of the new properties and the properties that exist on the form that is being extended.
+In an extension, we should be able to specify the same direct properties that we use in a regular form. In that case, we should define them on the `form:Extension`, instead of on the `form:Form`, using the same predicates as the ones used on the `form:Form`. The form-content service will take the `form:Extension` instance and transform it into a `form:Form` instance that contains the combination of the new properties and the properties that exist on the form that is being extended. The properties `form:targetType`, `form:targetLabel`, `ext:prefix` and `mu:uuid` are simply overwritten. So you should define them on the form extension. Other properties are taken from both, and are combined.
 
 ### Transparency of `form:Extension`s
 

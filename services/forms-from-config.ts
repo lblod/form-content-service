@@ -4,6 +4,7 @@ import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import formExtRepo from '../domain/data-access/form-extension-repository';
 import { HttpError } from '../domain/http-error';
+import { extendForm } from './form-extensions';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/forms';
@@ -49,14 +50,19 @@ export const fetchFormDefinitionById = async (
   );
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
-  if (!definitionFromConfig) formsFromConfig[formId] = { formTtl };
 
-  const metaTtl = await computeIfAbsent(definitionFromConfig, 'metaTtl', () =>
-    fetchMetaTtlFromFormTtl(formTtl),
-  );
+  const form = await extendForm(formTtl);
+
+  if (!definitionFromConfig) {
+    formsFromConfig[formId] = { formTtl: form.formTtl };
+  }
+
+  let metaTtl = definitionFromConfig?.metaTtl ?? '';
+  metaTtl += (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
+  metaTtl += form.metaTtl ?? '';
 
   return {
-    formTtl,
+    formTtl: form.formTtl,
     metaTtl,
   };
 };
@@ -73,15 +79,19 @@ export const fetchFormDefinitionByUri = async (
   const formTtl = await formRepo.fetchFormTtlByUri(formUri);
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
-  const metaTtl = await fetchMetaTtlFromFormTtl(formTtl);
+
+  const form = await extendForm(formTtl);
+
+  let metaTtl = (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
+  metaTtl += form.metaTtl ?? '';
 
   formId = await formExtRepo.getFormId(formTtl);
 
   formsUriToId[formUri] = formId;
-  formsFromConfig[formId] = { formTtl };
+  formsFromConfig[formId] = { formTtl: form.formTtl };
 
   return {
-    formTtl,
+    formTtl: form.formTtl,
     metaTtl,
   };
 };
