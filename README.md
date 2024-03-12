@@ -71,6 +71,19 @@ Then the following data is inserted in the store:
         as:deleted "thetimeofdelete"^^xsd:dateTime  .
 ```
 
+## Tracking history
+
+Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the current value for that instance is written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. Meta information about this history item is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information is made up of the following triples:
+
+```
+  <historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
+                       dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
+                       dct:creator <accountUriOfCreator> ;
+                       dc:description "updated the name of the organization" .
+```
+
+In this data, the graph containing the history information is used as the subject. It refers to the form instance it's a history entry of using `dct:IsVersionOf`. The time at which the version was created is stored using `dct:issued`. The account of the user that created the instance can be found by following the `dct:creator` predicate. Finally, a description can be provided (optionally) that contains a free form text description of the change.
+
 ## Extending Forms
 
 ### Predicates and Types
