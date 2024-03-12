@@ -145,10 +145,12 @@ export const buildFormQuery = async function (
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
+      <${instanceUri}> a ?type .
       ${constructVariables.join('\n')}
     }
     ${options?.beforeWhereSnippet || ''}
     WHERE {
+      <${instanceUri}> a ?type .
       ${constructPaths.join('\n')}
     }
   `;

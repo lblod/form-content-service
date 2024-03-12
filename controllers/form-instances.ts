@@ -56,8 +56,8 @@ formInstanceRouter.put(
 formInstanceRouter.delete(
   '/:id/instances/:instanceId',
   async (req: Request, res: Response) => {
-    deleteFormInstance(req.params.id, req.params.instanceId);
-    res.send(200);
+    await deleteFormInstance(req.params.id, req.params.instanceId);
+    res.sendStatus(200);
   },
 );
 
