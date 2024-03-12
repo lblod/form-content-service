@@ -76,6 +76,10 @@ Then the following data is inserted in the store:
 Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the current value for that instance is written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. Meta information about this history item is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information is made up of the following triples:
 
 ```
+  @prefix dc: <http://purl.org/dc/elements/1.1/>.
+  @prefix dct: <http://purl.org/dc/terms/>.
+  @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+
   <historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
                        dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
                        dct:creator <accountUriOfCreator> ;
