@@ -82,11 +82,11 @@ Form definitions can specify that their history should be tracked by adding a tr
 
   <historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
                        dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
-                       dct:creator <accountUriOfCreator> ;
+                       dct:creator <uriOfCreatorUser> ;
                        dc:description "updated the name of the organization" .
 ```
 
-In this data, the graph containing the history information is used as the subject. It refers to the form instance it's a history entry of using `dct:IsVersionOf`. The time at which the version was created is stored using `dct:issued`. The account of the user that created the instance can be found by following the `dct:creator` predicate. Finally, a description can be provided (optionally) that contains a free form text description of the change.
+In this data, the graph containing the history information is used as the subject. It refers to the form instance it's a history entry of using `dct:IsVersionOf`. The time at which the version was created is stored using `dct:issued`. The user that created the instance can be found by following the `dct:creator` predicate. Finally, a description can be provided (optionally) that contains a free form text description of the change.
 
 ## Extending Forms
 
