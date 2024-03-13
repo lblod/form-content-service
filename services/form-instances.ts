@@ -30,16 +30,24 @@ export const postFormInstance = async (
     instanceUri,
   );
 
-  await formRepo.addFormInstance(validatedContent);
+  const [_ignoredAddResult, formData] = await Promise.all([
+    formRepo.addFormInstance(validatedContent),
+    comunicaRepo.getFormData(form.formTtl),
+  ]);
 
-  const [id, _] = await Promise.all([
-    formRepo.fetchInstanceIdByUri(instanceUri),
-    formRepo.saveInstanceVersion(
+  let versioningPromise = new Promise<void>((resolve) => resolve());
+  if (formData.withHistory) {
+    versioningPromise = formRepo.saveInstanceVersion(
       instanceUri,
       validatedContent,
       userId,
       'Created',
-    ),
+    );
+  }
+
+  const [id, _] = await Promise.all([
+    formRepo.fetchInstanceIdByUri(instanceUri),
+    versioningPromise,
   ]);
 
   return id;
@@ -108,22 +116,23 @@ export const updateFormInstance = async (
     throw new HttpError('Not authenticated', 401);
   }
 
-  const validatedContentTtl = await cleanAndValidateFormInstance(
-    contentTtl,
-    form,
-    instance.instanceUri,
-  );
+  const [validatedContentTtl, formData] = await Promise.all([
+    cleanAndValidateFormInstance(contentTtl, form, instance.instanceUri),
+    comunicaRepo.getFormData(form.formTtl),
+  ]);
 
   await formRepo.updateFormInstance(instance, validatedContentTtl);
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
 
-  await formRepo.saveInstanceVersion(
-    newInstance.instanceUri,
-    newInstance.formInstanceTtl,
-    userId,
-    description,
-  );
+  if (formData.withHistory) {
+    await formRepo.saveInstanceVersion(
+      newInstance.instanceUri,
+      newInstance.formInstanceTtl,
+      userId,
+      description,
+    );
+  }
 
   return { instance: newInstance };
 };

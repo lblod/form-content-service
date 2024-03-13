@@ -2,13 +2,16 @@ import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
 
-const getFormPrefix = async (formTtl: string) => {
+const getFormData = async (formTtl: string) => {
   const q = `
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
       SELECT DISTINCT *
       WHERE {
-          ?s ext:prefix ?o .
+          ?s ext:prefix ?prefix .
+          OPTIONAL {
+            ?s ext:withHistory ?withHistory .
+          }
       }
       `;
   const store = await ttlToStore(formTtl);
@@ -21,23 +24,24 @@ const getFormPrefix = async (formTtl: string) => {
 
   const bindings = await bindingStream.toArray();
   if (bindings.length === 0) {
-    return defaultPrefix;
+    return { prefix: defaultPrefix, withHistory: false };
   }
 
-  const binding = bindings[0].get('o');
+  let prefix = bindings[0].get('prefix')?.value;
 
-  if (!binding || binding.value.length < 1) {
+  if (!prefix || prefix.length < 1) {
     throw new Error(
       'The form definition you tried to access defines an invalid form prefix!',
     );
   }
 
-  let prefix = binding.value;
-
   if (!prefix.endsWith('#') && !prefix.endsWith('/')) {
     prefix += '/';
   }
-  return prefix;
+  return {
+    prefix,
+    withHistory: !!bindings[0].get('withHistory')?.value,
+  };
 };
 
 export const getFormTargetAndLabel = async (formTtl: string) => {
@@ -120,7 +124,7 @@ const getUriTypes = async (ttl: string) => {
 };
 
 export default {
-  getFormPrefix,
+  getFormData,
   getFormTargetAndLabel,
   fetchConceptSchemeUris,
   getUriTypes,
