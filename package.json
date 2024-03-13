@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^2.10.1",
+    "@lblod/mu-auth-sudo": "^0.6.1",
     "body-parser": "^1.19.0",
     "cron": "^1.8.2",
     "crypto-js": "^4.0.0",

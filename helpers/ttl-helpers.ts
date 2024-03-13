@@ -55,15 +55,7 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   });
 };
 
-/**
- * This is a naive implementation that will not work for data of the format:
- * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
- *
- * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
- *
- * We probably don't care.
- */
-export const ttlToInsert = function (ttl) {
+export const ttlToTriplesAndPrefixes = function (ttl: string) {
   const lines = ttl.split(/\.\s/);
   const prefixLines = [] as string[];
   const insertLines = [] as string[];
@@ -76,6 +68,20 @@ export const ttlToInsert = function (ttl) {
       insertLines.push(trimmedLine);
     }
   });
+
+  return { prefixLines, insertLines };
+};
+
+/**
+ * This is a naive implementation that will not work for data of the format:
+ * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
+ *
+ * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
+ *
+ * We probably don't care.
+ */
+export const ttlToInsert = function (ttl) {
+  const { insertLines, prefixLines } = ttlToTriplesAndPrefixes(ttl);
 
   return `${prefixLines.join('\n')}
 

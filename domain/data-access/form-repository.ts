@@ -13,8 +13,11 @@ import {
   computeInstanceDeltaQuery,
   sparqlEscapeObject,
   ttlToInsert,
+  ttlToTriplesAndPrefixes,
 } from '../../helpers/ttl-helpers';
+import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
+import { updateSudo } from '@lblod/mu-auth-sudo';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -266,15 +269,54 @@ const fetchInstanceUriById = async (id: string) => {
   }
 };
 
+const saveInstanceVersion = async (
+  instanceUri: string,
+  instanceTtl: string,
+  creatorUri: string,
+  description?: string,
+) => {
+  const { insertLines, prefixLines } =
+    await ttlToTriplesAndPrefixes(instanceTtl);
+
+  const historyGraph = `<http://mu.semte.ch/graphs/formHistory/${uuid()}>`;
+
+  let descriptionInsert = '';
+  if (description && description.length > 0) {
+    descriptionInsert = `; dct:description ${sparqlEscapeString(description)} `;
+  }
+
+  const insertQuery = `
+    ${prefixLines.join('\n')}
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX dc: <http://purl.org/dc/elements/1.1/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+    INSERT DATA {
+      GRAPH <http://mu.semte.ch/graphs/formHistory> {
+        ${historyGraph} a <http://mu.semte.ch/vocabularies/ext/FormHistory> ;
+          dct:isVersionOf ${sparqlEscapeUri(instanceUri)} ;
+          dct:issued ${sparqlEscapeDateTime(new Date())} ;
+          dct:creator ${sparqlEscapeUri(creatorUri)} ${descriptionInsert}.
+      }
+      GRAPH ${historyGraph} {
+        ${insertLines.join('.\n')}
+      }
+    }
+  `;
+
+  await updateSudo(insertQuery);
+};
+
 export default {
-  fetchFormTtlById,
-  fetchFormTtlByUri,
-  getConceptSchemeTriples,
-  fetchFormInstanceByUri,
-  updateFormInstance,
   addFormInstance,
   deleteFormInstance,
-  getFormInstancesWithCount,
+  fetchFormInstanceByUri,
+  fetchFormTtlById,
+  fetchFormTtlByUri,
   fetchInstanceIdByUri,
   fetchInstanceUriById,
+  getConceptSchemeTriples,
+  getFormInstancesWithCount,
+  saveInstanceVersion,
+  updateFormInstance,
 };

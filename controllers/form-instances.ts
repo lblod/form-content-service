@@ -9,10 +9,11 @@ import {
 } from '../services/form-instances';
 
 const formInstanceRouter = Router();
+const getSessionId = (req: Request) => req.get('mu-session-id');
 
 // should this be a post to /:id/instances?
 formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
-  const id = await postFormInstance(req.params.id, req.body);
+  const id = await postFormInstance(req.params.id, req.body, getSessionId(req));
   res.send({ id });
 });
 
@@ -48,6 +49,8 @@ formInstanceRouter.put(
       req.params.id,
       req.params.instanceId,
       req.body.contentTtl,
+      getSessionId(req),
+      req.body.description,
     );
     res.send({ instance });
   },
