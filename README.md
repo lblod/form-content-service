@@ -71,6 +71,30 @@ Then the following data is inserted in the store:
         as:deleted "thetimeofdelete"^^xsd:dateTime  .
 ```
 
+## Tracking history
+
+Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the new triples of the form instance after that operation are written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. This means that at the end of this operation, that graph contains all triples that would normally be returned when fetching the form instance using the form definition used to update it.
+
+Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information is made up of the following triples:
+
+```
+  @prefix dc: <http://purl.org/dc/elements/1.1/>.
+  @prefix dct: <http://purl.org/dc/terms/>.
+  @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+  @prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
+
+  <historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
+                       dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
+                       dct:creator <uriOfCreatorUser> ;
+                       ext:createdByForm <uriOfFormDefinition> ;
+                       dc:description "updated the name of the organization" .
+```
+
+In this data, the graph containing the history information is used as the subject. It refers to the form instance it's a history entry of using `dct:IsVersionOf`. The time at which the version was created is stored using `dct:issued`. The user that created the instance can be found by following the `dct:creator` predicate. The uri of the form definition of the form used to create this content is added as well so that if the instance can be modified by different forms, the user can find the form that made this change (e.g. when trying to restore the instance to this version). Finally, a `dc:description` can be provided (optionally) that contains a free form text description of the change.
+
+> [!CAUTION]
+> Careful: a form instance can possibly be updated through different form definitions, each with their own fields. A history item will ONLY keep track of the properties that are controlled by their own (that is ext:createdByForm) form definition. E.g. if you have a form that controls only the end date of an event and a form that controls all properties of the event (e.g. name), the history item linked to updating only the end date through the specialized form will only contain the triples related to the end date and NOT the name. If you'd want to restore such an item, you'd have to restore the version of the item from before the end time update (if any) and then restore the triples referring only to the end time.
+
 ## Extending Forms
 
 ### Predicates and Types
