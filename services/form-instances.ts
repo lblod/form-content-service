@@ -5,6 +5,7 @@ import { fetchFormDefinitionById } from './forms-from-config';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
+import { uri } from 'rdflib';
 
 export const postFormInstance = async (
   formId: string,
@@ -67,6 +68,17 @@ export const getInstancesForForm = async (
   );
 
   return await formRepo.getFormInstancesWithCount(type, label, options);
+};
+
+export const getHistoryForInstance = async (
+  instanceId: string,
+  options: { limit: number; offset: number },
+) => {
+  return await formRepo.getInstanceHistoryWithCount(instanceId, options);
+};
+
+export const getHistoryInstance = async (historyUri: string) => {
+  return await formRepo.getHistoryInstance(historyUri);
 };
 
 const fetchFormInstanceById = async (

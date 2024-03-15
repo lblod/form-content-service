@@ -17,7 +17,8 @@ import {
 } from '../../helpers/ttl-helpers';
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
-import { updateSudo } from '@lblod/mu-auth-sudo';
+import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { getHistoryForInstance } from '../../services/form-instances';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -307,6 +308,120 @@ const saveInstanceVersion = async (
   await updateSudo(insertQuery);
 };
 
+// unsecure because we don't know if the user has access to the instance
+const unsecureGetInstanceHistoryWithCount = async (
+  instanceId: string,
+  options: { limit: number; offset: number },
+) => {
+  const { limit, offset } = options;
+  const result = querySudo(`
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+    SELECT ?history ?issued ?creatorId ?description
+    WHERE {
+      ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+      GRAPH <http://mu.semte.ch/graphs/formHistory> {
+        ?history dct:isVersionOf ?instance ;
+        dct:issued ?issued ;
+        dct:creator ?creator .
+        OPTIONAL { ?history dct:description ?description .
+      }
+      ?creator mu:uuid ?creatorId .
+    }
+    ORDER BY DESC(?issued)
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `);
+
+  return result.results.bindings.map((binding) => {
+    return {
+      history: binding.history.value,
+      issued: binding.issued.value,
+      creator: binding.creatorId.value,
+      description: binding.description?.value || null,
+    };
+  });
+};
+
+// unsecure because we don't know if the user has access to the instance
+const unsecureGetHistoryInstance = async (historyUri: string) => {
+  const result = await querySudo(`
+    CONSTRUCT {
+      ?s ?p ?o
+    }
+    WHERE {
+      GRAPH ${sparqlEscapeUri(historyUri)} {
+        ?s ?p ?o
+      }
+    }
+  `);
+
+  return result.results.bindings.map(bindingToTriple).join('\n');
+};
+
+const hasAccessToInstance = async (instanceUri: string) => {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT * {
+      ${sparqlEscapeUri(instanceUri)} a ?thing .
+    } LIMIT 1
+  `);
+
+  return result.results.bindings.length > 0;
+};
+
+const hasAccessToInstanceId = async (instanceId: string) => {
+  const result = await query(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT * {
+      ?thing mu:uuid ${sparqlEscapeUri(instanceId)}.
+    } LIMIT 1
+  `);
+
+  return result.results.bindings.length > 0;
+};
+
+const hasAccessToHistoryInstance = async (historyInstanceUri: string) => {
+  const instanceResult = await querySudo(`
+    PREFIX dct: <http://purl.org/dc/terms/>
+
+    SELECT ?instance
+    WHERE {
+      GRAPH <http://mu.semte.ch/graphs/formHistory> {
+        ${sparqlEscapeUri(historyInstanceUri)} dct:isVersionOf ?instance .
+      }
+    } LIMIT 1
+  `);
+
+  const instanceUri = instanceResult.results.bindings[0]?.instance?.value;
+
+  if (!instanceUri) {
+    return false;
+  }
+  return hasAccessToInstance(instanceUri);
+};
+
+const getInstanceHistoryWithCount = async (
+  instanceId: string,
+  options: { limit: number; offset: number },
+) => {
+  if (!(await hasAccessToInstanceId(instanceId))) {
+    return [];
+  }
+  return unsecureGetInstanceHistoryWithCount(instanceId, options);
+};
+
+const getHistoryInstance = async (historyUri: string) => {
+  if (!(await hasAccessToHistoryInstance(historyUri))) {
+    return null;
+  }
+  return unsecureGetHistoryInstance(historyUri);
+};
+
 export default {
   addFormInstance,
   deleteFormInstance,
@@ -317,6 +432,8 @@ export default {
   fetchInstanceUriById,
   getConceptSchemeTriples,
   getFormInstancesWithCount,
+  getHistoryInstance,
+  getInstanceHistoryWithCount,
   saveInstanceVersion,
   updateFormInstance,
 };

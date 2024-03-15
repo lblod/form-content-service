@@ -3,6 +3,8 @@ import Router from 'express-promise-router';
 import {
   deleteFormInstance,
   fetchInstanceAndForm,
+  getHistoryForInstance,
+  getHistoryInstance,
   getInstancesForForm,
   postFormInstance,
   updateFormInstance,
@@ -41,6 +43,28 @@ formInstanceRouter.get(
     res.send(instance);
   },
 );
+
+formInstanceRouter.get(
+  '/:id/instances/:instanceId/history',
+  async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.page?.size || 0, 10);
+    const offset = parseInt(req.query.page?.number || 0, 10) * limit;
+    const formInstances = await getHistoryForInstance(req.params.instanceId, {
+      limit,
+      offset,
+    });
+    res.set('X-Total-Count', formInstances.count);
+    res.send({ instances: formInstances.instances });
+  },
+);
+
+formInstanceRouter.get('/history', async (req: Request, res: Response) => {
+  const historyUri = req.query.historyUri;
+  const instanceTtl = await getHistoryInstance(historyUri);
+
+  res.set('Content-Type', 'text/turtle');
+  res.send(instanceTtl);
+});
 
 formInstanceRouter.put(
   '/:id/instances/:instanceId',
