@@ -11,8 +11,8 @@ formDefinitionRouter.get('/forms', async (_req: Request, res: Response) => {
 });
 
 formDefinitionRouter.get('/:id', async (req: Request, res: Response) => {
-  const { formTtl, metaTtl, prefix } = await fetchFormDefinition(req.params.id);
-  res.send({ formTtl, metaTtl, prefix });
+  const definition = await fetchFormDefinition(req.params.id);
+  res.send(definition);
 });
 
 export { formDefinitionRouter };

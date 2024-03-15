@@ -49,12 +49,12 @@ formInstanceRouter.get(
   async (req: Request, res: Response) => {
     const limit = parseInt(req.query.page?.size || 0, 10);
     const offset = parseInt(req.query.page?.number || 0, 10) * limit;
-    const formInstances = await getHistoryForInstance(req.params.instanceId, {
+    const history = await getHistoryForInstance(req.params.instanceId, {
       limit,
       offset,
     });
-    res.set('X-Total-Count', formInstances.count);
-    res.send({ instances: formInstances.instances });
+    res.set('X-Total-Count', history.count);
+    res.send({ instances: history.instances });
   },
 );
 

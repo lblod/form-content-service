@@ -18,7 +18,6 @@ import {
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
-import { getHistoryForInstance } from '../../services/form-instances';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -309,12 +308,12 @@ const saveInstanceVersion = async (
 };
 
 // unsecure because we don't know if the user has access to the instance
-const unsecureGetInstanceHistoryWithCount = async (
+const unsecureGetInstanceHistoryItems = async (
   instanceId: string,
   options: { limit: number; offset: number },
 ) => {
   const { limit, offset } = options;
-  const result = querySudo(`
+  const result = await querySudo(`
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -326,7 +325,7 @@ const unsecureGetInstanceHistoryWithCount = async (
         ?history dct:isVersionOf ?instance ;
         dct:issued ?issued ;
         dct:creator ?creator .
-        OPTIONAL { ?history dct:description ?description .
+        OPTIONAL { ?history dct:description ?description }.
       }
       ?creator mu:uuid ?creatorId .
     }
@@ -343,6 +342,26 @@ const unsecureGetInstanceHistoryWithCount = async (
       description: binding.description?.value || null,
     };
   });
+};
+
+// unsecure because we don't know if the user has access to the instance
+const unsecureGetInstanceHistoryCount = async (instanceId: string) => {
+  const result = await querySudo(`
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+    SELECT (COUNT(DISTINCT ?history) AS ?count)
+    WHERE {
+      ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+      GRAPH <http://mu.semte.ch/graphs/formHistory> {
+        ?history dct:isVersionOf ?instance .
+      }
+    }
+  `);
+
+  const firstResult = result.results.bindings[0];
+  return firstResult?.count?.value || 0;
 };
 
 // unsecure because we don't know if the user has access to the instance
@@ -378,7 +397,7 @@ const hasAccessToInstanceId = async (instanceId: string) => {
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
     SELECT * {
-      ?thing mu:uuid ${sparqlEscapeUri(instanceId)}.
+      ?thing mu:uuid ${sparqlEscapeString(instanceId)}.
     } LIMIT 1
   `);
 
@@ -409,10 +428,17 @@ const getInstanceHistoryWithCount = async (
   instanceId: string,
   options: { limit: number; offset: number },
 ) => {
-  if (!(await hasAccessToInstanceId(instanceId))) {
-    return [];
+  const [hasAccess, count] = await Promise.all([
+    hasAccessToInstanceId(instanceId),
+    unsecureGetInstanceHistoryCount(instanceId),
+  ]);
+  if (!hasAccess) {
+    return { instances: [], count: 0 };
   }
-  return unsecureGetInstanceHistoryWithCount(instanceId, options);
+  return {
+    instances: await unsecureGetInstanceHistoryItems(instanceId, options),
+    count,
+  };
 };
 
 const getHistoryInstance = async (historyUri: string) => {
