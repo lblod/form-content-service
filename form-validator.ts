@@ -151,7 +151,9 @@ export const buildFormQuery = async function (
     ${options?.beforeWhereSnippet || ''}
     WHERE {
       <${instanceUri}> a ?type .
-      ${constructPaths.join('\n')}
+      OPTIONAL {
+        ${constructPaths.join('\n')}
+      }
     }
   `;
 };
