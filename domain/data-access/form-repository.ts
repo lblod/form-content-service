@@ -318,7 +318,7 @@ const unsecureGetInstanceHistoryItems = async (
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
-    SELECT ?history ?issued ?creatorId ?description
+    SELECT DISTINCT ?history ?issued ?creatorId ?description
     WHERE {
       ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
       GRAPH <http://mu.semte.ch/graphs/formHistory> {

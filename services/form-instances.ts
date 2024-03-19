@@ -5,7 +5,6 @@ import { fetchFormDefinitionById } from './forms-from-config';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
-import { uri } from 'rdflib';
 
 export const postFormInstance = async (
   formId: string,
@@ -78,7 +77,11 @@ export const getHistoryForInstance = async (
 };
 
 export const getHistoryInstance = async (historyUri: string) => {
-  return await formRepo.getHistoryInstance(historyUri);
+  const historyTtlWithoutPrefixes =
+    await formRepo.getHistoryInstance(historyUri);
+  return {
+    formInstanceTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${historyTtlWithoutPrefixes}`,
+  };
 };
 
 const fetchFormInstanceById = async (
