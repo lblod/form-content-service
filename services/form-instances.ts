@@ -69,6 +69,21 @@ export const getInstancesForForm = async (
   return await formRepo.getFormInstancesWithCount(type, label, options);
 };
 
+export const getHistoryForInstance = async (
+  instanceId: string,
+  options: { limit: number; offset: number },
+) => {
+  return await formRepo.getInstanceHistoryWithCount(instanceId, options);
+};
+
+export const getHistoryInstance = async (historyUri: string) => {
+  const historyTtlWithoutPrefixes =
+    await formRepo.getHistoryInstance(historyUri);
+  return {
+    formInstanceTtl: `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n${historyTtlWithoutPrefixes}`,
+  };
+};
+
 const fetchFormInstanceById = async (
   form: FormDefinition,
   id: string,
