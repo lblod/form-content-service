@@ -76,6 +76,39 @@ export const getHistoryForInstance = async (
   return await formRepo.getInstanceHistoryWithCount(instanceId, options);
 };
 
+export const createHistoryForInstance = async (
+  formId: string,
+  instanceId: string,
+  sessionId: string,
+  description?: string,
+) => {
+  const form = await fetchFormDefinitionById(formId);
+  if (!form) {
+    throw new HttpError('Form not found', 404);
+  }
+
+  const [instance, userId] = await Promise.all([
+    fetchFormInstanceById(form, instanceId),
+    fetchUserIdFromSession(sessionId),
+  ]);
+
+  if (!instance) {
+    throw new HttpError('Instance not found', 404);
+  }
+  if (!userId) {
+    throw new HttpError('Not authenticated', 401);
+  }
+
+  await formRepo.saveInstanceVersion(
+    instance.instanceUri,
+    instance.formInstanceTtl,
+    userId,
+    description,
+  );
+
+  return instance.formInstanceTtl;
+};
+
 export const getHistoryInstance = async (historyUri: string) => {
   const historyTtlWithoutPrefixes =
     await formRepo.getHistoryInstance(historyUri);

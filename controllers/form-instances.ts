@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Router from 'express-promise-router';
 import {
+  createHistoryForInstance,
   deleteFormInstance,
   fetchInstanceAndForm,
   getHistoryForInstance,
@@ -55,6 +56,24 @@ formInstanceRouter.get(
     });
     res.set('X-Total-Count', history.count);
     res.send({ instances: history.instances });
+  },
+);
+
+/**
+ * Creates a new history entry for the given instance and form, with an optional description.
+ */
+formInstanceRouter.post(
+  '/:id/instances/:instanceId/history',
+  async (req: Request, res: Response) => {
+    const { description } = req.body;
+
+    const instanceTtl = await createHistoryForInstance(
+      req.params.id,
+      req.params.instanceId,
+      getSessionId(req),
+      description,
+    );
+    res.send({ instanceTtl });
   },
 );
 
