@@ -22,7 +22,7 @@ formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
 formInstanceRouter.get(
   '/:formId/instances',
   async (req: Request, res: Response) => {
-    const limit = parseInt(req.query.page?.size || 0, 10);
+    const limit = parseInt(req.query.page?.size || 10, 10);
     const offset = parseInt(req.query.page?.number || 0, 10) * limit;
     const formInstances = await getInstancesForForm(req.params.formId, {
       limit,
@@ -47,7 +47,7 @@ formInstanceRouter.get(
 formInstanceRouter.get(
   '/:id/instances/:instanceId/history',
   async (req: Request, res: Response) => {
-    const limit = parseInt(req.query.page?.size || 0, 10);
+    const limit = parseInt(req.query.page?.size || 10, 10);
     const offset = parseInt(req.query.page?.number || 0, 10) * limit;
     const history = await getHistoryForInstance(req.params.instanceId, {
       limit,
