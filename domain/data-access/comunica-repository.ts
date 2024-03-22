@@ -44,14 +44,41 @@ const getFormData = async (formTtl: string) => {
   };
 };
 
-export const getFormTargetAndLabel = async (formTtl: string) => {
+export const getFormTarget = async (formTtl: string) => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
 
-    SELECT DISTINCT ?type ?label
+    SELECT DISTINCT ?type
     WHERE {
         ?form form:targetType ?type .
+    }
+    `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+  const bindings = await bindingStream.toArray();
+  if (!bindings.length) {
+    throw new Error('Unsupported Form: did not specify target type');
+  }
+
+  const type = bindings[0].get('type')?.value;
+  if (!type || type.trim().length < 1) {
+    throw new Error('Empty target type for form');
+  }
+  return type;
+};
+
+export const getFormLabels = async (formTtl: string) => {
+  const q = `
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+
+    SELECT DISTINCT ?label
+    WHERE {
         ?form form:targetLabel ?label.
     }
     `;
@@ -63,17 +90,14 @@ export const getFormTargetAndLabel = async (formTtl: string) => {
 
   const bindings = await bindingStream.toArray();
   if (!bindings.length) {
-    throw new Error(
-      'Unsupported Form: did not specify both target type and label',
-    );
+    throw new Error('Unsupported Form: did not target label');
   }
 
-  const type = bindings[0].get('type')?.value;
   const label = bindings[0].get('label')?.value;
-  if (!type || !label || type.trim().length < 1 || label.trim().length < 1) {
-    throw new Error('Empty type or label for form');
+  if (!label || label.trim().length < 1) {
+    throw new Error('Empty target label for form');
   }
-  return { type, label };
+  return label;
 };
 
 const buildSelectFormOptionsQuery = () =>
@@ -125,7 +149,8 @@ const getUriTypes = async (ttl: string) => {
 
 export default {
   getFormData,
-  getFormTargetAndLabel,
+  getFormTarget,
+  getFormLabels,
   fetchConceptSchemeUris,
   getUriTypes,
 };
