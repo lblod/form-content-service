@@ -163,10 +163,7 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
   await query(q);
 };
 
-const getFormInstanceCount = async (
-  targetType: string,
-  labelPredicate: string,
-) => {
+const getFormInstanceCount = async (targetType: string) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -174,7 +171,6 @@ const getFormInstanceCount = async (
     SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
         ?uri mu:uuid ?id .
     }`;
 
@@ -227,7 +223,7 @@ const getFormInstancesWithCount = async (
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labelPredicate, options),
-    getFormInstanceCount(targetType, labelPredicate),
+    getFormInstanceCount(targetType),
   ]);
 
   return { instances, count };
