@@ -1,7 +1,7 @@
 services:
   form-content:
-    #image: local-js-template
-    build: ./
+    image: local-js-template
+    #build: ./
     restart: 'no'
     labels:
       - 'logging=true'
