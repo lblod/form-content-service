@@ -181,7 +181,7 @@ const getFormInstanceCount = async (targetType: string) => {
 
 const getFormInstances = async (
   targetType: string,
-  labelPredicate: string,
+  labelPredicates: string,
   options?: { limit?: number; offset?: number },
 ) => {
   const defaultPageSize = 20;
@@ -193,7 +193,7 @@ const getFormInstances = async (
     SELECT DISTINCT ?uri ?label ?id
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
+        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicates)} ?label . }
         ?uri mu:uuid ?id .
     }
     ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
@@ -218,11 +218,11 @@ const getFormInstances = async (
 
 const getFormInstancesWithCount = async (
   targetType: string,
-  labelPredicate: string,
+  labelPredicates: string,
   options?: { limit?: number; offset?: number },
 ) => {
   const [instances, count] = await Promise.all([
-    getFormInstances(targetType, labelPredicate, options),
+    getFormInstances(targetType, labelPredicates, options),
     getFormInstanceCount(targetType),
   ]);
 

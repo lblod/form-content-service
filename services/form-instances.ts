@@ -65,7 +65,7 @@ export const getInstancesForForm = async (
   const type = await comunicaRepo.getFormTarget(form.formTtl);
   const labels = await comunicaRepo.getFormLabels(form.formTtl);
 
-  return await formRepo.getFormInstancesWithCount(type, labels, options);
+  return await formRepo.getFormInstancesWithCount(type, labels[0], options);
 };
 
 export const getHistoryForInstance = async (

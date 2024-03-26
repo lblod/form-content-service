@@ -88,16 +88,27 @@ export const getFormLabels = async (formTtl: string) => {
     sources: [store],
   });
 
+  // const labels: string[] = [];
+  // bindingStream.on('data', (binding) => {
+  //   labels.push(binding.get('label').value);
+  // });
+
+  // bindingStream.on('end', () => {
+  //   console.log(labels);
+  //   return labels;
+  // });
+
   const bindings = await bindingStream.toArray();
+
   if (!bindings.length) {
     throw new Error('Unsupported Form: did not target label');
   }
 
-  const label = bindings[0].get('label')?.value;
-  if (!label || label.trim().length < 1) {
-    throw new Error('Empty target label for form');
-  }
-  return label;
+  const labels = bindings.map((binding) => {
+    return binding.get('label')?.value;
+  });
+
+  return labels;
 };
 
 const buildSelectFormOptionsQuery = () =>
