@@ -1,0 +1,22 @@
+services:
+  form-content:
+    #image: local-js-template
+    build: ./
+    restart: 'no'
+    labels:
+      - 'logging=true'
+    environment:
+      - NODE_ENV=development
+      - NO_BABEL_NODE=true
+    ports:
+      - '8081:80'
+      - '9229:9229'
+    volumes:
+      - ../app-lokaal-mandatenbeheer/config/form-content:/forms
+      - ./:/app
+      - ./dist:/build/
+    networks:
+      - debug
+networks:
+  debug:
+    external: true
