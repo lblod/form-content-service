@@ -448,6 +448,22 @@ const getHistoryInstance = async (historyUri: string) => {
   return unsecureGetHistoryInstance(historyUri);
 };
 
+const hasHistoryItems = async (instanceId: string) => {
+  const result = await querySudo(`
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    ASK {
+      ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+      GRAPH <http://mu.semte.ch/graphs/formHistory> {
+        ?history dct:isVersionOf ?instance .
+      }
+    }
+  `);
+
+  return result.boolean;
+};
+
 export default {
   addFormInstance,
   deleteFormInstance,
@@ -462,4 +478,5 @@ export default {
   getInstanceHistoryWithCount,
   saveInstanceVersion,
   updateFormInstance,
+  hasHistoryItems,
 };
