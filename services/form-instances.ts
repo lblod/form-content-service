@@ -169,13 +169,12 @@ export const updateFormInstance = async (
     comunicaRepo.getFormData(form.formTtl),
   ]);
 
-  const hasHistory = await formRepo.hasHistoryItems(instanceId);
-  if (formData.withHistory && !hasHistory) {
+  if (formData.withHistory && !(await formRepo.hasHistoryItems(instanceId))) {
     await formRepo.saveInstanceVersion(
       instance.instanceUri,
       instance.formInstanceTtl,
       userId,
-      'Original verion',
+      'Originele versie',
     );
   }
 
