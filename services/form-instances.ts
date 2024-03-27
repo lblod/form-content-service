@@ -169,6 +169,17 @@ export const updateFormInstance = async (
     comunicaRepo.getFormData(form.formTtl),
   ]);
 
+  // Write history of previous state
+  // TODO this only needs to be done when there is no history yet
+  if (formData.withHistory) {
+    await formRepo.saveInstanceVersion(
+      instance.instanceUri,
+      instance.formInstanceTtl,
+      userId,
+      'Original verion',
+    );
+  }
+
   await formRepo.updateFormInstance(instance, validatedContentTtl);
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
