@@ -15,6 +15,7 @@
   "scripts": {
     "lint:js": "eslint . --cache --ext .ts",
     "lint:js:fix": "eslint . --cache --ext .ts --fix",
+    "release": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -31,6 +32,7 @@
     "moment": "^2.29.1",
     "n3": "^1.17.2",
     "rdflib": "^2.1.1",
+    "release-it": "^15.4.1",
     "uuid": "^8.3.1"
   }
 }
