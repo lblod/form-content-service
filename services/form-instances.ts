@@ -169,6 +169,15 @@ export const updateFormInstance = async (
     comunicaRepo.getFormData(form.formTtl),
   ]);
 
+  if (formData.withHistory && !(await formRepo.hasHistoryItems(instanceId))) {
+    await formRepo.saveInstanceVersion(
+      instance.instanceUri,
+      instance.formInstanceTtl,
+      userId,
+      'Originele versie',
+    );
+  }
+
   await formRepo.updateFormInstance(instance, validatedContentTtl);
 
   const newInstance = await fetchFormInstanceById(form, instanceId);
