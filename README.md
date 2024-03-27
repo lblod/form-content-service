@@ -73,9 +73,9 @@ Then the following data is inserted in the store:
 
 ## Tracking history
 
-Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the new triples of the form instance after that operation are written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. This means that at the end of this operation, that graph contains all triples that would normally be returned when fetching the form instance using the form definition used to update it.
+Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the new triples of the form instance after that operation are written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. Let's call the URI of this graph the historyInstanceUri. At the end of this operation, that graph contains all triples that would normally be returned when fetching the form instance using the form definition used to update it.
 
-Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information is made up of the following triples:
+Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information describes the historyInstanceUri and is made up of the following triples:
 
 ```
   @prefix dc: <http://purl.org/dc/elements/1.1/>.
