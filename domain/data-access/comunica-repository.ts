@@ -79,8 +79,8 @@ export const getFormTargetAndLabel = async (formTtl: string) => {
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const conceptTypes = [
     'conceptSchemeSelector',
-    'conceptSchemeMulitSelector',
-    'conceptSchemeRadioButtions',
+    'conceptSchemeMultiSelector',
+    'conceptSchemeRadioButtons',
     'conceptSchemeMultiSelectCheckboxes',
   ];
   const types = conceptTypes.map((m) => 'displayTypes:' + m).join(' ');
