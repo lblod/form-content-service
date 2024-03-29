@@ -77,14 +77,23 @@ export const getFormTargetAndLabel = async (formTtl: string) => {
 };
 
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
+  const conceptTypes = [
+    'conceptSchemeSelector',
+    'conceptSchemeMulitSelector',
+    'conceptSchemeRadioButtions',
+    'conceptSchemeMultiSelectCheckboxes',
+  ];
+  const types = conceptTypes.map((m) => 'displayTypes:' + m).join(' ');
+
   const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
   PREFIX displayTypes: <http://lblod.data.gift/display-types/>
 
   SELECT ?o
   WHERE {
-    ?s form:displayType displayTypes:conceptSchemeSelector.
+    ?s form:displayType ?types.
     ?s form:options ?o.
+    VALUES ?types { ${types} }
   }`;
   const store = await ttlToStore(formTtl);
   const bindings = await queryStore(query, store);
