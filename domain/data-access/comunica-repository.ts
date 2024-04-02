@@ -76,28 +76,33 @@ export const getFormTargetAndLabel = async (formTtl: string) => {
   return { type, label };
 };
 
-const buildSelectFormOptionsQuery = () =>
-  `
+const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
+  const conceptTypes = [
+    'conceptSchemeSelector',
+    'conceptSchemeMultiSelector',
+    'conceptSchemeRadioButtons',
+    'conceptSchemeMultiSelectCheckboxes',
+  ];
+  const types = conceptTypes.map((m) => 'displayTypes:' + m).join(' ');
+
+  const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX displayTypes: <http://lblod.data.gift/display-types/>
 
   SELECT ?o
   WHERE {
-    ?s form:options ?o
-  }
-  `;
-
-const formOptionsToConceptSchemeUri = (binding): string => {
-  const formOptionsJson: string = binding.get('o').value;
-  const { conceptScheme } = JSON.parse(formOptionsJson);
-  return conceptScheme;
-};
-
-const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
-  const query = buildSelectFormOptionsQuery();
+    ?s form:displayType ?types.
+    ?s form:options ?o.
+    VALUES ?types { ${types} }
+  }`;
   const store = await ttlToStore(formTtl);
   const bindings = await queryStore(query, store);
 
-  return bindings.map(formOptionsToConceptSchemeUri);
+  return bindings.map((binding) => {
+    const formOptionsJson = binding.get('o')?.value ?? '';
+    const { conceptScheme } = JSON.parse(formOptionsJson);
+    return conceptScheme;
+  });
 };
 
 const getUriTypes = async (ttl: string) => {
