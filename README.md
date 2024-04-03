@@ -55,6 +55,35 @@ The endpoint MUST allow fetching a specific instance using a query parameter `?f
 
 The specification above for the `instance endpoint` is a subset of the specification for mu-cl-resources. So using a resources endpoint will always be a correct value for the instance endpoint. It is allowed to define your own endpoint as long as you follow this spec though. This is useful in case your instances cannot be fetched through resources for instance, e.g. for custom forms created by the form builder.
 
+### Nested Fields
+
+In case of nested fields, e.g.
+
+```
+ext:geboorteF
+    a form:Field;
+    form:displayType displayTypes:dateTime;
+    sh:group ext:persoonPG;
+    sh:name "Geboortedatum";
+    sh:order 6;
+    sh:path ( persoon:heeftGeboorte persoon:datum ).
+```
+
+The corresponding form:Generator should be modified to also generate a type and UUID for the nested field, as otherwise the data would not be processable by mu-auth and resources respectively:
+
+```
+ext:personG a form:Generator;
+  form:prototype [
+    form:shape [
+      a person:Person;
+      persoon:heeftGeboorte [
+        a persoon:Geboorte
+      ]
+    ]
+  ];
+  form:dataGenerator form:addMuUuid.
+```
+
 ### Deleting form instances
 
 When a form instance is deleted, a [tombstone](https://www.stevebate.net/ontologies/activitystreams2/class-astombstone.html) is erected for every uri where a triple was removed that expresses the type for that uri. E.g. if on delete of a form instance, the following triple is removed
@@ -142,7 +171,7 @@ Because a form extension is translated directly into a regular form, it is strai
 
 ### No Generator Shape Paths
 
-Currently, this service only supports generators with simple paths in their shape, e.g.
+Currently, this service only supports generators with simple paths and with nested types in their shape, e.g.
 
 ```
 ext:mandatarisG a form:Generator;
@@ -154,7 +183,22 @@ ext:mandatarisG a form:Generator;
   form:dataGenerator form:addMuUuid.
 ```
 
-This generator's shape only has direct attributes (a ns:Mandataris) without modifiers, like sh:inversePath. Anything more complicated will not be handled by this service yet.
+and
+
+```
+ext:personG a form:Generator;
+  form:prototype [
+    form:shape [
+      a person:Person;
+      persoon:heeftGeboorte [
+        a persoon:Geboorte
+      ]
+    ]
+  ];
+  form:dataGenerator form:addMuUuid.
+```
+
+This generator's shape only has direct attributes (a ns:Mandataris) and nested types without modifiers, like sh:inversePath. Anything more complicated will not be handled by this service yet.
 
 For instance, this shape is **not supported**:
 
