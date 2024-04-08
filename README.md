@@ -55,6 +55,35 @@ The endpoint MUST allow fetching a specific instance using a query parameter `?f
 
 The specification above for the `instance endpoint` is a subset of the specification for mu-cl-resources. So using a resources endpoint will always be a correct value for the instance endpoint. It is allowed to define your own endpoint as long as you follow this spec though. This is useful in case your instances cannot be fetched through resources for instance, e.g. for custom forms created by the form builder.
 
+### Nested Fields
+
+In case of nested fields, e.g.
+
+```
+ext:geboorteF
+    a form:Field;
+    form:displayType displayTypes:dateTime;
+    sh:group ext:persoonPG;
+    sh:name "Geboortedatum";
+    sh:order 6;
+    sh:path ( persoon:heeftGeboorte persoon:datum ).
+```
+
+The corresponding form:Generator should be modified to also generate a type and UUID for the nested field, as otherwise the data would not be processable by mu-auth and resources respectively:
+
+```
+ext:personG a form:Generator;
+  form:prototype [
+    form:shape [
+      a person:Person;
+      persoon:heeftGeboorte [
+        a persoon:Geboorte
+      ]
+    ]
+  ];
+  form:dataGenerator form:addMuUuid.
+```
+
 ### Deleting form instances
 
 When a form instance is deleted, a [tombstone](https://www.stevebate.net/ontologies/activitystreams2/class-astombstone.html) is erected for every uri where a triple was removed that expresses the type for that uri. E.g. if on delete of a form instance, the following triple is removed
@@ -73,9 +102,9 @@ Then the following data is inserted in the store:
 
 ## Tracking history
 
-Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the new triples of the form instance after that operation are written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. This means that at the end of this operation, that graph contains all triples that would normally be returned when fetching the form instance using the form definition used to update it.
+Form definitions can specify that their history should be tracked by adding a triple `<formDefinitionUri> ext:withHistory "true"^^xsd:boolean`. When an instance of such a form is created or updated, the new triples of the form instance after that operation are written to a **new graph** with an auto-generated uri, e.g. `<http://mu.semte.ch/vocabularies/ext/formHistory/d420c907-8bbd-4f5b-b89c-be330df247ea>`. Let's call the URI of this graph the historyInstanceUri. At the end of this operation, that graph contains all triples that would normally be returned when fetching the form instance using the form definition used to update it.
 
-Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information is made up of the following triples:
+Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information describes the historyInstanceUri and is made up of the following triples:
 
 ```
   @prefix dc: <http://purl.org/dc/elements/1.1/>.
@@ -142,7 +171,7 @@ Because a form extension is translated directly into a regular form, it is strai
 
 ### No Generator Shape Paths
 
-Currently, this service only supports generators with simple paths in their shape, e.g.
+Currently, this service only supports generators with simple paths and with nested types in their shape, e.g.
 
 ```
 ext:mandatarisG a form:Generator;
@@ -154,7 +183,22 @@ ext:mandatarisG a form:Generator;
   form:dataGenerator form:addMuUuid.
 ```
 
-This generator's shape only has direct attributes (a ns:Mandataris) without modifiers, like sh:inversePath. Anything more complicated will not be handled by this service yet.
+and
+
+```
+ext:personG a form:Generator;
+  form:prototype [
+    form:shape [
+      a person:Person;
+      persoon:heeftGeboorte [
+        a persoon:Geboorte
+      ]
+    ]
+  ];
+  form:dataGenerator form:addMuUuid.
+```
+
+This generator's shape only has direct attributes (a ns:Mandataris) and nested types without modifiers, like sh:inversePath. Anything more complicated will not be handled by this service yet.
 
 For instance, this shape is **not supported**:
 

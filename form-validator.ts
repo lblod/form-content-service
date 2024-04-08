@@ -81,6 +81,16 @@ const getPathsForGenerators = async function (formStore: N3.Store) {
   return fullPaths;
 };
 
+const createPathTriple = (
+  currentOrigin: string,
+  predicate: string,
+  nextVariable: string,
+) => {
+  return predicate.startsWith('^')
+    ? `${nextVariable} ${predicate.substring(1)} ${currentOrigin}.`
+    : `${currentOrigin} ${predicate} ${nextVariable}.`;
+};
+
 const pathToConstructVariables = function (
   path: string[],
   fieldIndex: number,
@@ -88,14 +98,22 @@ const pathToConstructVariables = function (
 ) {
   const instance = sparqlEscapeUri(instanceUri);
   const variables = path.map((predicate, index) => {
-    const currentOrigin =
-      index === 0 ? instance : `?field${fieldIndex}var${index - 1}`;
-    if (predicate.startsWith('^')) {
-      return `?field${fieldIndex}var${index} ${predicate.substring(
-        1,
-      )} ${currentOrigin} .`;
+    const isFirstPredicate = index === 0;
+    let result = '';
+    const currentOrigin = isFirstPredicate
+      ? instance
+      : `?field${fieldIndex}var${index - 1}`;
+    const nextVariable = `?field${fieldIndex}var${index}`;
+    result += createPathTriple(currentOrigin, predicate, nextVariable);
+    if (!isFirstPredicate) {
+      // As these triples will be added to the same Optional as the first
+      // predicate in this path, if any of the other predicates do not have
+      // a mu:uuid or a type, the whole path will be skipped. This is fine
+      // because otherwise they would be rejected by mu-auth.
+      result += `${currentOrigin} mu:uuid ${nextVariable}Id .
+        ${currentOrigin} a ${nextVariable}Type .`;
     }
-    return `${currentOrigin} ${predicate} ?field${fieldIndex}var${index} .`;
+    return result;
   });
   return variables.join('\n');
 };
@@ -143,6 +161,7 @@ export const buildFormQuery = async function (
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
       <${instanceUri}> a ?type .
