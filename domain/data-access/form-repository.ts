@@ -181,19 +181,24 @@ const getFormInstanceCount = async (targetType: string) => {
 
 const getFormInstances = async (
   targetType: string,
-  labelPredicates: string,
+  labelPredicates: string[],
   options?: { limit?: number; offset?: number },
 ) => {
+  const labelJoin = labelPredicates
+    .map((label, index) => {
+      return `?uri ${sparqlEscapeUri(label)} ?label${index} .`;
+    })
+    .join('\n');
   const defaultPageSize = 20;
   const defaultOffset = 0;
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    SELECT DISTINCT ?uri ?label ?id
+    SELECT DISTINCT *
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicates)} ?label . }
+        OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
     }
     ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
@@ -205,11 +210,10 @@ const getFormInstances = async (
   const instance_values: InstanceMinimal[] = [];
 
   queryResult.results.bindings.map((binding) => {
-    const instance = {
-      uri: binding.uri.value,
-      id: binding.id.value,
-      label: binding.label ? binding.label.value : null,
-    };
+    const instance = {};
+    Object.keys(binding).forEach((key) => {
+      instance[key] = binding[key].value;
+    });
     instance_values.push(instance);
   });
 
@@ -218,7 +222,7 @@ const getFormInstances = async (
 
 const getFormInstancesWithCount = async (
   targetType: string,
-  labelPredicates: string,
+  labelPredicates: string[],
   options?: { limit?: number; offset?: number },
 ) => {
   const [instances, count] = await Promise.all([

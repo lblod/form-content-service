@@ -72,7 +72,7 @@ export const getFormTarget = async (formTtl: string) => {
   return type;
 };
 
-export const getFormLabels = async (formTtl: string) => {
+export const getFormLabels = async (formTtl: string): Promise<string[]> => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
@@ -105,7 +105,7 @@ export const getFormLabels = async (formTtl: string) => {
   }
 
   const labels = bindings.map((binding) => {
-    return binding.get('label')?.value;
+    return binding.get('label')?.value ?? '';
   });
 
   return labels;
