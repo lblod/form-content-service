@@ -185,8 +185,8 @@ const getFormInstances = async (
   options?: { limit?: number; offset?: number },
 ) => {
   const labelJoin = labelPredicates
-    .map((label, index) => {
-      return `?uri ${sparqlEscapeUri(label)} ?label${index} .`;
+    .map((label) => {
+      return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
     })
     .join('\n');
   const defaultPageSize = 20;
@@ -210,9 +210,14 @@ const getFormInstances = async (
   const instance_values: InstanceMinimal[] = [];
 
   queryResult.results.bindings.map((binding) => {
-    const instance = {};
-    Object.keys(binding).forEach((key) => {
-      instance[key] = binding[key].value;
+    const instance = {
+      uri: binding.uri.value,
+      id: binding.id.value,
+    };
+    labelPredicates.forEach((label) => {
+      instance[label.name] = binding[label.name]
+        ? binding[label.name].value
+        : null;
     });
     instance_values.push(instance);
   });

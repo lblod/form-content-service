@@ -76,10 +76,13 @@ export const getFormLabels = async (formTtl: string): Promise<string[]> => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT DISTINCT ?label
+    SELECT DISTINCT ?labelUri ?labelName
     WHERE {
-        ?form form:targetLabel ?label.
+        ?form form:targetLabel ?labelUri.
+        ?field sh:path ?labelUri;
+               sh:name ?labelName.
     }
     `;
   const store = await ttlToStore(formTtl);
@@ -105,7 +108,10 @@ export const getFormLabels = async (formTtl: string): Promise<string[]> => {
   }
 
   const labels = bindings.map((binding) => {
-    return binding.get('label')?.value ?? '';
+    return {
+      name: binding.get('labelName')?.value ?? '',
+      uri: binding.get('labelUri')?.value ?? '',
+    };
   });
 
   return labels;
