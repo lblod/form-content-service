@@ -1,6 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
+import { Label } from '../../types';
 
 const getFormData = async (formTtl: string) => {
   const q = `
@@ -72,7 +73,7 @@ export const getFormTarget = async (formTtl: string) => {
   return type;
 };
 
-export const getFormLabels = async (formTtl: string): Promise<string[]> => {
+export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
@@ -90,16 +91,6 @@ export const getFormLabels = async (formTtl: string): Promise<string[]> => {
   const bindingStream = await engine.queryBindings(q, {
     sources: [store],
   });
-
-  // const labels: string[] = [];
-  // bindingStream.on('data', (binding) => {
-  //   labels.push(binding.get('label').value);
-  // });
-
-  // bindingStream.on('end', () => {
-  //   console.log(labels);
-  //   return labels;
-  // });
 
   const bindings = await bindingStream.toArray();
 

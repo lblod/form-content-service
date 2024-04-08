@@ -4,7 +4,7 @@ import {
   sparqlEscapeUri,
   sparqlEscapeDateTime,
 } from 'mu';
-import { InstanceData, InstanceMinimal } from '../../types';
+import { InstanceData, InstanceMinimal, Label } from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
@@ -181,10 +181,10 @@ const getFormInstanceCount = async (targetType: string) => {
 
 const getFormInstances = async (
   targetType: string,
-  labelPredicates: string[],
+  labels: Label[],
   options?: { limit?: number; offset?: number },
 ) => {
-  const labelJoin = labelPredicates
+  const labelJoin = labels
     .map((label) => {
       return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
     })
@@ -214,7 +214,7 @@ const getFormInstances = async (
       uri: binding.uri.value,
       id: binding.id.value,
     };
-    labelPredicates.forEach((label) => {
+    labels.forEach((label) => {
       instance[label.name] = binding[label.name]
         ? binding[label.name].value
         : null;
@@ -227,11 +227,11 @@ const getFormInstances = async (
 
 const getFormInstancesWithCount = async (
   targetType: string,
-  labelPredicates: string[],
+  labels: Label[],
   options?: { limit?: number; offset?: number },
 ) => {
   const [instances, count] = await Promise.all([
-    getFormInstances(targetType, labelPredicates, options),
+    getFormInstances(targetType, labels, options),
     getFormInstanceCount(targetType),
   ]);
 
