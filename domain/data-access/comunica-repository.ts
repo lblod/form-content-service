@@ -100,6 +100,8 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
 
   const labels = bindings.map((binding) => {
     return {
+      // Remove all spaces from this string,
+      // as this is used as key in a later stage, which can't contain spaces.
       name: binding.get('labelName')?.value.replace(/ /g, '') ?? '',
       uri: binding.get('labelUri')?.value ?? '',
     };
