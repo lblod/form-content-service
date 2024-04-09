@@ -100,7 +100,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
 
   const labels = bindings.map((binding) => {
     return {
-      name: binding.get('labelName')?.value ?? '',
+      name: binding.get('labelName')?.value.replace(/ /g, '') ?? '',
       uri: binding.get('labelUri')?.value ?? '',
     };
   });
