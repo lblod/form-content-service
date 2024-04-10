@@ -4,7 +4,7 @@ import {
   sparqlEscapeUri,
   sparqlEscapeDateTime,
 } from 'mu';
-import { InstanceData, InstanceMinimal } from '../../types';
+import { InstanceData, InstanceMinimal, Label } from '../../types';
 import {
   buildFormConstructQuery,
   buildFormDeleteQuery,
@@ -163,10 +163,7 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
   await query(q);
 };
 
-const getFormInstanceCount = async (
-  targetType: string,
-  labelPredicate: string,
-) => {
+const getFormInstanceCount = async (targetType: string) => {
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -174,7 +171,6 @@ const getFormInstanceCount = async (
     SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
         ?uri mu:uuid ?id .
     }`;
 
@@ -185,19 +181,24 @@ const getFormInstanceCount = async (
 
 const getFormInstances = async (
   targetType: string,
-  labelPredicate: string,
+  labels: Label[],
   options?: { limit?: number; offset?: number },
 ) => {
+  const labelJoin = labels
+    .map((label) => {
+      return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
+    })
+    .join('\n');
   const defaultPageSize = 20;
   const defaultOffset = 0;
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    SELECT DISTINCT ?uri ?label ?id
+    SELECT DISTINCT *
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
-        OPTIONAL { ?uri ${sparqlEscapeUri(labelPredicate)} ?label . }
+        OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
     }
     ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
@@ -212,8 +213,12 @@ const getFormInstances = async (
     const instance = {
       uri: binding.uri.value,
       id: binding.id.value,
-      label: binding.label ? binding.label.value : null,
     };
+    labels.forEach((label) => {
+      instance[label.name] = binding[label.name]
+        ? binding[label.name].value
+        : null;
+    });
     instance_values.push(instance);
   });
 
@@ -222,12 +227,12 @@ const getFormInstances = async (
 
 const getFormInstancesWithCount = async (
   targetType: string,
-  labelPredicate: string,
+  labels: Label[],
   options?: { limit?: number; offset?: number },
 ) => {
   const [instances, count] = await Promise.all([
-    getFormInstances(targetType, labelPredicate, options),
-    getFormInstanceCount(targetType, labelPredicate),
+    getFormInstances(targetType, labels, options),
+    getFormInstanceCount(targetType),
   ]);
 
   return { instances, count };

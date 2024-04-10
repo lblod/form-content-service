@@ -62,11 +62,10 @@ export const getInstancesForForm = async (
     throw new HttpError('Form not found', 404);
   }
 
-  const { type, label } = await comunicaRepo.getFormTargetAndLabel(
-    form.formTtl,
-  );
+  const type = await comunicaRepo.getFormTarget(form.formTtl);
+  const labels = await comunicaRepo.getFormLabels(form.formTtl);
 
-  return await formRepo.getFormInstancesWithCount(type, label, options);
+  return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
 
 export const getHistoryForInstance = async (
