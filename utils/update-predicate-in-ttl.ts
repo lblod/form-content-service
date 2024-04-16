@@ -1,35 +1,39 @@
 import ForkingStore from 'forking-store';
-import { NamedNode, Namespace, Statement, Literal } from 'rdflib';
-
-const DCT = new Namespace('http://purl.org/dc/terms/');
-const XSD = new Namespace('http://www.w3.org/2001/XMLSchema#');
+import { NamedNode, Statement, Literal } from 'rdflib';
 
 export const PREDICATES = {
-  modified: DCT('modified')
-}
+  modified: new NamedNode('http://purl.org/dc/terms/modified'),
+};
+
 export const XSD_TYPES = {
-  datetime: XSD('datetime')
-}
+  datetime: new NamedNode('http://www.w3.org/2001/XMLSchema#datetime'),
+};
 
 export const updatePredicateInTtl = async (
   instance: NamedNode,
-  predicate: Namespace,
+  predicate: NamedNode,
   predicatevalue: Literal,
-  ttlCode: string
+  ttlCode: string,
 ) => {
   const store = new ForkingStore();
   const sourceGraph = new NamedNode('http://data.lblod.info/sourceGraph');
   store.parse(ttlCode, sourceGraph, 'text/turtle');
 
-  const currentMatches = store.match(instance, predicate, undefined, sourceGraph);
+  const currentMatches = store.match(
+    instance,
+    predicate,
+    undefined,
+    sourceGraph,
+  );
   store.removeStatements(currentMatches);
 
   const statement = new Statement(
     instance,
     predicate,
     predicatevalue,
-    sourceGraph
-  )
-  store.addAll([statement])
+    sourceGraph,
+  );
+  store.addAll([statement]);
+
   return await store.serializeDataMergedGraph(sourceGraph);
-}
+};

@@ -7,7 +7,11 @@ import N3 from 'n3';
 import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
 import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
 import { ttlToStore } from './helpers/ttl-helpers';
-import { XSD_TYPES, PREDICATES, updatePredicateInTtl } from './utils/update-predicate-in-ttl';
+import {
+  XSD_TYPES,
+  PREDICATES,
+  updatePredicateInTtl,
+} from './utils/update-predicate-in-ttl';
 
 type PathSegment = { predicate?: string; step?: string };
 type PathQueryResultItem = PathSegment & { previous?: string; field: string };
@@ -214,8 +218,8 @@ export const cleanAndValidateFormInstance = async function (
   const updatedModifiedAt = await updatePredicateInTtl(
     new NamedNode(instanceUri),
     PREDICATES.modified,
-    new Literal(new Date().toString(), XSD_TYPES.datetime),
-    parsedTtl
+    new Literal(new Date().toString(), undefined, XSD_TYPES.datetime),
+    parsedTtl,
   );
 
   const cleanedTtl = await extractFormDataTtl(
