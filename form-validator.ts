@@ -1,4 +1,4 @@
-import { NamedNode } from 'rdflib';
+import { NamedNode, Literal } from 'rdflib';
 import { FormDefinition } from './types';
 import ForkingStore from 'forking-store';
 import { sparqlEscapeUri } from 'mu';
@@ -7,6 +7,7 @@ import N3 from 'n3';
 import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
 import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
 import { ttlToStore } from './helpers/ttl-helpers';
+import { XSD_TYPES, PREDICATES, updatePredicateInTtl } from './utils/update-predicate-in-ttl';
 
 type PathSegment = { predicate?: string; step?: string };
 type PathQueryResultItem = PathSegment & { previous?: string; field: string };
@@ -210,9 +211,15 @@ export const cleanAndValidateFormInstance = async function (
   await store.parse(instanceTtl, validationGraph);
 
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
+  const updatedModifiedAt = await updatePredicateInTtl(
+    new NamedNode(instanceUri),
+    PREDICATES.modified,
+    new Literal(new Date().toString(), XSD_TYPES.datetime),
+    parsedTtl
+  );
 
   const cleanedTtl = await extractFormDataTtl(
-    parsedTtl,
+    updatedModifiedAt,
     definitionTtl,
     instanceUri,
   );
