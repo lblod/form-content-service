@@ -182,7 +182,7 @@ const getFormInstanceCount = async (targetType: string) => {
 const getFormInstances = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; sort?: string },
 ) => {
   const labelJoin = labels
     .map((label) => {
@@ -191,6 +191,9 @@ const getFormInstances = async (
     .join('\n');
   const defaultPageSize = 20;
   const defaultOffset = 0;
+  const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
+  const sortName =
+    order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -201,7 +204,8 @@ const getFormInstances = async (
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
     }
-    ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
+    ORDER BY ${order}(?${sortName ? sortName : 'uri'})
+    LIMIT ${options?.limit || defaultPageSize}
     OFFSET ${options?.offset || defaultOffset}
     `;
 
@@ -228,7 +232,7 @@ const getFormInstances = async (
 const getFormInstancesWithCount = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; sort?: string },
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),
