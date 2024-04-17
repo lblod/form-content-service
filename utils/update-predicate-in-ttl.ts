@@ -1,11 +1,11 @@
 import ForkingStore from 'forking-store';
 import { NamedNode, Statement, Literal } from 'rdflib';
 
-export const PREDICATES = {
+export const PREDICATE = {
   modified: new NamedNode('http://purl.org/dc/terms/modified'),
 };
 
-export const XSD_TYPES = {
+export const DATATYPE = {
   datetime: new NamedNode('http://www.w3.org/2001/XMLSchema#datetime'),
 };
 

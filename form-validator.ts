@@ -8,8 +8,8 @@ import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
 import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
 import { ttlToStore } from './helpers/ttl-helpers';
 import {
-  XSD_TYPES,
-  PREDICATES,
+  DATATYPE,
+  PREDICATE,
   updatePredicateInTtl,
 } from './utils/update-predicate-in-ttl';
 
@@ -221,8 +221,8 @@ export const cleanAndValidateFormInstance = async function (
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
   const updatedModifiedAt = await updatePredicateInTtl(
     new NamedNode(instanceUri),
-    PREDICATES.modified,
-    new Literal(new Date().toString(), undefined, XSD_TYPES.datetime),
+    PREDICATE.modified,
+    new Literal(new Date().toString(), undefined, DATATYPE.datetime),
     parsedTtl,
   );
 
