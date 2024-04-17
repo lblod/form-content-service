@@ -219,7 +219,7 @@ export const cleanAndValidateFormInstance = async function (
   await store.parse(instanceTtl, validationGraph);
 
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
-  const updatedModifiedAt = await updatePredicateInTtl(
+  const ttlWithModifiedAt = await updatePredicateInTtl(
     new NamedNode(instanceUri),
     PREDICATE.modified,
     new Literal(new Date().toString(), undefined, DATATYPE.datetime),
@@ -227,7 +227,7 @@ export const cleanAndValidateFormInstance = async function (
   );
 
   const cleanedTtl = await extractFormDataTtl(
-    updatedModifiedAt,
+    ttlWithModifiedAt,
     definitionTtl,
     instanceUri,
   );
