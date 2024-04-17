@@ -170,7 +170,7 @@ export const buildFormQuery = async function (
     ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
       <${instanceUri}> a ?type .
-      <${instanceUri}> <http://purl.org/dc/terms/modified> ?modifiedAt .
+      <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
       ${constructVariables.join('\n')}
     }
     ${options?.beforeWhereSnippet || ''}
@@ -178,7 +178,7 @@ export const buildFormQuery = async function (
       <${instanceUri}> a ?type .
       OPTIONAL {
         OPTIONAL {
-          <${instanceUri}> <http://purl.org/dc/terms/modified> ?modifiedAt .
+          <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
         }
         ${constructPaths.join('\n')}
       }
