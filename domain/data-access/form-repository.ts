@@ -182,13 +182,20 @@ const getFormInstanceCount = async (targetType: string) => {
 const getFormInstances = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string },
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
   const labelJoin = labels
     .map((label) => {
       return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
     })
     .join('\n');
+  const variables =
+    '?uri ?id' +
+    labels
+      .map((label) => {
+        return `?${label.name}`;
+      })
+      .join(' ');
   const defaultPageSize = 20;
   const defaultOffset = 0;
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
@@ -198,11 +205,13 @@ const getFormInstances = async (
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    SELECT DISTINCT *
+    SELECT DISTINCT ${variables}
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
+        ?uri ?p ?o .
+        ${options?.filter ? `FILTER regex(?o, "${options?.filter}", "i")` : ''}
     }
     ORDER BY ${order}(?${sortName ? sortName : 'uri'})
     LIMIT ${options?.limit || defaultPageSize}
@@ -232,7 +241,7 @@ const getFormInstances = async (
 const getFormInstancesWithCount = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string },
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),

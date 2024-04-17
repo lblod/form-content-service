@@ -55,7 +55,7 @@ export const postFormInstance = async (
 
 export const getInstancesForForm = async (
   formId: string,
-  options?: { limit?: number; offset?: number; sort?: string },
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
