@@ -100,9 +100,10 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
 
   const labels = bindings.map((binding) => {
     return {
-      // Remove all spaces from this string,
+      // Remove all spaces from this string, and transform the string to lowercase
       // as this is used as key in a later stage, which can't contain spaces.
-      name: binding.get('labelName')?.value.replace(/ /g, '') ?? '',
+      name:
+        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ?? '',
       uri: binding.get('labelUri')?.value ?? '',
     };
   });
