@@ -81,9 +81,11 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
 
     SELECT DISTINCT ?labelUri ?labelName
     WHERE {
-        ?form form:targetLabel ?labelUri.
+      ?form form:targetLabel ?labelUri.
+      OPTIONAL {
         ?field sh:path ?labelUri;
                sh:name ?labelName.
+      }
     }
     `;
   const store = await ttlToStore(formTtl);
@@ -95,7 +97,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
   const bindings = await bindingStream.toArray();
 
   if (!bindings.length) {
-    throw new Error('Unsupported Form: did not target label');
+    throw new Error('Unsupported Form: no valid target label supplied');
   }
 
   const labels = bindings.map((binding) => {
@@ -103,7 +105,8 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
       // Remove all spaces from this string, and transform the string to lowercase
       // as this is used as key in a later stage, which can't contain spaces.
       name:
-        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ?? '',
+        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
+        'label',
       uri: binding.get('labelUri')?.value ?? '',
     };
   });
