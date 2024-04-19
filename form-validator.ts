@@ -1,4 +1,4 @@
-import { NamedNode } from 'rdflib';
+import { NamedNode, Literal } from 'rdflib';
 import { FormDefinition } from './types';
 import ForkingStore from 'forking-store';
 import { sparqlEscapeUri } from 'mu';
@@ -7,6 +7,11 @@ import N3 from 'n3';
 import { getPathsForFieldsQuery } from './domain/data-access/getPathsForFields';
 import { getPathsForGeneratorQuery } from './domain/data-access/getPathsForGenerators';
 import { ttlToStore } from './helpers/ttl-helpers';
+import {
+  DATATYPE,
+  PREDICATE,
+  updatePredicateInTtl,
+} from './utils/update-predicate-in-ttl';
 
 type PathSegment = { predicate?: string; step?: string };
 type PathQueryResultItem = PathSegment & { previous?: string; field: string };
@@ -165,12 +170,16 @@ export const buildFormQuery = async function (
     ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
       <${instanceUri}> a ?type .
+      <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
       ${constructVariables.join('\n')}
     }
     ${options?.beforeWhereSnippet || ''}
     WHERE {
       <${instanceUri}> a ?type .
       OPTIONAL {
+        OPTIONAL {
+          <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
+        }
         ${constructPaths.join('\n')}
       }
     }
@@ -210,9 +219,15 @@ export const cleanAndValidateFormInstance = async function (
   await store.parse(instanceTtl, validationGraph);
 
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
+  const ttlWithModifiedAt = await updatePredicateInTtl(
+    new NamedNode(instanceUri),
+    PREDICATE.modified,
+    new Literal(new Date().toString(), undefined, DATATYPE.datetime),
+    parsedTtl,
+  );
 
   const cleanedTtl = await extractFormDataTtl(
-    parsedTtl,
+    ttlWithModifiedAt,
     definitionTtl,
     instanceUri,
   );
