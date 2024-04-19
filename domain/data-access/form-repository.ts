@@ -167,6 +167,9 @@ const getFormInstanceCount = async (
   targetType: string,
   options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
+  const filter = options?.filter
+    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
+    : '';
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -176,7 +179,7 @@ const getFormInstanceCount = async (
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri mu:uuid ?id .
         ?uri ?p ?o .
-        ${options?.filter ? `FILTER regex(?o, "${options?.filter}", "i")` : ''}
+        ${filter}
     }`;
 
   const queryResult = await query(q);
@@ -206,6 +209,9 @@ const getFormInstances = async (
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
   const sortName =
     order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
+  const filter = options?.filter
+    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
+    : '';
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -216,7 +222,7 @@ const getFormInstances = async (
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
         ?uri ?p ?o .
-        ${options?.filter ? `FILTER regex(?o, "${options?.filter}", "i")` : ''}
+        ${filter}
     }
     ORDER BY ${order}(?${sortName ? sortName : 'uri'})
     LIMIT ${options?.limit || defaultPageSize}
