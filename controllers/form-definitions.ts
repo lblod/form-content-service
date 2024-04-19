@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
 import { fetchFormDefinition } from '../services/form-definitions';
-import { fetchFormDirectories } from '../services/forms-from-config';
+import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import Router from 'express-promise-router';
 
 const formDefinitionRouter = Router();
 
 formDefinitionRouter.get('/forms', async (_req: Request, res: Response) => {
-  const formDirectories = await fetchFormDirectories();
+  const formDirectories = await fetchFormDirectoryNames();
   res.send({ formDirectories });
 });
 

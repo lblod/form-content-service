@@ -97,30 +97,42 @@ export const fetchFormDefinitionByUri = async (
 };
 
 const loadConfigForm = async (formName: string) => {
-  const filePath = `${formDirectory}/${formName}/form.ttl`;
-  const metaPath = `${formDirectory}/${formName}/meta.ttl`;
+  const formTtlPath = `${formDirectory}/${formName}/form.ttl`;
+  const metaTtlPath = `${formDirectory}/${formName}/meta.ttl`;
   try {
-    const specification = await fs.readFile(filePath, 'utf-8');
-    const meta = await fs.readFile(metaPath, 'utf-8').catch(() => null);
-    return { formTtl: specification, metaTtl: meta };
+    const formTtl = await fs.readFile(formTtlPath, 'utf-8');
+    const metaTtl = await fs.readFile(metaTtlPath, 'utf-8').catch(() => null);
+    return { formTtl, metaTtl };
   } catch (error) {
     console.error(`Failed to load form ${formName}: ${error}`);
   }
 };
 
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
 export const loadFormsFromConfig = async () => {
-  const formDirectories = await fetchFormDirectories();
-  formDirectories.forEach(async (formDirectory) => {
-    const form = await loadConfigForm(formDirectory);
-    formsFromConfig[formDirectory] = form;
-    if (!form) {
+  const formDirectoryNames = await fetchFormDirectoryNames();
+  //await delay(5000);
+
+  for (const formDirectoryName of formDirectoryNames) {
+    const formDefinition = await loadConfigForm(formDirectoryName);
+    if (!formDefinition) {
       return;
     }
-    const formUri = await formExtRepo.getFormUri(form.formTtl);
-    formsUriToId[formUri] = formDirectory;
-  });
+    const isValidForm = await formExtRepo.isValidForm(formDefinition.formTtl);
+    if (!isValidForm) {
+      console.error(
+        `Form ${formDirectoryName} is not valid. Check if the form.ttl is correct and all prefixes are defined.`,
+      );
+      return;
+    }
+
+    formsFromConfig[formDirectoryName] = formDefinition;
+    const formUri = await formExtRepo.getFormUri(formDefinition.formTtl);
+    formsUriToId[formUri] = formDirectoryName;
+  }
 };
 
-export const fetchFormDirectories = async () => {
+export const fetchFormDirectoryNames = async () => {
   return await fs.readdir(formDirectory);
 };

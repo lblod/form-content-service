@@ -20,6 +20,17 @@ const isFormExtension = async (formTtl: string) => {
   return hasMatches;
 };
 
+const isValidForm = async (formTtl: string) => {
+  const query = 'ASK { ?s ?p ?o. }';
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const hasMatches = await engine.queryBoolean(query, {
+    sources: [store],
+  });
+
+  return hasMatches;
+};
+
 const getBaseFormUri = async (formTtl: string) => {
   const query = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -79,7 +90,7 @@ const getFormUri = async (formTtl: string) => {
   return binding.value;
 };
 
-const getFormId = async (formTtl: string) => {
+const getFormId = async (formTtl: string): Promise<string> => {
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -265,6 +276,7 @@ const deleteAllFromBaseForm = async (
 
 export default {
   isFormExtension,
+  isValidForm,
   getBaseFormUri,
   getFormUri,
   getFormId,
