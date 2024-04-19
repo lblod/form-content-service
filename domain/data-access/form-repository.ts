@@ -163,7 +163,13 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
   await query(q);
 };
 
-const getFormInstanceCount = async (targetType: string) => {
+const getFormInstanceCount = async (
+  targetType: string,
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+) => {
+  const filter = options?.filter
+    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
+    : '';
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -172,6 +178,8 @@ const getFormInstanceCount = async (targetType: string) => {
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri mu:uuid ?id .
+        ?uri ?p ?o .
+        ${filter}
     }`;
 
   const queryResult = await query(q);
@@ -182,26 +190,42 @@ const getFormInstanceCount = async (targetType: string) => {
 const getFormInstances = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
   const labelJoin = labels
     .map((label) => {
       return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
     })
     .join('\n');
+  const variables =
+    '?uri ?id' +
+    labels
+      .map((label) => {
+        return `?${label.name}`;
+      })
+      .join(' ');
   const defaultPageSize = 20;
   const defaultOffset = 0;
+  const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
+  const sortName =
+    order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
+  const filter = options?.filter
+    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
+    : '';
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    SELECT DISTINCT *
+    SELECT DISTINCT ${variables}
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
+        ?uri ?p ?o .
+        ${filter}
     }
-    ORDER BY ?uri LIMIT ${options?.limit || defaultPageSize}
+    ORDER BY ${order}(?${sortName ? sortName : 'uri'})
+    LIMIT ${options?.limit || defaultPageSize}
     OFFSET ${options?.offset || defaultOffset}
     `;
 
@@ -228,11 +252,11 @@ const getFormInstances = async (
 const getFormInstancesWithCount = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number },
+  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),
-    getFormInstanceCount(targetType),
+    getFormInstanceCount(targetType, options),
   ]);
 
   return { instances, count };
