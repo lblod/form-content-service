@@ -222,7 +222,7 @@ export const cleanAndValidateFormInstance = async function (
   const ttlWithModifiedAt = await updatePredicateInTtl(
     new NamedNode(instanceUri),
     PREDICATE.modified,
-    new Literal(new Date().toString(), undefined, DATATYPE.datetime),
+    new Literal(new Date().toISOString(), undefined, DATATYPE.datetime),
     parsedTtl,
   );
 
