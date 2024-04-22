@@ -6,7 +6,7 @@ export const PREDICATE = {
 };
 
 export const DATATYPE = {
-  datetime: new NamedNode('http://www.w3.org/2001/XMLSchema#datetime'),
+  datetime: new NamedNode('http://www.w3.org/2001/XMLSchema#dateTime'),
 };
 
 export const updatePredicateInTtl = async (
