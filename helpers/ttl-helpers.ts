@@ -6,6 +6,7 @@ const parser = new N3.Parser();
 
 const datatypeNames = {
   'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
+  'http://www.w3.org/2001/XMLSchema#datetime': 'dateTime',
   'http://www.w3.org/2001/XMLSchema#date': 'date',
   'http://www.w3.org/2001/XMLSchema#decimal': 'decimal',
   'http://www.w3.org/2001/XMLSchema#integer': 'int',
