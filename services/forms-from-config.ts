@@ -110,6 +110,9 @@ const loadConfigForm = async (formName: string) => {
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
+// add if check: hasInvalidForm
+// assign true to hasInvalidForm if form is invalid
+// if hasInvalidForm is true, if true, throw error that you should read the logs
 export const loadFormsFromConfig = async () => {
   const formDirectoryNames = await fetchFormDirectoryNames();
   //await delay(5000);
@@ -122,7 +125,7 @@ export const loadFormsFromConfig = async () => {
     const isValidForm = await formExtRepo.isValidForm(formDefinition.formTtl);
     if (!isValidForm) {
       console.error(
-        `Form ${formDirectoryName} is not valid. Check if the form.ttl is correct and all prefixes are defined.`,
+        `The ${formDirectoryName} form is invalid. Check if the form.ttl is correct and all prefixes are defined.`,
       );
       return;
     }
