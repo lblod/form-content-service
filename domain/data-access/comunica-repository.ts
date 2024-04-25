@@ -166,10 +166,32 @@ const getUriTypes = async (ttl: string) => {
     .filter((binding) => binding !== null) as { uri: string; type: string }[];
 };
 
+/*
+ * Best effort check to see if the form is valid
+ * The N3 parser is lenient and will sometimes still parse a form, even if it uses unknown prefixes.
+ */
+const isValidForm = async (formTtl: string) => {
+  const query = `
+  PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+
+  ASK { 
+    ?s a ?o.
+    VALUES ?o { form:Form form:Extension }
+  }`;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const hasMatches = await engine.queryBoolean(query, {
+    sources: [store],
+  });
+
+  return hasMatches;
+};
+
 export default {
   getFormData,
   getFormTarget,
   getFormLabels,
   fetchConceptSchemeUris,
   getUriTypes,
+  isValidForm,
 };

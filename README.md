@@ -21,6 +21,15 @@ docker run --rm -it -p 9229:9229 -p 8081:80 -e NODE_ENV=development local-form-m
 
 Running it in development mode and exposing port 9229 allows you to connect your debugger to the docker.
 
+### Project Structure
+
+The project follows the Model-view-controller (MVC) architecture.
+
+- Routing and anything Express related resides in `/controllers`. The routes should be simple methods that call services.
+- Services reside in `/services`. This is where the business logic and validations are.
+- Querries for the database or Comunica go in `/domain/data-access`. These query methods should only contain the means to query or mutate the data, and return the result in a format that the service understands.
+- Helpers reside in `/helpers` and contain functionality that is used in multiple services or querries.
+
 ## Model
 
 This service follows the semantic forms model and to that end uses the ember-submission-form-fields package. However, some extensions are needed and they may not have made it into the form spec yet. The main extensions are: listing form instance, defining the uri prefix for form instances, linking to other types (possibly forms) using dropdowns etc.
@@ -216,3 +225,7 @@ ext:mandatarisG a form:Generator;
 ### No Modified Simple Paths in fields or generator scopes
 
 Fields and Generators can each define a scope. This service supports simple paths (e.g. `foaf:name`) and complex paths (e.g. `( [ sh:inversePath mandaat:isAangesteldAls ] foaf:name )`). However, modified simple paths are **not supported** (e.g. `[ sh:inversePath mandaat:isAangesteldAls ]`). Luckily, these can always be written in their complex form, which IS supported: `( [ sh:inversePath mandaat:isAangesteldAls ] )` (note the wrapping brackets in this case, signifying a linked list in RDF).
+
+### Lenient Form Validity Checks
+
+The validity of all forms is checked at startup, but the parsing library that we currently use (N3) is lenient and will sometimes still parse a form, even if it uses unknown prefixes. Therefore the full validity of the forms at runtime cannot be guaranteed, they just pass through a best effort check.
