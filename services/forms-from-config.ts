@@ -108,31 +108,35 @@ const loadConfigForm = async (formName: string) => {
   }
 };
 
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-
-// add if check: hasInvalidForm
-// assign true to hasInvalidForm if form is invalid
-// if hasInvalidForm is true, if true, throw error that you should read the logs
 export const loadFormsFromConfig = async () => {
   const formDirectoryNames = await fetchFormDirectoryNames();
-  //await delay(5000);
+
+  let hasInvalidForm = false;
 
   for (const formDirectoryName of formDirectoryNames) {
     const formDefinition = await loadConfigForm(formDirectoryName);
     if (!formDefinition) {
-      return;
+      hasInvalidForm = true;
+      continue;
     }
-    const isValidForm = await formExtRepo.isValidForm(formDefinition.formTtl);
+    const isValidForm = await comunicaRepo.isValidForm(formDefinition.formTtl);
     if (!isValidForm) {
       console.error(
-        `The ${formDirectoryName} form is invalid. Check if the form.ttl is correct and all prefixes are defined.`,
+        `Error: The ${formDirectoryName} form is invalid. Check if the form.ttl is correct and all prefixes are defined.`,
       );
-      return;
+      hasInvalidForm = true;
+      continue;
     }
 
     formsFromConfig[formDirectoryName] = formDefinition;
     const formUri = await formExtRepo.getFormUri(formDefinition.formTtl);
     formsUriToId[formUri] = formDirectoryName;
+  }
+
+  if (hasInvalidForm) {
+    throw new Error(
+      'One or more forms are invalid. Check the logs for more information.',
+    );
   }
 };
 
