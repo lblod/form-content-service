@@ -7,7 +7,7 @@ import { HttpError } from '../domain/http-error';
 import { extendForm } from './form-extensions';
 
 const formsFromConfig: FormsFromConfig = {};
-const formDirectory = '/forms';
+const formDirectory = '/config';
 
 const formsUriToId: UriToIdMap = {};
 

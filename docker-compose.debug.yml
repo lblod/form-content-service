@@ -12,7 +12,7 @@ services:
       - '8081:80'
       - '9229:9229'
     volumes:
-      - ../app-lokaal-mandatenbeheer/config/form-content:/forms
+      - ../app-lokaal-mandatenbeheer/config/form-content:/config
       - ./:/app
       # ignore app/dist because this is where we map the built files to, otherwise we get an infinite loop of creating files (on mac)
       - /app/dist
