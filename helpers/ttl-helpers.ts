@@ -40,7 +40,8 @@ const quadToString = function (quad: Quad) {
 
 export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   const store = new N3.Store();
-
+  console.log(`type: ${typeof ttl}`);
+  console.log(`ttl length: ${ttl.length}`);
   return new Promise((resolve, reject) => {
     parser.parse(ttl, (error, quad) => {
       if (!quad) {
