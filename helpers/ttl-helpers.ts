@@ -2,8 +2,6 @@ import { sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
 import { Quad } from 'n3';
 import N3 from 'n3';
 
-const parser = new N3.Parser();
-
 const datatypeNames = {
   'http://www.w3.org/2001/XMLSchema#dateTime': 'dateTime',
   'http://www.w3.org/2001/XMLSchema#datetime': 'dateTime',
@@ -40,17 +38,18 @@ const quadToString = function (quad: Quad) {
 
 export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   const store = new N3.Store();
-  console.log(`type: ${typeof ttl}`);
-  console.log(`ttl length: ${ttl.length}`);
+  const parser = new N3.Parser();
+
   return new Promise((resolve, reject) => {
     parser.parse(ttl, (error, quad) => {
-      if (!quad) {
-        resolve(store);
-        return;
-      }
       if (error) {
         console.error(error);
         reject(error);
+        return;
+      }
+      if (!quad) {
+        resolve(store);
+        return;
       }
       store.addQuad(quad);
     });
