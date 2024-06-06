@@ -29,7 +29,7 @@ export const extendForm = async (
   await formExtRepo.loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
 
   await formExtRepo.deleteAllFromBaseForm(
-    ['form:targetType', 'form:targetLabel', 'ext:prefix', 'mu:uuid'],
+    ['form:targetLabel', 'ext:prefix', 'mu:uuid'],
     mergeGraph,
     store,
   );
