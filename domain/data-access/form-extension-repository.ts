@@ -263,6 +263,28 @@ const deleteAllFromBaseForm = async (
   await engine.queryVoid(query, { sources: [store] });
 };
 
+const formExtensionHasPredicateSet = async (
+  predicate: string,
+  extensionFormTtl: string,
+) => {
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+  ASK {
+    ?formUri a form:Extension.
+    ?formUri ${predicate} ?o.
+  }
+  `;
+
+  const store = await ttlToStore(extensionFormTtl);
+  const hasMatches = await engine.queryBoolean(query, {
+    sources: [store],
+  });
+
+  return hasMatches;
+};
+
 export default {
   isFormExtension,
   getBaseFormUri,
@@ -273,4 +295,5 @@ export default {
   replaceExtendsGroup,
   replaceFormUri,
   deleteAllFromBaseForm,
+  formExtensionHasPredicateSet,
 };

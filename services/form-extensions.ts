@@ -28,8 +28,12 @@ export const extendForm = async (
   );
   await formExtRepo.loadTtlIntoGraph(extensionFormTtl, mergeGraph, store);
 
+  const predicatesToDeleteFromBase = await getDefinedPredicatesInExtensionForm(
+    extensionFormTtl,
+    ['form:targetType', 'form:targetLabel', 'ext:prefix'],
+  );
   await formExtRepo.deleteAllFromBaseForm(
-    ['form:targetLabel', 'ext:prefix', 'mu:uuid'],
+    [...predicatesToDeleteFromBase, 'mu:uuid'],
     mergeGraph,
     store,
   );
@@ -43,4 +47,23 @@ export const extendForm = async (
     formTtl: extendedFormTtl,
     metaTtl: baseFormDefinition.metaTtl,
   };
+};
+
+const getDefinedPredicatesInExtensionForm = async (
+  extensionFormTtl: string,
+  predicatesToCheck: Array<string>,
+) => {
+  const definedPredicates: Array<string> = [];
+
+  for (const predicate of predicatesToCheck) {
+    const isDefined = await formExtRepo.formExtensionHasPredicateSet(
+      predicate,
+      extensionFormTtl,
+    );
+    if (isDefined) {
+      definedPredicates.push(predicate);
+    }
+  }
+
+  return definedPredicates;
 };
