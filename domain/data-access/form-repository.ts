@@ -167,9 +167,7 @@ const getFormInstanceCount = async (
   targetType: string,
   options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
-  const filter = options?.filter
-    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
-    : '';
+  const filter = buildInstanceFilter(options?.filter);
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -178,13 +176,19 @@ const getFormInstanceCount = async (
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri mu:uuid ?id .
-        ?uri ?p ?o .
         ${filter}
     }`;
 
   const queryResult = await query(q);
 
   return parseInt(queryResult.results.bindings[0]?.count?.value, 10) || 0;
+};
+
+const buildInstanceFilter = (filter) => {
+  if (!filter) {
+    return '';
+  }
+  return `?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
 };
 
 const getFormInstances = async (
@@ -194,14 +198,14 @@ const getFormInstances = async (
 ) => {
   const labelJoin = labels
     .map((label) => {
-      return `?uri ${sparqlEscapeUri(label.uri)} ?${label.name} .`;
+      return `?uri ${sparqlEscapeUri(label.uri)} ?${label.var} .`;
     })
     .join('\n');
   const variables =
-    '?uri ?id' +
+    '?uri ?id ' +
     labels
       .map((label) => {
-        return `?${label.name}`;
+        return `?${label.var}`;
       })
       .join(' ');
   const defaultPageSize = 20;
@@ -209,9 +213,7 @@ const getFormInstances = async (
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
   const sortName =
     order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
-  const filter = options?.filter
-    ? `FILTER CONTAINS(LCASE(str(?o)), LCASE("${options?.filter}"))`
-    : '';
+  const filter = buildInstanceFilter(options?.filter);
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -221,7 +223,6 @@ const getFormInstances = async (
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
-        ?uri ?p ?o .
         ${filter}
     }
     ORDER BY ${order}(?${sortName ? sortName : 'uri'})
@@ -239,8 +240,8 @@ const getFormInstances = async (
       id: binding.id.value,
     };
     labels.forEach((label) => {
-      instance[label.name] = binding[label.name]
-        ? binding[label.name].value
+      instance[label.name] = binding[label.var]
+        ? binding[label.var].value
         : null;
     });
     instance_values.push(instance);
