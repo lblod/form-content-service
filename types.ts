@@ -6,6 +6,7 @@ export type FormDefinition = {
 export type Label = {
   name: string;
   uri: string;
+  var: string;
 };
 
 export type InstanceMinimal = {

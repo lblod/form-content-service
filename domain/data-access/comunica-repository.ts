@@ -102,9 +102,12 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
 
   const labels = bindings.map((binding) => {
     return {
+      name: binding.get('labelName')?.value ?? 'label',
       // Remove all spaces from this string, and transform the string to lowercase
       // as this is used as key in a later stage, which can't contain spaces.
-      name:
+      // we need to do this because we want to possibly filter on certain values
+      // so the client will send a string that is transformed in the same way
+      var:
         binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
         'label',
       uri: binding.get('labelUri')?.value ?? '',
@@ -174,7 +177,7 @@ const isValidForm = async (formTtl: string) => {
   const query = `
   PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
 
-  ASK { 
+  ASK {
     ?s a ?o.
     VALUES ?o { form:Form form:Extension }
   }`;
