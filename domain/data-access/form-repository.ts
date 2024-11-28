@@ -92,7 +92,7 @@ const getConceptSchemeTriples = async (conceptSchemeUris: string[]) => {
     conceptSchemeUris,
     bindings,
   );
-  return bindings.map(bindingToTriple).join('\n');;
+  return bindings.map(bindingToTriple).join('\n');
 };
 
 const fetchFormInstanceByUri = async (
