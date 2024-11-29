@@ -8,6 +8,8 @@ import { extendForm } from './form-extensions';
 
 const formsFromConfig: FormsFromConfig = {};
 const formDirectory = '/config';
+// This allows adding config files to the config folder that aren't forms.
+const nonFormConfigFiles = ['interceptors.ts'];
 
 const formsUriToId: UriToIdMap = {};
 
@@ -141,5 +143,7 @@ export const loadFormsFromConfig = async () => {
 };
 
 export const fetchFormDirectoryNames = async () => {
-  return await fs.readdir(formDirectory);
+  return (await fs.readdir(formDirectory)).filter(
+    (dir) => !nonFormConfigFiles.includes(dir),
+  );
 };
