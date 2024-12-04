@@ -53,10 +53,12 @@ const getPathsForFields = async function (
         parentScopePath,
       );
       allPaths = { ...allPaths, ...formPaths };
-    } else if (
-      (item.type = 'http://lblod.data.gift/vocabularies/forms/Listing')
-    ) {
+    } else if (item.type == 'http://lblod.data.gift/vocabularies/forms/Listing')
+    {
       const scopeNode = await getScopeForNode(formStore, item.node);
+      if (!scopeNode) {
+        throw new Error(`Expected Scope for ${item.node}`);
+      }
       const scopePath = (
         await getPathForNode(formStore, scopeNode, parentScopePath)
       )[scopeNode];
