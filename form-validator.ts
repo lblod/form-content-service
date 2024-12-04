@@ -39,51 +39,63 @@ const buildPathChain = function (results: PathQueryResultItem[]) {
   return { fieldPathStarts, previousToNext };
 };
 
-const getPathsForFields = async function (formStore: N3.Store,
-                                          formItems: Array<{type: string, node: string}>,
-                                          parentScopePath: string[] = []) {
+const getPathsForFields = async function (
+  formStore: N3.Store,
+  formItems: Array<{ type: string; node: string }>,
+  parentScopePath: string[] = [],
+) {
   let allPaths = {};
-  for(const item of formItems) {
-    if(item.type == "http://lblod.data.gift/vocabularies/forms/Field") {
-
-      const formPaths = await getPathForNode(formStore, item.node, parentScopePath);
+  for (const item of formItems) {
+    if (item.type == 'http://lblod.data.gift/vocabularies/forms/Field') {
+      const formPaths = await getPathForNode(
+        formStore,
+        item.node,
+        parentScopePath,
+      );
       allPaths = { ...allPaths, ...formPaths };
-
-    }
-    else if (item.type = "http://lblod.data.gift/vocabularies/forms/Listing") {
-
+    } else if (
+      (item.type = 'http://lblod.data.gift/vocabularies/forms/Listing')
+    ) {
       const scopeNode = await getScopeForNode(formStore, item.node);
-      const scopePath = (await getPathForNode(formStore, scopeNode, parentScopePath))[scopeNode];
+      const scopePath = (
+        await getPathForNode(formStore, scopeNode, parentScopePath)
+      )[scopeNode];
 
       const subFormNode = await getSubFormForListing(formStore, item.node);
-      if(!subFormNode) { throw new Error(`Expected SubForm for ${subFormNode}`) };
+      if (!subFormNode) {
+        throw new Error(`Expected SubForm for ${subFormNode}`);
+      }
 
       const subFormItems = await getFormItemsForNode(formStore, subFormNode);
-      const subFormPaths = await getPathsForFields(formStore, subFormItems, scopePath);
+      const subFormPaths = await getPathsForFields(
+        formStore,
+        subFormItems,
+        scopePath,
+      );
 
       allPaths = { ...allPaths, ...subFormPaths };
-    }
-    else {
+    } else {
       console.warn(`Unsupported type of included node: ${item.node}`);
     }
   }
 
   return allPaths;
-}
+};
 
-const getPathForNode = async function (formStore: N3.Store,
-                                       node: string,
-                                       parentScopePath: string[] = []
-                                      ): Promise<{}> {
-
+const getPathForNode = async function (
+  formStore: N3.Store,
+  node: string,
+  parentScopePath: string[] = [],
+): Promise<{}> {
   const scopeForNode = await getScopeForNode(formStore, node);
 
   let fullScopePath: string[] = [];
 
   if (scopeForNode) {
-    fullScopePath = (await getPathForNode(formStore, scopeForNode, parentScopePath))[scopeForNode];
-  }
-  else {
+    fullScopePath = (
+      await getPathForNode(formStore, scopeForNode, parentScopePath)
+    )[scopeForNode];
+  } else {
     fullScopePath = parentScopePath;
   }
 
@@ -103,17 +115,17 @@ const getPathForNode = async function (formStore: N3.Store,
       pathSteps.push(current.predicate);
       current = previousToNext[current.step || ''];
       if (!current) {
-        nodePath = [...nodePath, ...pathSteps]
+        nodePath = [...nodePath, ...pathSteps];
       }
     }
   });
 
   const result = {};
-  result[node] = [ ...fullScopePath, ...nodePath ];
-  return result
+  result[node] = [...fullScopePath, ...nodePath];
+  return result;
 };
 
-const getScopeForNode = async function(formStore: N3.Store, node: String) {
+const getScopeForNode = async function (formStore: N3.Store, node: string) {
   const queryScope = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     SELECT DISTINCT ?scope WHERE {
@@ -125,13 +137,13 @@ const getScopeForNode = async function(formStore: N3.Store, node: String) {
   `;
 
   const bindings = await queryStore(queryScope, formStore);
-  if(bindings.length) {
+  if (bindings.length) {
     return bindings[0].get('scope')?.value;
   }
   return null;
-}
+};
 
-const getFormRootNode = async function(formStore: N3.Store) {
+const getFormRootNode = async function (formStore: N3.Store) {
   const queryRootNode = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -141,13 +153,13 @@ const getFormRootNode = async function(formStore: N3.Store) {
     LIMIT 1
   `;
   const bindings = await queryStore(queryRootNode, formStore);
-  if(bindings.length) {
+  if (bindings.length) {
     return bindings[0].get('rootNode')?.value;
   }
   return null;
-}
+};
 
-const getFormItemsForNode = async function(formStore: N3.Store, node: String) {
+const getFormItemsForNode = async function (formStore: N3.Store, node: string) {
   const queryIncludes = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -162,18 +174,21 @@ const getFormItemsForNode = async function(formStore: N3.Store, node: String) {
   `;
   const bindings = await queryStore(queryIncludes, formStore);
 
-  if(bindings.length) {
-    return bindings.map(b => {
+  if (bindings.length) {
+    return bindings.map((b) => {
       return {
         node: b.get('node').value,
         type: b.get('type').value,
-      }
+      };
     });
   }
   return [];
-}
+};
 
-const getSubFormForListing = async function(formStore: N3.Store, node: String) {
+const getSubFormForListing = async function (
+  formStore: N3.Store,
+  node: string,
+) {
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -192,11 +207,11 @@ const getSubFormForListing = async function(formStore: N3.Store, node: String) {
     LIMIT 1
   `;
   const bindings = await queryStore(query, formStore);
-  if(bindings.length) {
+  if (bindings.length) {
     return bindings[0].get('node')?.value;
   }
   return null;
-}
+};
 
 const getPathsForGenerators = async function (formStore: N3.Store) {
   const results = await getPathsForGeneratorQuery(formStore);

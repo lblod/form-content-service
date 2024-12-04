@@ -89,7 +89,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
   });
 };
 
-const getSimplePaths = async function (formStore: N3.Store, node: String) {
+const getSimplePaths = async function (formStore: N3.Store, node: string) {
   // NOTE: we don't support simple paths with modifiers (e.g. inverse path),
   // in that case, just write it as ( [ sh:inversePath <predicate> ] ) instead of
   // [ sh:inversePath <predicate> ], i.e. make it a complex path
@@ -125,7 +125,7 @@ const getSimplePaths = async function (formStore: N3.Store, node: String) {
   });
 };
 
-const getComplexPathHeads = async function (formStore: N3.Store, node: String) {
+const getComplexPathHeads = async function (formStore: N3.Store, node: string) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -170,7 +170,10 @@ const getComplexPathHeads = async function (formStore: N3.Store, node: String) {
   });
 };
 
-const getComplexPathsTails = async function (formStore: N3.Store, node: String) {
+const getComplexPathsTails = async function (
+  formStore: N3.Store,
+  node: string,
+) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -238,7 +241,10 @@ const getComplexPathsTails = async function (formStore: N3.Store, node: String) 
  * "fields:1","nodeID://b10098","nodeID://b10100","dct:subject",,
  * "fields:1","nodeID://b10101","nodeID://b10103","prov:startedAtTime",,
  */
-export const getPathForNodeQuery = async function (formStore: N3.Store, node: String) {
+export const getPathForNodeQuery = async function (
+  formStore: N3.Store,
+  node: string,
+) {
   const [simple, heads, tails] = await Promise.all([
     getSimplePaths(formStore, node),
     getComplexPathHeads(formStore, node),
@@ -246,4 +252,4 @@ export const getPathForNodeQuery = async function (formStore: N3.Store, node: St
   ]);
   const bindings = [...simple, ...heads, ...tails];
   return bindings;
-}
+};
