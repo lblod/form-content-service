@@ -10,13 +10,14 @@
     "eslint": "^8.23.1",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^5.0.0",
-    "prettier": "^3.0.0"
+    "prettier": "^3.0.0",
+    "vitest": "^2.1.8"
   },
   "scripts": {
     "lint:js": "eslint . --cache --ext .ts",
     "lint:js:fix": "eslint . --cache --ext .ts --fix",
     "release": "release-it",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
   },
   "dependencies": {
     "@comunica/query-sparql": "^2.10.1",
