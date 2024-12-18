@@ -8,8 +8,11 @@ export const fetchFormDefinition = async (id: string) => {
     formDefinition.formTtl,
   );
   return {
+    id,
+    uri: formDefinition.uri,
     formTtl: formDefinition.formTtl,
     metaTtl: formDefinition.metaTtl,
+    custom: formDefinition.custom,
     prefix,
     withHistory,
   };

@@ -11,23 +11,6 @@ const formDirectory = '/config';
 
 const formsUriToId: UriToIdMap = {};
 
-const computeIfAbsent = async <Key, Value>(
-  object,
-  key: Key,
-  mappingFunction: (key: Key) => Promise<Value>,
-): Promise<Value | null> => {
-  const value: Value | undefined = object[key];
-  if (value) return value;
-
-  const newValue = await mappingFunction(key);
-  if (newValue) {
-    object[key] = newValue;
-    return newValue;
-  }
-
-  return null;
-};
-
 const fetchMetaTtlFromFormTtl = async (
   formTtl: string,
 ): Promise<string | null> => {
@@ -43,19 +26,19 @@ export const fetchFormDefinitionById = async (
   const definitionFromConfig: FormDefinition | undefined =
     formsFromConfig[formId];
 
-  const formTtl = await computeIfAbsent(
-    definitionFromConfig || {},
-    'formTtl',
-    () => formRepo.fetchFormTtlById(formId),
-  );
-
-  if (!formTtl) throw new HttpError('Definition not found', 404);
-
-  const formDefinition = await extendForm(formTtl);
-
-  if (!definitionFromConfig) {
-    formsFromConfig[formId] = { formTtl: formDefinition.formTtl };
+  let formTtl = definitionFromConfig?.formTtl;
+  let custom = definitionFromConfig?.custom;
+  let uri = definitionFromConfig?.uri;
+  if (!formTtl) {
+    const result = await formRepo.fetchFormTtlById(formId);
+    formTtl = result?.formTtl;
+    custom = result?.custom;
+    uri = result?.uri;
   }
+
+  if (!formTtl || !uri) throw new HttpError('Definition not found', 404);
+
+  const formDefinition = await extendForm(uri, formTtl);
 
   let metaTtl = definitionFromConfig?.metaTtl ?? '';
   metaTtl += (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
@@ -64,6 +47,8 @@ export const fetchFormDefinitionById = async (
   return {
     formTtl: formDefinition.formTtl,
     metaTtl,
+    uri: formDefinition.uri,
+    custom: !!custom,
   };
 };
 
@@ -80,7 +65,7 @@ export const fetchFormDefinitionByUri = async (
 
   if (!formTtl) throw new HttpError('Definition not found', 404);
 
-  const formDefinition = await extendForm(formTtl);
+  const formDefinition = await extendForm(formUri, formTtl);
 
   let metaTtl = (await fetchMetaTtlFromFormTtl(formTtl)) ?? '';
   metaTtl += formDefinition.metaTtl ?? '';
@@ -88,10 +73,10 @@ export const fetchFormDefinitionByUri = async (
   formId = await formExtRepo.getFormId(formTtl);
 
   formsUriToId[formUri] = formId;
-  formsFromConfig[formId] = { formTtl: formDefinition.formTtl };
 
   return {
     formTtl: formDefinition.formTtl,
+    uri: formDefinition.uri,
     metaTtl,
   };
 };
@@ -128,8 +113,8 @@ export const loadFormsFromConfig = async () => {
       continue;
     }
 
-    formsFromConfig[formDirectoryName] = formDefinition;
     const formUri = await formExtRepo.getFormUri(formDefinition.formTtl);
+    formsFromConfig[formDirectoryName] = { ...formDefinition, uri: formUri };
     formsUriToId[formUri] = formDirectoryName;
   }
 
