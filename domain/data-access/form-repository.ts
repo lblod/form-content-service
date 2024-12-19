@@ -50,20 +50,25 @@ const fetchFormTtlById = async (
   }
 };
 
-const fetchFormTtlByUri = async (formUri: string): Promise<string | null> => {
+const fetchFormTtlByUri = async (
+  formUri: string,
+): Promise<{ formTtl: string; custom: boolean } | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT ?formTtl
+    SELECT ?formTtl ?custom
     WHERE {
       ${sparqlEscapeUri(formUri)} a ext:GeneratedForm;
         ext:ttlCode ?formTtl.
+        OPTIONAL {
+          ${sparqlEscapeUri(formUri)} ext:isCustomForm ?custom .
+        }
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return binding.formTtl.value;
+    return { formTtl: binding.formTtl.value, custom: !!binding.custom?.value };
   } else {
     return null;
   }
