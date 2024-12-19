@@ -10,6 +10,7 @@ import {
 } from 'mu';
 import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
 import { QueryEngine } from '@comunica/query-sparql';
+import { fetchFormDefinitionByUri } from './forms-from-config';
 
 export async function addField(formId: string, description: any) {
   let form = await fetchFormDefinition(formId);
@@ -120,8 +121,10 @@ async function updateFormTtlForExtension(formUri: string) {
       ${sparqlEscapeUri(formUri)}
     }
     ?s ?p ?o.
-    ?s form:includes ?field.
-    ?field ?fieldP ?fieldO.
+    OPTIONAL {
+      ?s form:includes ?field.
+      ?field ?fieldP ?fieldO.
+    }
     FILTER(?p NOT IN (ext:ttlCode))
   }
   `);
@@ -195,4 +198,30 @@ export async function getFormReplacements() {
       replacementId: b.replacementId.value,
     };
   });
+}
+
+export async function deleteFormField(formUri: string, fieldUri: string) {
+  await deleteFieldFromFormExtension(formUri, fieldUri);
+  await updateFormTtlForExtension(formUri);
+  const newFormData = await fetchFormDefinitionByUri(formUri);
+  return newFormData;
+}
+
+async function deleteFieldFromFormExtension(formUri: string, fieldUri: string) {
+  await update(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    DELETE {
+        ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(fieldUri)}.
+        ${sparqlEscapeUri(fieldUri)} ?p ?o.
+    }
+    WHERE {
+        ${sparqlEscapeUri(formUri)} a form:Extension;
+          ext:isCustomForm true;
+          form:includes ${sparqlEscapeUri(fieldUri)}.
+        ${sparqlEscapeUri(fieldUri)} ?p ?o.
+    }
+  `);
 }
