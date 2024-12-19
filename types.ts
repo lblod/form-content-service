@@ -1,6 +1,8 @@
 export type FormDefinition = {
   formTtl: string;
   metaTtl?: string | null;
+  custom?: boolean;
+  uri: string;
 };
 
 export type Label = {

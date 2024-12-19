@@ -19,42 +19,56 @@ import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 
-const fetchFormTtlById = async (formId: string): Promise<string | null> => {
+const fetchFormTtlById = async (
+  formId: string,
+): Promise<{ formTtl: string; custom: boolean; uri: string } | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT ?formDefinition ?formTtl
+    SELECT ?formDefinition ?formTtl ?custom
     WHERE {
       ?formDefinition a ext:GeneratedForm ;
         mu:uuid ${sparqlEscapeString(formId)} ;
         ext:ttlCode ?formTtl .
+        OPTIONAL {
+          ?formDefinition ext:isCustomForm ?custom .
+        }
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return binding.formTtl.value;
+    return {
+      formTtl: binding.formTtl.value,
+      custom: !!binding.custom?.value,
+      uri: binding.formDefinition.value,
+    };
   } else {
     return null;
   }
 };
 
-const fetchFormTtlByUri = async (formUri: string): Promise<string | null> => {
+const fetchFormTtlByUri = async (
+  formUri: string,
+): Promise<{ formTtl: string; custom: boolean } | null> => {
   const result = await query(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT ?formTtl
+    SELECT ?formTtl ?custom
     WHERE {
       ${sparqlEscapeUri(formUri)} a ext:GeneratedForm;
         ext:ttlCode ?formTtl.
+        OPTIONAL {
+          ${sparqlEscapeUri(formUri)} ext:isCustomForm ?custom .
+        }
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const binding = result.results.bindings[0];
-    return binding.formTtl.value;
+    return { formTtl: binding.formTtl.value, custom: !!binding.custom?.value };
   } else {
     return null;
   }

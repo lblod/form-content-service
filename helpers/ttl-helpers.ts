@@ -41,18 +41,21 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
   const parser = new N3.Parser();
 
   return new Promise((resolve, reject) => {
-    parser.parse(ttl, (error, quad) => {
-      if (error) {
-        console.error(error);
-        reject(error);
-        return;
-      }
-      if (!quad) {
-        resolve(store);
-        return;
-      }
-      store.addQuad(quad);
-    });
+    parser.parse(
+      `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n ${ttl}`,
+      (error, quad) => {
+        if (error) {
+          console.error(error);
+          reject(error);
+          return;
+        }
+        if (!quad) {
+          resolve(store);
+          return;
+        }
+        store.addQuad(quad);
+      },
+    );
   });
 };
 
