@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import { fetchFormDefinition } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import Router from 'express-promise-router';
-import { addField, getFormReplacements } from '../services/custom-forms';
+import {
+  addField,
+  deleteFormField,
+  getFormReplacements,
+} from '../services/custom-forms';
 
 const formDefinitionRouter = Router();
 
@@ -37,8 +41,8 @@ formDefinitionRouter.post(
 formDefinitionRouter.delete('/fields', async (req: Request, res: Response) => {
   const formUri = req.body.formUri;
   const fieldUri = req.body.fieldUri;
-  console.log(`deleting field ${formUri} ${fieldUri}`);
-  res.send({ success: true });
+  const newFormData = await deleteFormField(formUri, fieldUri);
+  res.send(newFormData);
 });
 
 export { formDefinitionRouter };
