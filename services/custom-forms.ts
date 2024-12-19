@@ -69,7 +69,7 @@ async function createCustomExtension(formUri: string): Promise<{
 async function addFieldToFormExtension(
   formUri: string,
   formTtl: string,
-  fieldDescription: any,
+  fieldDescription: FieldDescription,
 ) {
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
@@ -146,7 +146,7 @@ async function updateFormTtlForExtension(formUri: string) {
   `);
 
   const resultTtl = result.results.bindings
-    .map((b: any) => {
+    .map((b) => {
       return `${sparqlEscapeUri(b.s.value)} ${sparqlEscapeUri(
         b.p.value,
       )} ${sparqlEscapeObject(b.o)} .`;
@@ -175,19 +175,17 @@ async function markReplacement(
   standardUri: string,
   replacementUri: string,
 ) {
+  const safeReplacement = sparqlEscapeUri(replacementUri);
+  const safeStandard = sparqlEscapeUri(standardUri);
   const query = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
     INSERT DATA {
-      ${sparqlEscapeUri(replacementUri)} ext:replacesForm ${sparqlEscapeUri(
-        standardUri,
-      )} .
-      ${sparqlEscapeUri(standardUri)} a form:Form .
-      ${sparqlEscapeUri(standardUri)} mu:uuid ${sparqlEscapeString(
-        standardId,
-      )} .
+      ${safeReplacement} ext:replacesForm ${safeStandard} .
+      ${safeStandard} a form:Form .
+      ${safeStandard} mu:uuid ${sparqlEscapeString(standardId)} .
     }`;
 
   await update(query);
@@ -206,7 +204,7 @@ export async function getFormReplacements() {
     }`;
 
   const result = await query(q);
-  return result.results.bindings.map((b: any) => {
+  return result.results.bindings.map((b) => {
     return {
       standard: b.standard.value,
       replacement: b.replacement.value,
