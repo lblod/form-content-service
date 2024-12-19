@@ -1,18 +1,25 @@
-import { FormDefinition } from '../types';
-import { fetchFormDefinition } from './form-definitions';
-import { v4 as uuidv4 } from 'uuid';
+import { QueryEngine } from '@comunica/query-sparql';
 import {
   query,
-  update,
-  sparqlEscapeUri,
-  sparqlEscapeString,
   sparqlEscapeInt,
+  sparqlEscapeString,
+  sparqlEscapeUri,
+  update,
 } from 'mu';
+import { v4 as uuidv4 } from 'uuid';
 import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
-import { QueryEngine } from '@comunica/query-sparql';
+import { fetchFormDefinition } from './form-definitions';
 import { fetchFormDefinitionByUri } from './forms-from-config';
+import { HttpError } from '../domain/http-error';
+type FieldDescription = {
+  name: string;
+  displayType: string;
+  order?: number;
+  path?: string;
+};
 
-export async function addField(formId: string, description: any) {
+export async function addField(formId: string, description: FieldDescription) {
+  verifyFieldDescription(description);
   let form = await fetchFormDefinition(formId);
   let uri = form.uri;
   let modifiedFormId = formId;
@@ -26,6 +33,15 @@ export async function addField(formId: string, description: any) {
   await updateFormTtlForExtension(uri);
   form = await fetchFormDefinition(modifiedFormId);
   return form;
+}
+
+function verifyFieldDescription(description: FieldDescription) {
+  if (!description.name || description.name.trim().length === 0) {
+    throw new HttpError('Field description must have a name', 400);
+  }
+  if (!description.displayType || description.displayType.trim().length === 0) {
+    throw new HttpError('Field description must have a display type', 400);
+  }
 }
 
 async function createCustomExtension(formUri: string): Promise<{
@@ -73,7 +89,7 @@ async function addFieldToFormExtension(
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)};
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
-            sh:order ${sparqlEscapeInt(fieldDescription.order)};
+            sh:order ${sparqlEscapeInt(fieldDescription.order || 99999)};
             sh:path ${sparqlEscapeUri(fieldDescription.path || generatedPath)};
             mu:uuid ${sparqlEscapeString(id)}.
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
