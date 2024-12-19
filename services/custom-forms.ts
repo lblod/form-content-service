@@ -8,19 +8,22 @@ import {
   sparqlEscapeString,
   sparqlEscapeInt,
 } from 'mu';
-import { sparqlEscapeObject } from '../helpers/ttl-helpers';
+import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
+import { QueryEngine } from '@comunica/query-sparql';
 
-// TODO add a type definition for what we want field descriptions to look like
 export async function addField(formId: string, description: any) {
   let form = await fetchFormDefinition(formId);
   let uri = form.uri;
+  let modifiedFormId = formId;
   if (!form.custom) {
     const created = await createCustomExtension(form.uri);
+    modifiedFormId = created.id;
+    await markReplacement(form.id, form.uri, created.uri);
     uri = created.uri;
   }
   await addFieldToFormExtension(uri, form.formTtl, description);
   await updateFormTtlForExtension(uri);
-  form = await fetchFormDefinition(formId);
+  form = await fetchFormDefinition(modifiedFormId);
   return form;
 }
 
@@ -37,7 +40,7 @@ async function createCustomExtension(formUri: string): Promise<{
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     INSERT DATA {
-        ${sparqlEscapeUri(uri)} a form:Extension;
+        ${sparqlEscapeUri(uri)} a form:Extension, ext:GeneratedForm;
             ext:extendsForm ${sparqlEscapeUri(formUri)};
             ext:isCustomForm true;
             mu:uuid ${sparqlEscapeString(id)}.
@@ -54,8 +57,7 @@ async function addFieldToFormExtension(
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
   const name = fieldDescription.name;
-  // find right field group from form ttl
-  const fieldGroupUri = `http://data.lblod.info/id/lmb/form-field-groups/${id}`;
+  const fieldGroupUri = await fetchGroupFromFormTtl(formTtl);
   const safeName = name.replace(/[^a-zA-Z0-9]/g, '');
   const generatedPath = `http://data.lblod.info/id/lmb/form-fields-path/${id}/${safeName}`;
 
@@ -73,22 +75,53 @@ async function addFieldToFormExtension(
             sh:order ${sparqlEscapeInt(fieldDescription.order)};
             sh:path ${sparqlEscapeUri(fieldDescription.path || generatedPath)};
             mu:uuid ${sparqlEscapeString(id)}.
+        ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
     }
   `);
   return { id, uri };
 }
 
+async function fetchGroupFromFormTtl(formTtl: string) {
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const query = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT ?group
+    WHERE {
+      VALUES ?type {
+        form:FieldGroup
+        form:PropertyGroup
+      }
+      ?group a ?type.
+    } LIMIT 1
+  `;
+
+  const bindingStream = await engine.queryBindings(query, {
+    sources: [store],
+  });
+  const bindings = await bindingStream.toArray();
+  return bindings?.[0]?.get('group')?.value;
+}
+
 async function updateFormTtlForExtension(formUri: string) {
   const result = await query(`
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
   CONSTRUCT {
     ?s ?p ?o.
+    ?field ?fieldP ?fieldO.
   }
   WHERE {
     VALUES ?s {
       ${sparqlEscapeUri(formUri)}
     }
     ?s ?p ?o.
+    ?s form:includes ?field.
+    ?field ?fieldP ?fieldO.
     FILTER(?p NOT IN (ext:ttlCode))
   }
   `);
@@ -111,7 +144,55 @@ async function updateFormTtlForExtension(formUri: string) {
     }
     WHERE {
       ?s ext:isCustomForm true.
-      ?s ext:ttlCode ?ttl.
+      OPTIONAL {
+        ?s ext:ttlCode ?ttl.
+      }
     }
   `);
+}
+
+async function markReplacement(
+  standardId: string,
+  standardUri: string,
+  replacementUri: string,
+) {
+  const query = `
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+    INSERT DATA {
+      ${sparqlEscapeUri(replacementUri)} ext:replacesForm ${sparqlEscapeUri(
+        standardUri,
+      )} .
+      ${sparqlEscapeUri(standardUri)} a form:Form .
+      ${sparqlEscapeUri(standardUri)} mu:uuid ${sparqlEscapeString(
+        standardId,
+      )} .
+    }`;
+
+  await update(query);
+}
+
+export async function getFormReplacements() {
+  const q = `
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?standard ?replacement ?standardId ?replacementId
+    WHERE {
+      ?replacement ext:replacesForm ?standard .
+      ?standard mu:uuid ?standardId .
+      ?replacement mu:uuid ?replacementId .
+    }`;
+
+  const result = await query(q);
+  return result.results.bindings.map((b: any) => {
+    return {
+      standard: b.standard.value,
+      replacement: b.replacement.value,
+      standardId: b.standardId.value,
+      replacementId: b.replacementId.value,
+    };
+  });
 }

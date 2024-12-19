@@ -61,9 +61,11 @@ export const fetchFormDefinitionByUri = async (
     return fetchFormDefinitionById(formId);
   }
 
-  const formTtl = await formRepo.fetchFormTtlByUri(formUri);
+  const result = await formRepo.fetchFormTtlByUri(formUri);
 
-  if (!formTtl) throw new HttpError('Definition not found', 404);
+  if (!result) throw new HttpError('Definition not found', 404);
+
+  const { formTtl, custom } = result;
 
   const formDefinition = await extendForm(formUri, formTtl);
 
@@ -77,6 +79,7 @@ export const fetchFormDefinitionByUri = async (
   return {
     formTtl: formDefinition.formTtl,
     uri: formDefinition.uri,
+    custom: formDefinition.custom || custom,
     metaTtl,
   };
 };
