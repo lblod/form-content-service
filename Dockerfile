@@ -1,4 +1,5 @@
-FROM semtech/mu-javascript-template:1.8.0 AS base
+#FROM semtech/mu-javascript-template:1.8.0 AS base
+FROM local-js-template AS base
 LABEL maintainer="karel.kremer@redpencil.io"
 FROM base AS test
 # added vitest as a dev dependency and since the template builds with NODE_ENV=production it's discarded

@@ -7,7 +7,7 @@ import { loadFormsFromConfig } from './services/forms-from-config';
 loadFormsFromConfig();
 
 app.get('/', async (_req, res) => {
-  res.send({ status: 'ok' });
+  res.send({ status: 'ok!' });
 });
 
 app.use('/', formInstanceRouter);
