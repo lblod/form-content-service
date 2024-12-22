@@ -15,8 +15,8 @@ services:
       - ../app-lokaal-mandatenbeheer/config/form-content:/config
       - ./:/app
       # ignore app/dist because this is where we map the built files to, otherwise we get an infinite loop of creating files (on mac)
-      - /app/dist
-      - ./dist:/build/
+      # - /app/dist
+      # - ./dist:/build/
     networks:
       - debug
 networks:
