@@ -11,12 +11,21 @@ import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
 import { fetchFormDefinition } from './form-definitions';
 import { fetchFormDefinitionByUri } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
-type FieldDescription = {
-  name: string;
-  displayType: string;
-  order?: number;
-  path?: string;
-};
+type FieldDescription =
+  | {
+      name: string;
+      displayType: string;
+      libraryEntryId?: never;
+      order?: number;
+      path?: string;
+    }
+  | {
+      name: string;
+      displayType?: never;
+      libraryEntryId: string;
+      order?: number;
+      path?: string;
+    };
 
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
@@ -39,8 +48,16 @@ function verifyFieldDescription(description: FieldDescription) {
   if (!description.name || description.name.trim().length === 0) {
     throw new HttpError('Field description must have a name', 400);
   }
-  if (!description.displayType || description.displayType.trim().length === 0) {
-    throw new HttpError('Field description must have a display type', 400);
+  const noDisplayType =
+    !description.displayType || description.displayType.trim().length === 0;
+  const noLibraryEntry =
+    !description.libraryEntryId ||
+    description.libraryEntryId.trim().length === 0;
+  if (noDisplayType && noLibraryEntry) {
+    throw new HttpError(
+      'Field description must have a display type or a library entry id',
+      400,
+    );
   }
 }
 
