@@ -15,14 +15,14 @@ type FieldDescription =
   | {
       name: string;
       displayType: string;
-      libraryEntryId?: never;
+      libraryEntryUri?: never;
       order?: number;
       path?: string;
     }
   | {
       name: string;
       displayType?: never;
-      libraryEntryId: string;
+      libraryEntryUri: string;
       order?: number;
       path?: string;
     };
@@ -51,8 +51,8 @@ function verifyFieldDescription(description: FieldDescription) {
   const noDisplayType =
     !description.displayType || description.displayType.trim().length === 0;
   const noLibraryEntry =
-    !description.libraryEntryId ||
-    description.libraryEntryId.trim().length === 0;
+    !description.libraryEntryUri ||
+    description.libraryEntryUri.trim().length === 0;
   if (noDisplayType && noLibraryEntry) {
     throw new HttpError(
       'Field description must have a display type or a library entry id',
@@ -88,6 +88,10 @@ async function addFieldToFormExtension(
   formTtl: string,
   fieldDescription: FieldDescription,
 ) {
+  if (fieldDescription.libraryEntryUri) {
+    return addLibraryFieldToFormExtension(formUri, formTtl, fieldDescription);
+  }
+
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
   const name = fieldDescription.name;
@@ -113,6 +117,67 @@ async function addFieldToFormExtension(
     }
   `);
   return { id, uri };
+}
+
+async function addLibraryFieldToFormExtension(
+  formUri: string,
+  formTtl: string,
+  fieldDescription: FieldDescription,
+) {
+  const id = uuidv4();
+  const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
+  const fieldGroupUri = await fetchGroupFromFormTtl(formTtl);
+
+  const libraryEntryUri = await verifyLibraryEntryUri(
+    fieldDescription.libraryEntryUri,
+  );
+  if (!libraryEntryUri) {
+    throw new HttpError('Library entry not found', 404);
+  }
+
+  await update(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
+
+    INSERT {
+        ${sparqlEscapeUri(uri)} a form:Field;
+            ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)} ;
+            sh:name ${sparqlEscapeString(fieldDescription.name)} ;
+            prov:wasDerivedFrom ${sparqlEscapeUri(libraryEntryUri)} ;
+            form:displayType ?displayType ;
+            sh:order ${sparqlEscapeInt(99999)} ;
+            sh:path ?path ;
+            mu:uuid ${sparqlEscapeString(id)} .
+        ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)} .
+    } WHERE {
+      ${sparqlEscapeUri(libraryEntryUri)} a ext:FormLibraryEntry ;
+        sh:path ?path ;
+        form:displayType ?displayType .
+    }
+  `);
+  return { id, uri };
+}
+
+async function verifyLibraryEntryUri(libraryEntryUri: string) {
+  const result = await query(`
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    SELECT ?libraryEntry
+    WHERE {
+      VALUES ?libraryEntry {
+        ${sparqlEscapeUri(libraryEntryUri)}
+      }
+      ?libraryEntry a ext:FormLibraryEntry ;
+        form:displayType ?type ;
+        mu:uuid ?uuid ;
+        sh:path ?path .
+    }`);
+  return result.results.bindings[0]?.libraryEntry?.value;
 }
 
 async function fetchGroupFromFormTtl(formTtl: string) {
