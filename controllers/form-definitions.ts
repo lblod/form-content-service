@@ -31,17 +31,17 @@ formDefinitionRouter.get('/:id', async (req: Request, res: Response) => {
 formDefinitionRouter.post(
   '/:id/fields',
   async (req: Request, res: Response) => {
-    const body = req.body;
-    const newFormData = await addField(req.params.id, body);
+    const newFormData = await addField(req.params.id, req.body);
     res.send(newFormData);
   },
 );
 
 // this is in semantic forms territory and there we only know uris... we can solve this with contexts if necessary
 formDefinitionRouter.delete('/fields', async (req: Request, res: Response) => {
-  const formUri = req.body.formUri;
-  const fieldUri = req.body.fieldUri;
-  const newFormData = await deleteFormField(formUri, fieldUri);
+  const newFormData = await deleteFormField(
+    req.body.formUri,
+    req.body.fieldUri,
+  );
   res.send(newFormData);
 });
 
