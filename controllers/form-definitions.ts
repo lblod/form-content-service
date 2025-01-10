@@ -6,6 +6,7 @@ import {
   addField,
   deleteFormField,
   getFormReplacements,
+  moveField,
 } from '../services/custom-forms';
 
 const formDefinitionRouter = Router();
@@ -32,6 +33,18 @@ formDefinitionRouter.post(
   '/:id/fields',
   async (req: Request, res: Response) => {
     const newFormData = await addField(req.params.id, req.body);
+    res.send(newFormData);
+  },
+);
+
+formDefinitionRouter.post(
+  '/:id/fields/move',
+  async (req: Request, res: Response) => {
+    const newFormData = await moveField(
+      req.params.id,
+      req.body.fieldUri,
+      req.body.direction,
+    );
     res.send(newFormData);
   },
 );
