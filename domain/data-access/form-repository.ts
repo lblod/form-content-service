@@ -18,6 +18,7 @@ import {
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { interceptorGetConceptSchemeTriples } from '../../config/interceptors';
 
 const fetchFormTtlById = async (formId: string): Promise<string | null> => {
   const result = await query(`
@@ -86,7 +87,12 @@ const bindingToTriple = (binding) =>
 const getConceptSchemeTriples = async (conceptSchemeUris: string[]) => {
   const constructQuery = buildConstructConceptSchemesQuery(conceptSchemeUris);
   const result = await query(constructQuery);
-  return result.results.bindings.map(bindingToTriple).join('\n');
+  let bindings = result.results.bindings;
+  bindings = await interceptorGetConceptSchemeTriples(
+    conceptSchemeUris,
+    bindings,
+  );
+  return bindings.map(bindingToTriple).join('\n');
 };
 
 const fetchFormInstanceByUri = async (
