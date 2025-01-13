@@ -113,8 +113,11 @@ async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
     let currentIndex = newPosition;
     while (fieldsInGroup[currentIndex] && fieldsInGroup[currentIndex].extends) {
       const offset = currentIndex - newPosition;
-      newFieldOrders[fieldsInGroup[currentIndex].field] = newOrder + offset;
-      currentIndex += direction;
+      if (fieldsInGroup[currentIndex].field !== fieldUri) {
+        newFieldOrders[fieldsInGroup[currentIndex].field] =
+          newOrder - (offset + 1) * direction;
+      }
+      currentIndex -= direction;
     }
   } else {
     // jumping over a fixed field. Take the order of this field and set the order of the target to be offset by 1 in the direction, do the same for other extending fields in the group counting in the direction
@@ -122,8 +125,10 @@ async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
     let currentIndex = newPosition + direction;
     while (fieldsInGroup[currentIndex] && fieldsInGroup[currentIndex].extends) {
       const offset = currentIndex - newPosition;
-      newFieldOrders[fieldsInGroup[currentIndex].field] =
-        fieldAtOldPosition.order + offset * direction;
+      if (fieldsInGroup[currentIndex].field !== fieldUri) {
+        newFieldOrders[fieldsInGroup[currentIndex].field] =
+          parseInt(fieldAtOldPosition.order) + (1 + offset) * direction;
+      }
       currentIndex += direction;
     }
   }
@@ -199,6 +204,8 @@ async function addFieldToFormExtension(
     return addLibraryFieldToFormExtension(formUri, formTtl, fieldDescription);
   }
 
+  const nextOrder = await getNextFieldOrder(formUri);
+
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
   const name = fieldDescription.name;
@@ -217,13 +224,27 @@ async function addFieldToFormExtension(
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)};
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
-            sh:order ${sparqlEscapeInt(fieldDescription.order || 99999)};
+            sh:order ${nextOrder};
             sh:path ${sparqlEscapeUri(fieldDescription.path || generatedPath)};
             mu:uuid ${sparqlEscapeString(id)}.
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
     }
   `);
   return { id, uri };
+}
+
+async function getNextFieldOrder(formUri: string) {
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT (MAX(?order) AS ?maxOrder)
+    WHERE {
+      ${sparqlEscapeUri(formUri)} form:includes ?field .
+      ?field sh:order ?order .
+    }
+  `);
+  return parseInt(result.results.bindings[0]?.maxOrder?.value || '9000') + 1;
 }
 
 async function addLibraryFieldToFormExtension(
