@@ -49,6 +49,8 @@ export const extendForm = async (
 
   await formExtRepo.replaceFormUri(mergeGraph, store);
   await formExtRepo.replaceExtendsGroup(mergeGraph, store);
+  await formExtRepo.addExtensionFieldGenerators(mergeGraph, store);
+  await formExtRepo.addComplexPaths(mergeGraph, store);
 
   const extendedFormTtl = await formExtRepo.graphToTtl(mergeGraph, store);
 

@@ -1,6 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import { sparqlEscapeUri } from 'mu';
-import N3 from 'n3';
+import { quadToString, ttlToStore } from '../../helpers/ttl-helpers';
+import { sparqlEscapeUri, query } from 'mu';
+import N3, { Quad } from 'n3';
 
 import { ttlToStore } from '../../helpers/ttl-helpers';
 
@@ -215,7 +216,7 @@ const replaceFormUriObject = async (graphUri: string, store: N3.Store) => {
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  
+
     DELETE {
       GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?form.
@@ -247,7 +248,9 @@ const deleteAllFromBaseForm = async (
   const safePredicates = predicateUris.map((uri) => sparqlEscapeUri(uri));
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-  
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
     DELETE {
       GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?o.
@@ -285,6 +288,192 @@ const formExtensionHasPredicateSet = async (
   return hasMatches;
 };
 
+const addExtensionFieldGenerators = async (graph: string, store: N3.Store) => {
+  const libraryUris = await getExtensionFieldLibraryEntries(graph, store);
+  if (!libraryUris) {
+    return;
+  }
+  await addUriGenerators(libraryUris, store, graph);
+  await addShapes(libraryUris, store, graph);
+};
+
+const getExtensionFieldLibraryEntries = async (
+  graph: string,
+  store: N3.Store,
+) => {
+  const query = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
+
+    SELECT DISTINCT ?libraryUri
+    WHERE {
+      GRAPH <${graph}> {
+        ?s a form:Field;
+           prov:wasDerivedFrom ?libraryUri.
+      }
+    }`;
+
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) return;
+
+  const libraryUris = bindings.map(
+    (binding) => binding.get('libraryUri').value,
+  );
+  return libraryUris;
+};
+
+const addUriGenerators = async (
+  libraryUris: string[],
+  store: N3.Store,
+  graph: string,
+) => {
+  const safeUris = libraryUris.map((uri) => sparqlEscapeUri(uri)).join(' ');
+  const q = `
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  CONSTRUCT {
+    ?generator ?p ?o.
+  } WHERE {
+    VALUES ?libraryUri { ${safeUris} }
+    ?libraryUri ext:needsGenerator ?generator.
+    ?generator ?p ?o.
+  }`;
+  const results = await query(q);
+  const triples = results.results.bindings
+    .map((binding) => {
+      return quadToString({
+        subject: binding.s,
+        predicate: binding.p,
+        object: binding.o,
+      } as unknown as Quad);
+    })
+    .join('\n');
+
+  await ttlToStore(triples, store, graph);
+};
+
+const addShapes = async (
+  libraryUris: string[],
+  store: N3.Store,
+  graph: string,
+) => {
+  // this only has support for simple shapes with one type for now. Doing more gets really complex in sparql.
+  const safeUris = libraryUris.map((uri) => sparqlEscapeUri(uri)).join(' ');
+  const q = `
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  SELECT DISTINCT ?p ?type WHERE {
+    VALUES ?libraryUri { ${safeUris} }
+    ?libraryUri ext:needsShape ?shape.
+    ?shape ?p ?o.
+    ?o a ?type.
+  }`;
+  const results = await query(q);
+
+  const promises = results.results.bindings.map((binding) => {
+    const p = binding.p.value;
+    const type = binding.type.value;
+
+    const generatorShapeQuery = `
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      INSERT {
+        GRAPH <${graph}> {
+          ?shape ${sparqlEscapeUri(p)} [
+            a ${sparqlEscapeUri(type)}
+          ] .
+        }
+      }
+      WHERE {
+        GRAPH <${graph}> {
+          ?gen a form:Generator.
+          ?gen form:prototype / form:shape ?shape.
+        }
+      } `;
+
+    engine.queryVoid(generatorShapeQuery, { sources: [store] });
+  });
+
+  await Promise.all(promises);
+};
+
+const addComplexPaths = async (graph: string, store: N3.Store) => {
+  const nodes = await getExtensionFieldPaths(graph, store);
+  if (!nodes) {
+    return;
+  }
+  const nodesQuery = `
+    CONSTRUCT {
+      ?node ?p ?o.
+    } WHERE {
+      VALUES ?node {
+        ${nodes.map((node) => sparqlEscapeUri(node)).join('\n')}
+      }
+      ?node ?p ?o.
+    }
+  `;
+  const nodesResults = await query(nodesQuery);
+  const nodesTriples = nodesResults.results.bindings
+    .map((binding) => {
+      return quadToString({
+        subject: binding.s,
+        predicate: binding.p,
+        object: binding.o,
+      } as unknown as Quad);
+    })
+    .join('\n');
+  await ttlToStore(nodesTriples, store, graph);
+};
+
+const getExtensionFieldPaths = async (graph: string, store: N3.Store) => {
+  const pathQuery = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT DISTINCT ?path
+    WHERE {
+      GRAPH <${graph}> {
+        ?s a form:Field;
+           prov:wasDerivedFrom ?libraryUri ;
+           sh:path ?path .
+      }
+    }`;
+
+  const bindingStream = await engine.queryBindings(pathQuery, {
+    sources: [store],
+  });
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) {
+    return;
+  }
+
+  const pathUris = bindings.map((binding) => binding.get('path').value);
+
+  // added ?something sh:path ?path to get around a virtuoso bug
+  const nodeQuery = `
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+  PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+  SELECT distinct ?node WHERE {
+    VALUES ?path {
+      ${pathUris.map((uri) => sparqlEscapeUri(uri)).join(' ')}
+    }
+    ?something sh:path ?path.
+    ?path rdf:rest* ?node.
+    FILTER (?node != <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil>)
+  }`;
+  const nodeResults = await query(nodeQuery);
+  if (nodeResults.results.bindings.length === 0) {
+    return;
+  }
+  const nodeUris = nodeResults.results.bindings.map(
+    (binding) => binding.node.value,
+  );
+
+  return nodeUris;
+};
+
 export default {
   isFormExtension,
   getBaseFormUri,
@@ -296,4 +485,6 @@ export default {
   replaceFormUri,
   deleteAllFromBaseForm,
   formExtensionHasPredicateSet,
+  addExtensionFieldGenerators,
+  addComplexPaths,
 };
