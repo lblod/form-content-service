@@ -41,6 +41,8 @@ export async function addField(formId: string, description: FieldDescription) {
   await addFieldToFormExtension(uri, form.formTtl, description);
   await updateFormTtlForExtension(uri);
   form = await fetchFormDefinition(modifiedFormId);
+  await getGeneratorShape(form.formTtl);
+
   return form;
 }
 
@@ -428,4 +430,34 @@ async function deleteFieldFromFormExtension(formUri: string, fieldUri: string) {
         ${sparqlEscapeUri(fieldUri)} ?p ?o.
     }
   `);
+}
+
+async function getGeneratorShape(formTtl: string) {
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+  SELECT ?shape WHERE {
+    ?generator a form:Generator ;
+      form:prototype / form:shape ?shape .
+  }`;
+  const bindingStream = await engine.queryBindings(query, {
+    sources: [store],
+  });
+  const bindings = await bindingStream.toArray();
+  if (!bindings.length) {
+    return null;
+  }
+  const b = bindings[0];
+  if (b.get('shape').termType === 'BlankNode') {
+    throw new HttpError(
+      'Generator shape is a blank node. Cannot extend the form with this field.',
+      500,
+    );
+  }
+  return b.get('shape').value;
 }

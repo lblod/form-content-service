@@ -22,7 +22,7 @@ export const sparqlEscapeObject = (bindingObject): string => {
 /**
  * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
  */
-const quadToString = function (quad: Quad) {
+export const quadToString = function (quad: Quad) {
   let object;
   if (quad.object.termType === 'Literal') {
     const datatype = quad.object.datatype;
@@ -36,8 +36,15 @@ const quadToString = function (quad: Quad) {
   )} ${object} .`;
 };
 
-export const ttlToStore = function (ttl: string): Promise<N3.Store> {
-  const store = new N3.Store();
+export const ttlToStore = function (
+  ttl: string,
+  existingStore?: N3.Store,
+  graph?: string,
+): Promise<N3.Store> {
+  let store = existingStore;
+  if (!store) {
+    store = new N3.Store();
+  }
   const parser = new N3.Parser();
 
   return new Promise((resolve, reject) => {
@@ -53,7 +60,7 @@ export const ttlToStore = function (ttl: string): Promise<N3.Store> {
           resolve(store);
           return;
         }
-        store.addQuad(quad);
+        store.addQuad(quad.subject, quad.predicate, quad.object, graph);
       },
     );
   });
