@@ -13,19 +13,19 @@ import { fetchFormDefinitionByUri } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 type FieldDescription =
   | {
-      name: string;
-      displayType: string;
-      libraryEntryUri?: never;
-      order?: number;
-      path?: string;
-    }
+    name: string;
+    displayType: string;
+    libraryEntryUri?: never;
+    order?: number;
+    path?: string;
+  }
   | {
-      name: string;
-      displayType?: never;
-      libraryEntryUri: string;
-      order?: number;
-      path?: string;
-    };
+    name: string;
+    displayType?: never;
+    libraryEntryUri: string;
+    order?: number;
+    path?: string;
+  };
 
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
@@ -276,14 +276,27 @@ async function addLibraryFieldToFormExtension(
             sh:name ${sparqlEscapeString(fieldDescription.name)} ;
             prov:wasDerivedFrom ${sparqlEscapeUri(libraryEntryUri)} ;
             form:displayType ?displayType ;
+            form:validatedBy ?validationUri ;
             sh:order ${sparqlEscapeInt(99999)} ;
             sh:path ?path ;
-            mu:uuid ${sparqlEscapeString(id)} .
+            mu:uuid ?uuid .
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)} .
+
+        ?validationUri ?validationP ?validationO .
+        ?validationUri sh:path ?path .
     } WHERE {
       ${sparqlEscapeUri(libraryEntryUri)} a ext:FormLibraryEntry ;
         sh:path ?path ;
         form:displayType ?displayType .
+
+      OPTIONAL {
+        ${sparqlEscapeUri(libraryEntryUri)} form:validatedBy ?validation .
+        
+        ?validation ?validationP ?validationO .
+        FILTER(?validationP != sh:path)
+      }
+      BIND(${sparqlEscapeString(id)} AS ?uuid)
+      BIND(URI(CONCAT(?validation, ?uuid)) AS ?validationUri).
     }
   `);
   return { id, uri };
