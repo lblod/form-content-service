@@ -26,6 +26,11 @@ type FieldDescription =
       order?: number;
       path?: string;
     };
+type FieldUpdateDescription = {
+  field: string;
+  name: string;
+  displayType: string;
+};
 
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
@@ -41,6 +46,46 @@ export async function addField(formId: string, description: FieldDescription) {
   await addFieldToFormExtension(uri, form.formTtl, description);
   await updateFormTtlForExtension(uri);
   form = await fetchFormDefinition(modifiedFormId);
+  return form;
+}
+
+export async function updateField(
+  formId: string,
+  description: FieldUpdateDescription,
+) {
+  if (!description.field) {
+    throw new HttpError('Field uri must be provided', 400);
+  }
+  verifyFieldDescription(description);
+
+  const escaped = {
+    fieldUri: sparqlEscapeUri(description.field),
+    name: sparqlEscapeString(description.name),
+    displayType: sparqlEscapeUri(description.displayType),
+  };
+  await update(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    DELETE {
+      ?fieldUri sh:name ?fieldName .
+      ?fieldUri form:displayType ?displayType .
+    }
+    INSERT {
+      ?fieldUri sh:name ${escaped.name} .
+      ?fieldUri form:displayType ${escaped.displayType} .
+    }
+    WHERE {
+      ?fieldUri a form:Field ;
+        sh:name ?fieldName ;
+        form:displayType ?displayType .
+      
+      BIND(${escaped.fieldUri} AS ?fieldUri)
+    }
+  `);
+  const form = await fetchFormDefinition(formId);
+  await updateFormTtlForExtension(form.uri);
+
   return form;
 }
 
