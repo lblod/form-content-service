@@ -127,7 +127,7 @@ async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
       const offset = currentIndex - newPosition;
       if (fieldsInGroup[currentIndex].field !== fieldUri) {
         newFieldOrders[fieldsInGroup[currentIndex].field] =
-          parseInt(fieldAtOldPosition.order) + (1 + offset) * direction;
+          parseInt(fieldAtOldPosition.order) - (offset - 1) * direction;
       }
       currentIndex += direction;
     }
