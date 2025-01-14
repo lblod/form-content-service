@@ -355,6 +355,7 @@ async function updateFormTtlForExtension(formUri: string) {
     ?s ?p ?o.
     ?field ?fieldP ?fieldO.
     ?field ext:isExtensionField true.
+    ?validation ?vP ?vO.
   }
   WHERE {
     VALUES ?s {
@@ -364,6 +365,11 @@ async function updateFormTtlForExtension(formUri: string) {
     OPTIONAL {
       ?s form:includes ?field.
       ?field ?fieldP ?fieldO.
+
+      OPTIONAL {
+        ?field form:validatedBy ?validation.
+        ?validation ?vP ?vO.
+      }
     }
     FILTER(?p NOT IN (ext:ttlCode))
   }
