@@ -44,6 +44,118 @@ export async function addField(formId: string, description: FieldDescription) {
   return form;
 }
 
+export async function moveField(
+  formId: string,
+  fieldUri: string,
+  direction: string,
+) {
+  const form = await fetchFormDefinition(formId);
+  const uri = form.uri;
+  if (!form.custom) {
+    throw new HttpError('Cannot move fields in a standard form', 400);
+  }
+  if (!direction) {
+    throw new HttpError('Direction must be provided', 400);
+  }
+  if (!fieldUri) {
+    throw new HttpError('Field uri must be provided', 400);
+  }
+  const fieldsInGroup = await fetchFieldsInGroup(form, fieldUri);
+  if (!fieldsInGroup || fieldsInGroup.length === 0) {
+    throw new HttpError('Field not found', 400);
+  }
+  await updateFieldOrder(fieldUri, fieldsInGroup, direction === 'up' ? -1 : 1);
+  await updateFormTtlForExtension(uri);
+}
+
+async function fetchFieldsInGroup(form, fieldUri) {
+  const store = await ttlToStore(form.formTtl);
+  const engine = new QueryEngine();
+
+  const query = `
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+  SELECT ?field ?extends ?order WHERE {
+    ${sparqlEscapeUri(fieldUri)} sh:group ?group .
+    ?field a form:Field .
+    ?field sh:group ?group .
+    OPTIONAL { ?field ext:isExtensionField ?extends . }
+    ?field sh:order ?order .
+  } ORDER BY ?order`;
+  const bindingStream = await engine.queryBindings(query, {
+    sources: [store],
+  });
+  const bindings = await bindingStream.toArray();
+  return bindings.map((b) => {
+    return {
+      field: b.get('field').value,
+      extends: !!b.get('extends')?.value,
+      order: b.get('order').value,
+    };
+  });
+}
+
+async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
+  const newPosition =
+    fieldsInGroup.findIndex((f) => f.field === fieldUri) + direction;
+  if (newPosition < 0 || newPosition >= fieldsInGroup.length) {
+    return;
+  }
+  const fieldAtOldPosition = fieldsInGroup[newPosition];
+  const newFieldOrders = {} as { [key: string]: number };
+  if (!fieldAtOldPosition || fieldAtOldPosition.extends) {
+    // staying in the same group of extending fields, not jumping over a fixed field
+    // find order of fixed field in inverse direction and set order of other fields in the group to be in between
+    const newOrder = parseInt(fieldAtOldPosition.order);
+    newFieldOrders[fieldUri] = newOrder;
+    let currentIndex = newPosition;
+    while (fieldsInGroup[currentIndex] && fieldsInGroup[currentIndex].extends) {
+      const offset = currentIndex - newPosition;
+      if (fieldsInGroup[currentIndex].field !== fieldUri) {
+        newFieldOrders[fieldsInGroup[currentIndex].field] =
+          newOrder - (offset + 1) * direction;
+      }
+      currentIndex -= direction;
+    }
+  } else {
+    // jumping over a fixed field. Take the order of this field and set the order of the target to be offset by 1 in the direction, do the same for other extending fields in the group counting in the direction
+    newFieldOrders[fieldUri] = parseInt(fieldAtOldPosition.order) + direction;
+    let currentIndex = newPosition + direction;
+    while (fieldsInGroup[currentIndex] && fieldsInGroup[currentIndex].extends) {
+      const offset = currentIndex - newPosition;
+      if (fieldsInGroup[currentIndex].field !== fieldUri) {
+        newFieldOrders[fieldsInGroup[currentIndex].field] =
+          parseInt(fieldAtOldPosition.order) - (offset - 1) * direction;
+      }
+      currentIndex += direction;
+    }
+  }
+
+  const updateValues = Object.keys(newFieldOrders).map((fieldUri) => {
+    const newOrder = newFieldOrders[fieldUri];
+    return `( ${sparqlEscapeUri(fieldUri)} ${sparqlEscapeInt(newOrder)} )`;
+  });
+
+  await update(`
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    DELETE {
+      ?field sh:order ?oldOrder .
+    }
+    INSERT {
+      ?field sh:order ?newOrder .
+    }
+    WHERE {
+      VALUES (?field ?newOrder) {
+        ${updateValues.join(' ')}
+      }
+      ?field sh:order ?oldOrder .
+    }
+  `);
+}
+
 function verifyFieldDescription(description: FieldDescription) {
   if (!description.name || description.name.trim().length === 0) {
     throw new HttpError('Field description must have a name', 400);
@@ -92,6 +204,8 @@ async function addFieldToFormExtension(
     return addLibraryFieldToFormExtension(formUri, formTtl, fieldDescription);
   }
 
+  const nextOrder = await getNextFieldOrder(formUri);
+
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/form-fields/${id}`;
   const name = fieldDescription.name;
@@ -110,13 +224,27 @@ async function addFieldToFormExtension(
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)};
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
-            sh:order ${sparqlEscapeInt(fieldDescription.order || 99999)};
+            sh:order ${nextOrder};
             sh:path ${sparqlEscapeUri(fieldDescription.path || generatedPath)};
             mu:uuid ${sparqlEscapeString(id)}.
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
     }
   `);
   return { id, uri };
+}
+
+async function getNextFieldOrder(formUri: string) {
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT (MAX(?order) AS ?maxOrder)
+    WHERE {
+      ${sparqlEscapeUri(formUri)} form:includes ?field .
+      ?field sh:order ?order .
+    }
+  `);
+  return parseInt(result.results.bindings[0]?.maxOrder?.value || '9000') + 1;
 }
 
 async function addLibraryFieldToFormExtension(
@@ -213,6 +341,7 @@ async function updateFormTtlForExtension(formUri: string) {
   CONSTRUCT {
     ?s ?p ?o.
     ?field ?fieldP ?fieldO.
+    ?field ext:isExtensionField true.
   }
   WHERE {
     VALUES ?s {
