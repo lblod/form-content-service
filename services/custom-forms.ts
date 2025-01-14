@@ -263,6 +263,7 @@ async function addLibraryFieldToFormExtension(
     throw new HttpError('Library entry not found', 404);
   }
 
+  const escapedUuid = sparqlEscapeString(id);
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -279,7 +280,7 @@ async function addLibraryFieldToFormExtension(
             form:validatedBy ?validationUri ;
             sh:order ${sparqlEscapeInt(99999)} ;
             sh:path ?path ;
-            mu:uuid ?uuid .
+            mu:uuid ${escapedUuid} .
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)} .
 
         ?validationUri ?validationP ?validationO .
@@ -294,9 +295,8 @@ async function addLibraryFieldToFormExtension(
         
         ?validation ?validationP ?validationO .
         FILTER(?validationP != sh:path)
-        BIND(URI(CONCAT(?validation, ?uuid)) AS ?validationUri).
+        BIND(URI(CONCAT(?validation, ${escapedUuid})) AS ?validationUri).
       }
-      BIND(${sparqlEscapeString(id)} AS ?uuid)
     }
   `);
   return { id, uri };
