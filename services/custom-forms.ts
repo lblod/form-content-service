@@ -294,9 +294,9 @@ async function addLibraryFieldToFormExtension(
         
         ?validation ?validationP ?validationO .
         FILTER(?validationP != sh:path)
+        BIND(URI(CONCAT(?validation, ?uuid)) AS ?validationUri).
       }
       BIND(${sparqlEscapeString(id)} AS ?uuid)
-      BIND(URI(CONCAT(?validation, ?uuid)) AS ?validationUri).
     }
   `);
   return { id, uri };
