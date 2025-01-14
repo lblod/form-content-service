@@ -13,19 +13,19 @@ import { fetchFormDefinitionByUri } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 type FieldDescription =
   | {
-    name: string;
-    displayType: string;
-    libraryEntryUri?: never;
-    order?: number;
-    path?: string;
-  }
+      name: string;
+      displayType: string;
+      libraryEntryUri?: never;
+      order?: number;
+      path?: string;
+    }
   | {
-    name: string;
-    displayType?: never;
-    libraryEntryUri: string;
-    order?: number;
-    path?: string;
-  };
+      name: string;
+      displayType?: never;
+      libraryEntryUri: string;
+      order?: number;
+      path?: string;
+    };
 
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
