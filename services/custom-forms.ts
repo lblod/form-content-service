@@ -68,19 +68,17 @@ export async function updateField(
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
     DELETE {
-      ?fieldUri sh:name ?fieldName .
-      ?fieldUri form:displayType ?displayType .
+      ${escaped.fieldUri} sh:name ?fieldName .
+      ${escaped.fieldUri} form:displayType ?displayType .
     }
     INSERT {
-      ?fieldUri sh:name ${escaped.name} .
-      ?fieldUri form:displayType ${escaped.displayType} .
+      ${escaped.fieldUri} sh:name ${escaped.name} .
+      ${escaped.fieldUri} form:displayType ${escaped.displayType} .
     }
     WHERE {
-      ?fieldUri a form:Field ;
+      ${escaped.fieldUri} a form:Field ;
         sh:name ?fieldName ;
         form:displayType ?displayType .
-      
-      BIND(${escaped.fieldUri} AS ?fieldUri)
     }
   `);
   const form = await fetchFormDefinition(formId);
