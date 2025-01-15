@@ -30,6 +30,7 @@ type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
+  isRequired: boolean;
 };
 
 export async function addField(formId: string, description: FieldDescription) {
@@ -63,6 +64,27 @@ export async function updateField(
     name: sparqlEscapeString(description.name),
     displayType: sparqlEscapeUri(description.displayType),
   };
+  let requiredConstraintInsertTtl = '';
+  let requiredConstraintDeleteTtl = '';
+  if (description.isRequired) {
+    const uri =
+      'http://data.lblod.info/id/lmb/custom-forms/validation/is-required/' +
+      uuidv4();
+    requiredConstraintInsertTtl = `
+    ${escaped.fieldUri} form:validatedBy ${sparqlEscapeUri(uri)}.
+
+    ${sparqlEscapeUri(uri)} a form:RequiredConstraint ;
+      form:grouping form:Bag ;
+      sh:resultMessage "Dit veld is verplicht." ;
+      sh:path ?path .
+  `;
+  } else {
+    requiredConstraintDeleteTtl = `
+      ${escaped.fieldUri} form:validatedBy ?validation .
+        ?validation ?validationP ?validationO .
+    `;
+  }
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -70,15 +92,27 @@ export async function updateField(
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
       ${escaped.fieldUri} form:displayType ?displayType .
+
+      ${description.isRequired ? '' : requiredConstraintDeleteTtl}
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
       ${escaped.fieldUri} form:displayType ${escaped.displayType} .
+
+      ${description.isRequired ? requiredConstraintInsertTtl : ''}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
         sh:name ?fieldName ;
-        form:displayType ?displayType .
+        form:displayType ?displayType ;
+        sh:path ?path .
+
+      OPTIONAL {
+        ${escaped.fieldUri} form:validatedBy ?validation .
+
+        ?validation a form:RequiredConstraint ;
+          ?validationP ?validationO.
+      }
     }
   `);
   const form = await fetchFormDefinition(formId);
