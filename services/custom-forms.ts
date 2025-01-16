@@ -297,6 +297,10 @@ async function addFieldToFormExtension(
   const fieldGroupUri = await fetchGroupFromFormTtl(formTtl);
   const safeName = name.replace(/[^a-zA-Z0-9]/g, '');
   const generatedPath = `http://data.lblod.info/id/lmb/form-fields-path/${id}/${safeName}`;
+  const path = sparqlEscapeUri(fieldDescription.path || generatedPath);
+  const requiredConstraintTtl = fieldDescription.isRequired
+    ? getRequiredConstraintInsertTtl(uri, path)
+    : '';
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -310,9 +314,11 @@ async function addFieldToFormExtension(
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
             sh:order ${nextOrder};
-            sh:path ${sparqlEscapeUri(fieldDescription.path || generatedPath)};
+            sh:path ${path};
             mu:uuid ${sparqlEscapeString(id)}.
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
+
+      ${requiredConstraintTtl}
     }
   `);
   return { id, uri };
