@@ -18,6 +18,7 @@ type FieldDescription =
       libraryEntryUri?: never;
       order?: number;
       path?: string;
+      isRequired?: boolean;
     }
   | {
       name: string;
@@ -25,12 +26,27 @@ type FieldDescription =
       libraryEntryUri: string;
       order?: number;
       path?: string;
+      isRequired?: boolean;
     };
 type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
   isRequired: boolean;
+};
+
+const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
+  const uri =
+    'http://data.lblod.info/id/lmb/custom-forms/validation/is-required/' +
+    uuidv4();
+  return `
+    ${sparqlEscapeUri(fieldUri)} form:validatedBy ${sparqlEscapeUri(uri)}.
+
+    ${sparqlEscapeUri(uri)} a form:RequiredConstraint ;
+      form:grouping form:Bag ;
+      sh:resultMessage "Dit veld is verplicht." ;
+      sh:path ${path ?? '?path'} .
+  `;
 };
 
 export async function addField(formId: string, description: FieldDescription) {
@@ -67,17 +83,9 @@ export async function updateField(
   let requiredConstraintInsertTtl = '';
   let requiredConstraintDeleteTtl = '';
   if (description.isRequired) {
-    const uri =
-      'http://data.lblod.info/id/lmb/custom-forms/validation/is-required/' +
-      uuidv4();
-    requiredConstraintInsertTtl = `
-    ${escaped.fieldUri} form:validatedBy ${sparqlEscapeUri(uri)}.
-
-    ${sparqlEscapeUri(uri)} a form:RequiredConstraint ;
-      form:grouping form:Bag ;
-      sh:resultMessage "Dit veld is verplicht." ;
-      sh:path ?path .
-  `;
+    requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
+      description.field,
+    );
   } else {
     requiredConstraintDeleteTtl = `
       ${escaped.fieldUri} form:validatedBy ?validation .
