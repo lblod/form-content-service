@@ -45,7 +45,7 @@ const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
     ${sparqlEscapeUri(uri)} a form:RequiredConstraint ;
       form:grouping form:Bag ;
       sh:resultMessage "Dit veld is verplicht." ;
-      sh:path ${path ?? '?path'} .
+      sh:path ${path ? sparqlEscapeUri(path) : '?path'} .
   `;
 };
 
@@ -297,7 +297,7 @@ async function addFieldToFormExtension(
   const fieldGroupUri = await fetchGroupFromFormTtl(formTtl);
   const safeName = name.replace(/[^a-zA-Z0-9]/g, '');
   const generatedPath = `http://data.lblod.info/id/lmb/form-fields-path/${id}/${safeName}`;
-  const path = sparqlEscapeUri(fieldDescription.path || generatedPath);
+  const path = fieldDescription.path ?? generatedPath;
   const requiredConstraintTtl = fieldDescription.isRequired
     ? getRequiredConstraintInsertTtl(uri, path)
     : '';
@@ -314,7 +314,7 @@ async function addFieldToFormExtension(
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
             sh:order ${nextOrder};
-            sh:path ${path};
+            sh:path ${sparqlEscapeUri(path)};
             mu:uuid ${sparqlEscapeString(id)}.
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
 
@@ -354,6 +354,10 @@ async function addLibraryFieldToFormExtension(
     throw new HttpError('Library entry not found', 404);
   }
 
+  const requiredConstraintTtl = fieldDescription.isRequired
+    ? getRequiredConstraintInsertTtl(uri)
+    : '';
+
   const escapedUuid = sparqlEscapeString(id);
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -376,6 +380,8 @@ async function addLibraryFieldToFormExtension(
 
         ?validationUri ?validationP ?validationO .
         ?validationUri sh:path ?path .
+
+      ${requiredConstraintTtl}        
     } WHERE {
       ${sparqlEscapeUri(libraryEntryUri)} a ext:FormLibraryEntry ;
         sh:path ?path ;
