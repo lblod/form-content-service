@@ -175,7 +175,7 @@ const getUriTypes = async (ttl: string) => {
  */
 const isValidForm = async (formTtl: string) => {
   const query = `
-  PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
   ASK {
     ?s a ?o.

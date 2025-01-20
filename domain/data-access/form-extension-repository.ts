@@ -1,6 +1,9 @@
 import { QueryEngine } from '@comunica/query-sparql';
-import { ttlToStore } from '../../helpers/ttl-helpers';
+import { sparqlEscapeUri } from 'mu';
 import N3 from 'n3';
+
+import { ttlToStore } from '../../helpers/ttl-helpers';
+
 
 const engine = new QueryEngine();
 
@@ -110,14 +113,14 @@ const getFormId = async (formTtl: string): Promise<string> => {
 
 const loadTtlIntoGraph = async (
   ttl: string,
-  graphName: string,
+  graphUri: string,
   store: N3.Store,
 ) => {
   const baseStore = await ttlToStore(ttl);
 
   const query = `
     INSERT {
-      GRAPH <${graphName}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?o.
       }
     } WHERE {
@@ -130,11 +133,11 @@ const loadTtlIntoGraph = async (
   });
 };
 
-const graphToTtl = async (graphName: string, store: N3.Store) => {
+const graphToTtl = async (graphUri: string, store: N3.Store) => {
   const query = `
     CONSTRUCT { ?s ?p ?o }
     WHERE {
-      GRAPH <${graphName}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?o.
       } .
     }
@@ -152,22 +155,22 @@ const graphToTtl = async (graphName: string, store: N3.Store) => {
   return formTtl;
 };
 
-const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
+const replaceExtendsGroup = async (graphUri: string, store: N3.Store) => {
   const query = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ext:extendsGroup ?o.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s sh:group ?o.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ext:extendsGroup ?o.
       }
     }
@@ -175,8 +178,8 @@ const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
   await engine.queryVoid(query, { sources: [store] });
 };
 
-const replaceFormUri = async (graph: string, store: N3.Store) => {
-  await replaceFormUriObject(graph, store);
+const replaceFormUri = async (graphUri: string, store: N3.Store) => {
+  await replaceFormUriObject(graphUri, store);
 
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -184,19 +187,19 @@ const replaceFormUri = async (graph: string, store: N3.Store) => {
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?form ?p ?o.
         ?extension a form:Extension.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?extension ?p ?o;
                    a form:Form.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?form a form:Form;
               ?p ?o.
         ?extension a form:Extension.
@@ -209,23 +212,23 @@ const replaceFormUri = async (graph: string, store: N3.Store) => {
 // Separate query from replaceFormUri due to a comunica issue.
 // If the case where the form is used as an object is in an optional clause,
 // the whole graph turns up empty.
-const replaceFormUriObject = async (graph: string, store: N3.Store) => {
+const replaceFormUriObject = async (graphUri: string, store: N3.Store) => {
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?form.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?extension.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?form a form:Form.
         ?extension a form:Extension.
         ?s ?p ?form.
@@ -239,7 +242,7 @@ const replaceFormUriObject = async (graph: string, store: N3.Store) => {
 
 const deleteAllFromBaseForm = async (
   predicates: string[],
-  graph: string,
+  graphUri: string,
   store: N3.Store,
 ) => {
   const query = `
@@ -248,12 +251,12 @@ const deleteAllFromBaseForm = async (
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s ?p ?o.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s a form:Form;
         ?p ?o.
         VALUES ?p { ${predicates.join(' ')} }
@@ -264,7 +267,7 @@ const deleteAllFromBaseForm = async (
 };
 
 const formExtensionHasPredicateSet = async (
-  predicate: string,
+  predicate: string, // Very confusing but there are prefix predicates e.g. form:targetLabel
   extensionFormTtl: string,
 ) => {
   const query = `
