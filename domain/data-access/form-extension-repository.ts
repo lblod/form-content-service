@@ -4,7 +4,6 @@ import N3 from 'n3';
 
 import { ttlToStore } from '../../helpers/ttl-helpers';
 
-
 const engine = new QueryEngine();
 
 const isFormExtension = async (formTtl: string) => {
