@@ -118,7 +118,7 @@ const loadTtlIntoGraph = async (
 
   const query = `
     INSERT {
-      GRAPH <${graphName}> {
+      GRAPH ${sparqlEscapeUri(graphName)} {
         ?s ?p ?o.
       }
     } WHERE {
@@ -135,7 +135,7 @@ const graphToTtl = async (graphName: string, store: N3.Store) => {
   const query = `
     CONSTRUCT { ?s ?p ?o }
     WHERE {
-      GRAPH <${graphName}> {
+      GRAPH ${sparqlEscapeUri(graphName)} {
         ?s ?p ?o.
       } .
     }
@@ -158,17 +158,17 @@ const replaceExtendsGroup = async (graph: string, store: N3.Store) => {
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s ext:extendsGroup ?o.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s sh:group ?o.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s ext:extendsGroup ?o.
       }
     }
@@ -185,19 +185,19 @@ const replaceFormUri = async (graph: string, store: N3.Store) => {
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?form ?p ?o.
         ?extension a form:Extension.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?extension ?p ?o;
                    a form:Form.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?form a form:Form;
               ?p ?o.
         ?extension a form:Extension.
@@ -216,17 +216,17 @@ const replaceFormUriObject = async (graph: string, store: N3.Store) => {
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s ?p ?form.
       }
     }
     INSERT {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s ?p ?extension.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?form a form:Form.
         ?extension a form:Extension.
         ?s ?p ?form.
@@ -249,12 +249,12 @@ const deleteAllFromBaseForm = async (
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
     DELETE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s ?p ?o.
       }
     }
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s a form:Form;
         ?p ?o.
         VALUES ?p { ${predicates.join(' ')} }
@@ -306,7 +306,7 @@ const getExtensionFieldLibraryEntries = async (
 
     SELECT DISTINCT ?libraryUri
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s a form:Field;
            prov:wasDerivedFrom ?libraryUri.
       }
@@ -375,14 +375,14 @@ const addShapes = async (
     const generatorShapeQuery = `
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
       INSERT {
-        GRAPH <${graph}> {
+        GRAPH ${sparqlEscapeUri(graph)} {
           ?shape ${sparqlEscapeUri(p)} [
             a ${sparqlEscapeUri(type)}
           ] .
         }
       }
       WHERE {
-        GRAPH <${graph}> {
+        GRAPH ${sparqlEscapeUri(graph)} {
           ?gen a form:Generator.
           ?gen form:prototype / form:shape ?shape.
         }
@@ -432,7 +432,7 @@ const getExtensionFieldPaths = async (graph: string, store: N3.Store) => {
 
     SELECT DISTINCT ?path
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s a form:Field;
            prov:wasDerivedFrom ?libraryUri ;
            sh:path ?path .
