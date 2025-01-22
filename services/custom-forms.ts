@@ -81,16 +81,10 @@ export async function updateField(
     displayType: sparqlEscapeUri(description.displayType),
   };
   let requiredConstraintInsertTtl = '';
-  let requiredConstraintDeleteTtl = '';
   if (description.isRequired) {
     requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
       description.field,
     );
-  } else {
-    requiredConstraintDeleteTtl = `
-      ${escaped.fieldUri} form:validatedBy ?validation .
-        ?validation ?validationP ?validationO .
-    `;
   }
 
   await update(`
@@ -101,7 +95,8 @@ export async function updateField(
       ${escaped.fieldUri} sh:name ?fieldName .
       ${escaped.fieldUri} form:displayType ?displayType .
 
-      ${description.isRequired ? '' : requiredConstraintDeleteTtl}
+      ${escaped.fieldUri} form:validatedBy ?validation .
+        ?validation ?validationP ?validationO .
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
