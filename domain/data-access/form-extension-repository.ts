@@ -308,7 +308,7 @@ const getExtensionFieldLibraryEntries = async (
 
     SELECT DISTINCT ?libraryUri
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s a form:Field;
            prov:wasDerivedFrom ?libraryUri.
       }
@@ -377,14 +377,14 @@ const addShapes = async (
     const generatorShapeQuery = `
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
       INSERT {
-        GRAPH <${graph}> {
+        GRAPH ${sparqlEscapeUri(graph)} {
           ?shape ${sparqlEscapeUri(p)} [
             a ${sparqlEscapeUri(type)}
           ] .
         }
       }
       WHERE {
-        GRAPH <${graph}> {
+        GRAPH ${sparqlEscapeUri(graph)} {
           ?gen a form:Generator.
           ?gen form:prototype / form:shape ?shape.
         }
@@ -434,7 +434,7 @@ const getExtensionFieldPaths = async (graph: string, store: N3.Store) => {
 
     SELECT DISTINCT ?path
     WHERE {
-      GRAPH <${graph}> {
+      GRAPH ${sparqlEscapeUri(graph)} {
         ?s a form:Field;
            prov:wasDerivedFrom ?libraryUri ;
            sh:path ?path .
