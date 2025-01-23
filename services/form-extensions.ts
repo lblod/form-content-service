@@ -30,10 +30,17 @@ export const extendForm = async (
 
   const predicatesToDeleteFromBase = await getDefinedPredicatesInExtensionForm(
     extensionFormTtl,
-    ['form:targetType', 'form:targetLabel', 'ext:prefix'],
+    [
+      'http://lblod.data.gift/vocabularies/forms/targetType',
+      'http://lblod.data.gift/vocabularies/forms/targetLabel',
+      'http://mu.semte.ch/vocabularies/ext/prefix',
+    ],
   );
   await formExtRepo.deleteAllFromBaseForm(
-    [...predicatesToDeleteFromBase, 'mu:uuid'],
+    [
+      ...predicatesToDeleteFromBase,
+      'http://mu.semte.ch/vocabularies/core/uuid',
+    ],
     mergeGraph,
     store,
   );
@@ -55,13 +62,13 @@ const getDefinedPredicatesInExtensionForm = async (
 ) => {
   const definedPredicates: Array<string> = [];
 
-  for (const predicate of predicatesToCheck) {
+  for (const predicateUri of predicatesToCheck) {
     const isDefined = await formExtRepo.formExtensionHasPredicateSet(
-      predicate,
+      predicateUri,
       extensionFormTtl,
     );
     if (isDefined) {
-      definedPredicates.push(predicate);
+      definedPredicates.push(predicateUri);
     }
   }
 

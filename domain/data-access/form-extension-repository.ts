@@ -240,14 +240,13 @@ const replaceFormUriObject = async (graphUri: string, store: N3.Store) => {
 };
 
 const deleteAllFromBaseForm = async (
-  predicates: string[],
+  predicateUris: string[],
   graphUri: string,
   store: N3.Store,
 ) => {
+  const valuePredicates = predicateUris.map((uri) => sparqlEscapeUri(uri));
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   
     DELETE {
       GRAPH ${sparqlEscapeUri(graphUri)} {
@@ -258,7 +257,7 @@ const deleteAllFromBaseForm = async (
       GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s a form:Form;
         ?p ?o.
-        VALUES ?p { ${predicates.join(' ')} }
+        VALUES ?p { ${valuePredicates.join(' ')} }
       }
     }
     `;
@@ -266,16 +265,15 @@ const deleteAllFromBaseForm = async (
 };
 
 const formExtensionHasPredicateSet = async (
-  predicate: string, // Very confusing but there are prefix predicates e.g. form:targetLabel
+  predicateUri: string,
   extensionFormTtl: string,
 ) => {
   const query = `
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
   ASK {
     ?formUri a form:Extension.
-    ?formUri ${predicate} ?o.
+    ?formUri ${sparqlEscapeUri(predicateUri)} ?o.
   }
   `;
 
