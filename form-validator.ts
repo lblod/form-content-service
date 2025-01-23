@@ -154,6 +154,7 @@ export const buildFormQuery = async function (
   const formPaths = await getPathsForFields(formStore);
   const generatorPaths = await getPathsForGenerators(formStore);
   const allPaths = { ...formPaths, ...generatorPaths };
+  const safeInstanceUri = sparqlEscapeUri(instanceUri);
 
   const constructVariables = Object.keys(allPaths).map((field, index) => {
     return pathToConstructVariables(allPaths[field], index, instanceUri);
@@ -167,18 +168,19 @@ export const buildFormQuery = async function (
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX dcterms: <http://purl.org/dc/terms/>
     ${options?.afterPrefixesSnippet || ''}
     ${queryType} {
-      <${instanceUri}> a ?type .
-      <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
+      ${safeInstanceUri} a ?type .
+      ${safeInstanceUri} dcterms:modified ?modifiedAt .
       ${constructVariables.join('\n')}
     }
     ${options?.beforeWhereSnippet || ''}
     WHERE {
-      <${instanceUri}> a ?type .
+      ${safeInstanceUri} a ?type .
       OPTIONAL {
         OPTIONAL {
-          <${instanceUri}> <${PREDICATE.modified.value}> ?modifiedAt .
+          ${safeInstanceUri} dcterms:modified ?modifiedAt .
         }
         ${constructPaths.join('\n')}
       }
