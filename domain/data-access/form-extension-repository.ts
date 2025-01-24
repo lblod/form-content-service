@@ -3,8 +3,6 @@ import { quadToString, ttlToStore } from '../../helpers/ttl-helpers';
 import { sparqlEscapeUri, query } from 'mu';
 import N3, { Quad } from 'n3';
 
-import { ttlToStore } from '../../helpers/ttl-helpers';
-
 const engine = new QueryEngine();
 
 const isFormExtension = async (formTtl: string) => {
