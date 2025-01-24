@@ -269,7 +269,7 @@ const fetchInstanceIdByUri = async (uri: string) => {
 
     SELECT ?id
     WHERE {
-      <${uri}> mu:uuid ?id.
+      ${sparqlEscapeUri(uri)} mu:uuid ?id.
     } LIMIT 1
   `);
 
@@ -308,7 +308,9 @@ const saveInstanceVersion = async (
   const { insertLines, prefixLines } =
     await ttlToTriplesAndPrefixes(instanceTtl);
 
-  const historyGraph = `<http://mu.semte.ch/graphs/formHistory/${uuid()}>`;
+  const historyGraphUri = sparqlEscapeUri(
+    `http://mu.semte.ch/graphs/formHistory/${uuid()}`,
+  );
 
   let descriptionInsert = '';
   if (description && description.length > 0) {
@@ -323,12 +325,12 @@ const saveInstanceVersion = async (
 
     INSERT DATA {
       GRAPH <http://mu.semte.ch/graphs/formHistory> {
-        ${historyGraph} a <http://mu.semte.ch/vocabularies/ext/FormHistory> ;
+        ${historyGraphUri} a <http://mu.semte.ch/vocabularies/ext/FormHistory> ;
           dct:isVersionOf ${sparqlEscapeUri(instanceUri)} ;
           dct:issued ${sparqlEscapeDateTime(new Date())} ;
           dct:creator ${sparqlEscapeUri(creatorUri)} ${descriptionInsert}.
       }
-      GRAPH ${historyGraph} {
+      GRAPH ${historyGraphUri} {
         ${insertLines.join('.\n')}
       }
     }
