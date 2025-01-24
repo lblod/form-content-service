@@ -354,6 +354,9 @@ async function updateFormTtlForExtension(formUri: string) {
       ?s ext:ttlCode ${sparqlEscapeString(resultTtl)}.
     }
     WHERE {
+      VALUES ?s {
+        ${sparqlEscapeUri(formUri)}
+      }
       ?s ext:isCustomForm true.
       OPTIONAL {
         ?s ext:ttlCode ?ttl.
