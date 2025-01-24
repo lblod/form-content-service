@@ -244,7 +244,7 @@ const deleteAllFromBaseForm = async (
   graphUri: string,
   store: N3.Store,
 ) => {
-  const valuePredicates = predicateUris.map((uri) => sparqlEscapeUri(uri));
+  const safePredicates = predicateUris.map((uri) => sparqlEscapeUri(uri));
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
   
@@ -257,7 +257,7 @@ const deleteAllFromBaseForm = async (
       GRAPH ${sparqlEscapeUri(graphUri)} {
         ?s a form:Form;
         ?p ?o.
-        VALUES ?p { ${valuePredicates.join(' ')} }
+        VALUES ?p { ${safePredicates.join(' ')} }
       }
     }
     `;
