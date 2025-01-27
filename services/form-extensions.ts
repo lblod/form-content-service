@@ -5,6 +5,7 @@ import { fetchFormDefinitionByUri } from './forms-from-config';
 import { FormDefinition } from '../types';
 
 export const extendForm = async (
+  extensionUri: string,
   extensionFormTtl: string,
 ): Promise<FormDefinition> => {
   const store = new N3.Store();
@@ -14,6 +15,7 @@ export const extendForm = async (
     return {
       formTtl: extensionFormTtl,
       metaTtl: null,
+      uri: extensionUri,
     };
   }
 
@@ -47,12 +49,15 @@ export const extendForm = async (
 
   await formExtRepo.replaceFormUri(mergeGraph, store);
   await formExtRepo.replaceExtendsGroup(mergeGraph, store);
+  await formExtRepo.addExtensionFieldGenerators(mergeGraph, store);
+  await formExtRepo.addComplexPaths(mergeGraph, store);
 
   const extendedFormTtl = await formExtRepo.graphToTtl(mergeGraph, store);
 
   return {
     formTtl: extendedFormTtl,
     metaTtl: baseFormDefinition.metaTtl,
+    uri: extensionUri,
   };
 };
 
