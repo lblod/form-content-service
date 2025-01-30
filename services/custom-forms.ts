@@ -14,6 +14,7 @@ import {
   fetchFormDefinitionByUri,
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
+import comunicaRepo from '../domain/data-access/comunica-repository';
 
 type FieldDescription =
   | {
@@ -601,11 +602,13 @@ async function getGeneratorShape(formTtl: string) {
   return b.get('shape').value;
 }
 
-export async function getFormReplacementLabels(formId: string) {
+export async function getFormInstanceLabels(formId: string) {
   const baseForm = await fetchFormDefinitionById(formId);
   if (!baseForm) {
     throw new HttpError('base form not found', 404);
   }
+
+  const instanceLabels = await comunicaRepo.getFormLabels(baseForm.formTtl);
 
   const result = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -624,11 +627,13 @@ export async function getFormReplacementLabels(formId: string) {
     }
   `);
 
-  return result?.results?.bindings.map((b) => {
+  const customFormLabels = result?.results?.bindings.map((b) => {
     return {
       label: b.fieldName?.value,
       var: b.fieldValuePath?.value,
       uri: b.field?.value,
     };
   });
+
+  return [...instanceLabels, ...customFormLabels];
 }
