@@ -16,21 +16,21 @@ import {
 import { HttpError } from '../domain/http-error';
 type FieldDescription =
   | {
-      name: string;
-      displayType: string;
-      libraryEntryUri?: never;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    }
+    name: string;
+    displayType: string;
+    libraryEntryUri?: never;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  }
   | {
-      name: string;
-      displayType?: never;
-      libraryEntryUri: string;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    };
+    name: string;
+    displayType?: never;
+    libraryEntryUri: string;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -619,9 +619,29 @@ export async function getFormReplacementForForm(formId: string) {
   `);
 
   const result = formUriWithTtl.results.bindings?.at(0);
+  const formTtl = result?.ttlCode.value;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const localStoreQuery = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-  return {
-    formUri: result?.replacement.value,
-    ttlCode: result?.ttlCode.value,
-  };
+    SELECT ?label
+    WHERE {
+      ?field sh:name ?label .
+    }
+  `;
+
+  const bindingStream = await engine.queryBindings(localStoreQuery, {
+    sources: [store],
+  });
+  const bindings = await bindingStream.toArray();
+  return bindings.map((b) => {
+    return {
+      label: b.get('label').value,
+      value: null,
+    };
+  });
 }
