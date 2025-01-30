@@ -629,11 +629,24 @@ export async function getFormInstanceLabels(formId: string) {
 
   const customFormLabels = result?.results?.bindings.map((b) => {
     return {
-      label: b.fieldName?.value,
+      name: b.fieldName?.value,
       var: b.fieldValuePath?.value,
       uri: b.field?.value,
     };
   });
 
-  return [...instanceLabels, ...customFormLabels];
+  return [
+    {
+      name: 'Uri',
+      var: 'uri',
+      uri: null,
+    },
+    {
+      name: 'Id',
+      var: 'id',
+      uri: null,
+    },
+    ...instanceLabels,
+    ...customFormLabels,
+  ];
 }
