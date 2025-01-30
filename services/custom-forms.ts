@@ -9,7 +9,10 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
 import { fetchFormDefinition } from './form-definitions';
-import { fetchFormDefinitionByUri } from './forms-from-config';
+import {
+  fetchFormDefinitionById,
+  fetchFormDefinitionByUri,
+} from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 type FieldDescription =
   | {
@@ -595,4 +598,30 @@ async function getGeneratorShape(formTtl: string) {
     );
   }
   return b.get('shape').value;
+}
+
+export async function getFormReplacementForForm(formId: string) {
+  const baseForm = await fetchFormDefinitionById(formId);
+  if (!baseForm) {
+    throw new HttpError('base form not found', 404);
+  }
+
+  const formUriWithTtl = await query(`
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT ?replacement ?ttlCode
+    WHERE {
+      GRAPH ?g {
+        ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
+        ?replacement ext:ttlCode ?ttlCode .
+      }
+    } LIMIT 1
+  `);
+
+  const result = formUriWithTtl.results.bindings?.at(0);
+
+  return {
+    formUri: result?.replacement.value,
+    ttlCode: result?.ttlCode.value,
+  };
 }

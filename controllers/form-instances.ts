@@ -10,6 +10,7 @@ import {
   postFormInstance,
   updateFormInstance,
 } from '../services/form-instances';
+import { getFormReplacementForForm } from '../services/custom-forms';
 
 const formInstanceRouter = Router();
 const getSessionId = (req: Request) => req.get('mu-session-id');
@@ -33,6 +34,7 @@ formInstanceRouter.get(
       sort,
       filter,
     });
+    await getFormReplacementForForm(req.params.formId);
     res.set('X-Total-Count', formInstances.count);
     res.send({ instances: formInstances.instances });
   },
