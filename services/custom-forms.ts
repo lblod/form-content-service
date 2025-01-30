@@ -14,6 +14,7 @@ import {
   fetchFormDefinitionByUri,
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
+import { InstanceMinimal } from '../types';
 type FieldDescription =
   | {
     name: string;
@@ -600,48 +601,55 @@ async function getGeneratorShape(formTtl: string) {
   return b.get('shape').value;
 }
 
-export async function getFormReplacementForForm(formId: string) {
+export async function getFormReplacementForForm(
+  formId: string,
+  instances: Array<InstanceMinimal>,
+) {
   const baseForm = await fetchFormDefinitionById(formId);
   if (!baseForm) {
     throw new HttpError('base form not found', 404);
   }
 
-  const formUriWithTtl = await query(`
-    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  const safeInstanceUris = instances.map((i) => sparqlEscapeUri(i.uri));
 
-    SELECT ?replacement ?ttlCode
-    WHERE {
-      GRAPH ?g {
-        ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
-        ?replacement ext:ttlCode ?ttlCode .
-      }
-    } LIMIT 1
-  `);
-
-  const result = formUriWithTtl.results.bindings?.at(0);
-  const formTtl = result?.ttlCode.value;
-  const store = await ttlToStore(formTtl);
-  const engine = new QueryEngine();
-  const localStoreQuery = `
+  const result = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?label
+    SELECT ?instance ?fieldName ?value ?fieldValuePath
     WHERE {
-      ?field sh:name ?label .
-    }
-  `;
+      GRAPH ?g {
+      VALUES ?instance { ${safeInstanceUris.join(' \n')} }
+        ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
+        ?replacement form:includes ?field .
 
-  const bindingStream = await engine.queryBindings(localStoreQuery, {
-    sources: [store],
-  });
-  const bindings = await bindingStream.toArray();
-  return bindings.map((b) => {
+        ?field sh:name ?fieldName .
+        ?field sh:path ?fieldValuePath .
+        OPTIONAL {
+          ?instance ?fieldValuePath ?value .
+        }
+      }
+    }
+  `);
+
+  const instanceCustomFields = result?.results?.bindings.map((b) => {
     return {
-      label: b.get('label').value,
-      value: null,
+      instanceUri: b.instance?.value,
+      fieldName: b.fieldName?.value,
+      value: b.value?.value ?? null,
+      fieldValuePath: b.fieldValuePath?.value ?? null,
+    };
+  });
+
+  return instances.map((instance) => {
+    const fields = instanceCustomFields.filter(
+      (field) => field.instanceUri === instance.uri,
+    );
+
+    return {
+      ...instance,
+      customFields: fields,
     };
   });
 }

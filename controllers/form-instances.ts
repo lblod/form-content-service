@@ -34,9 +34,12 @@ formInstanceRouter.get(
       sort,
       filter,
     });
-    await getFormReplacementForForm(req.params.formId);
+    const updatedInstances = await getFormReplacementForForm(
+      req.params.formId,
+      formInstances.instances,
+    );
     res.set('X-Total-Count', formInstances.count);
-    res.send({ instances: formInstances.instances });
+    res.send({ instances: updatedInstances });
   },
 );
 
