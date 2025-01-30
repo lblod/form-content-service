@@ -14,24 +14,24 @@ import {
   fetchFormDefinitionByUri,
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
-import { InstanceMinimal } from '../types';
+
 type FieldDescription =
   | {
-    name: string;
-    displayType: string;
-    libraryEntryUri?: never;
-    order?: number;
-    path?: string;
-    isRequired?: boolean;
-  }
+      name: string;
+      displayType: string;
+      libraryEntryUri?: never;
+      order?: number;
+      path?: string;
+      isRequired?: boolean;
+    }
   | {
-    name: string;
-    displayType?: never;
-    libraryEntryUri: string;
-    order?: number;
-    path?: string;
-    isRequired?: boolean;
-  };
+      name: string;
+      displayType?: never;
+      libraryEntryUri: string;
+      order?: number;
+      path?: string;
+      isRequired?: boolean;
+    };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -601,55 +601,34 @@ async function getGeneratorShape(formTtl: string) {
   return b.get('shape').value;
 }
 
-export async function getFormReplacementForForm(
-  formId: string,
-  instances: Array<InstanceMinimal>,
-) {
+export async function getFormReplacementLabels(formId: string) {
   const baseForm = await fetchFormDefinitionById(formId);
   if (!baseForm) {
     throw new HttpError('base form not found', 404);
   }
-
-  const safeInstanceUris = instances.map((i) => sparqlEscapeUri(i.uri));
 
   const result = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?instance ?fieldName ?value ?fieldValuePath
+    SELECT ?field ?fieldName ?fieldValuePath
     WHERE {
       GRAPH ?g {
-      VALUES ?instance { ${safeInstanceUris.join(' \n')} }
         ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
         ?replacement form:includes ?field .
 
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
-        OPTIONAL {
-          ?instance ?fieldValuePath ?value .
-        }
       }
     }
   `);
 
-  const instanceCustomFields = result?.results?.bindings.map((b) => {
+  return result?.results?.bindings.map((b) => {
     return {
-      instanceUri: b.instance?.value,
-      fieldName: b.fieldName?.value,
-      value: b.value?.value ?? null,
-      fieldValuePath: b.fieldValuePath?.value ?? null,
-    };
-  });
-
-  return instances.map((instance) => {
-    const fields = instanceCustomFields.filter(
-      (field) => field.instanceUri === instance.uri,
-    );
-
-    return {
-      ...instance,
-      customFields: fields,
+      label: b.fieldName?.value,
+      var: b.fieldValuePath?.value,
+      uri: b.field?.value,
     };
   });
 }
