@@ -212,16 +212,21 @@ const getFormInstances = async (
 ) => {
   const labelJoin = labels
     .map((label) => {
+      if (['id', 'uri'].includes(label.var)) {
+        return;
+      }
       return `?uri ${sparqlEscapeUri(label.uri)} ?${label.var} .`;
     })
+    .filter((l) => l)
     .join('\n');
-  const variables =
-    '?uri ?id ' +
-    labels
-      .map((label) => {
-        return `?${label.var}`;
-      })
-      .join(' ');
+  const variables = labels
+    .map((label) => {
+      if (['id', 'uri'].includes(label.var)) {
+        return '';
+      }
+      return `?${label.var}`;
+    })
+    .join(' ');
   const defaultPageSize = 20;
   const defaultOffset = 0;
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
@@ -232,7 +237,7 @@ const getFormInstances = async (
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    SELECT DISTINCT ${variables}
+    SELECT DISTINCT ?uri ?id ${variables}
     WHERE {
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }

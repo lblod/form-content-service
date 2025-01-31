@@ -20,18 +20,20 @@ formInstanceRouter.post('/:id', async (req: Request, res: Response) => {
   res.send({ id });
 });
 
-formInstanceRouter.get(
+formInstanceRouter.post(
   '/:formId/instances',
   async (req: Request, res: Response) => {
     const limit = parseInt(req.query.page?.size || 10, 10);
     const offset = parseInt(req.query.page?.number || 0, 10) * limit;
     const sort = req.query.sort;
     const filter = req.query.filter;
+    const labels = req.body.labels;
     const formInstances = await getInstancesForForm(req.params.formId, {
       limit,
       offset,
       sort,
       filter,
+      labels,
     });
     res.set('X-Total-Count', formInstances.count);
     res.send({ instances: formInstances.instances });

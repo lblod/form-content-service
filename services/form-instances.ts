@@ -1,6 +1,6 @@
 import { HttpError } from '../domain/http-error';
 import { cleanAndValidateFormInstance } from '../form-validator';
-import { FormDefinition, InstanceData, InstanceInput } from '../types';
+import { FormDefinition, InstanceData, InstanceInput, Label } from '../types';
 import { fetchFormDefinitionById } from './forms-from-config';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
@@ -55,7 +55,13 @@ export const postFormInstance = async (
 
 export const getInstancesForForm = async (
   formId: string,
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    labels?: Array<Label>;
+  },
 ) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
@@ -63,7 +69,10 @@ export const getInstancesForForm = async (
   }
 
   const type = await comunicaRepo.getFormTarget(form.formTtl);
-  const labels = await comunicaRepo.getFormLabels(form.formTtl);
+  let labels = options.labels;
+  if (!labels || labels.length === 0) {
+    labels = await comunicaRepo.getFormLabels(form.formTtl);
+  }
 
   return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
