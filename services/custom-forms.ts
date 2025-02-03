@@ -635,6 +635,7 @@ export async function getFormInstanceLabels(
       name: b.fieldName?.value,
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
+      isCustom: true,
     };
   });
 
