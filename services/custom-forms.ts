@@ -638,7 +638,7 @@ export async function getFormInstanceLabels(
     };
   });
 
-  let order = 3;
+  let order = 2;
   const labelsWithOrder = [...instanceLabels, ...customFormLabels].map(
     (label) => {
       return {
@@ -653,13 +653,13 @@ export async function getFormInstanceLabels(
       name: 'Uri',
       var: 'uri',
       uri: null,
-      order: 1,
+      order: 0,
     },
     {
       name: 'Id',
       var: 'id',
       uri: 'http://mu.semte.ch/vocabularies/core/uuid',
-      order: 2,
+      order: 1,
     },
     ...labelsWithOrder,
   ];
