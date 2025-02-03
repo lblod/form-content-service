@@ -5,6 +5,7 @@ import { fetchFormDefinitionById } from './forms-from-config';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
+import { jsonToCsv } from '../utils/json-to-csv-string';
 
 export const postFormInstance = async (
   formId: string,
@@ -217,4 +218,22 @@ export const deleteFormInstance = async (
   }
 
   await formRepo.deleteFormInstance(form.formTtl, instanceUri);
+};
+
+export const instancesAsCsv = async (
+  formId: string,
+  labels: Array<Label>,
+): Promise<string> => {
+  const result = await getInstancesForForm(formId, {
+    labels,
+  });
+  const instancePropertiesForLabels = result.instances.map((instance) => {
+    return Object.fromEntries(
+      Object.entries(instance).filter(([key]) =>
+        labels.map((l) => l.name).includes(key),
+      ),
+    );
+  });
+
+  return jsonToCsv(instancePropertiesForLabels);
 };
