@@ -15,6 +15,7 @@ import {
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 import comunicaRepo from '../domain/data-access/comunica-repository';
+import { Label } from '../types';
 
 type FieldDescription =
   | {
@@ -602,7 +603,9 @@ async function getGeneratorShape(formTtl: string) {
   return b.get('shape').value;
 }
 
-export async function getFormInstanceLabels(formId: string) {
+export async function getFormInstanceLabels(
+  formId: string,
+): Promise<Array<Label>> {
   const baseForm = await fetchFormDefinitionById(formId);
   if (!baseForm) {
     throw new HttpError('base form not found', 404);
@@ -635,18 +638,29 @@ export async function getFormInstanceLabels(formId: string) {
     };
   });
 
+  let order = 3;
+  const labelsWithOrder = [...instanceLabels, ...customFormLabels].map(
+    (label) => {
+      return {
+        ...label,
+        order: order++,
+      };
+    },
+  );
+
   return [
     {
       name: 'Uri',
       var: 'uri',
       uri: null,
+      order: 1,
     },
     {
       name: 'Id',
       var: 'id',
       uri: 'http://mu.semte.ch/vocabularies/core/uuid',
+      order: 2,
     },
-    ...instanceLabels,
-    ...customFormLabels,
+    ...labelsWithOrder,
   ];
 }
