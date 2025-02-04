@@ -19,7 +19,10 @@ import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { updateInstancesWithComplexPath } from '../../services/custom-forms';
-import { complexPathUris } from '../../utils/get-custom-form-field-value';
+import {
+  complexPathUris,
+  formatTypeUris,
+} from '../../utils/get-custom-form-field-value';
 
 const fetchFormTtlById = async (
   formId: string,
@@ -266,7 +269,8 @@ const getFormInstances = async (
         ? binding[label.var].value
         : null;
       if (
-        Object.values(complexPathUris).includes(label?.uri) &&
+        (Object.values(complexPathUris).includes(label?.uri) ||
+          Object.values(formatTypeUris).includes(label?.type)) &&
         instance[label.name]
       ) {
         complexPathLabels.push(label);

@@ -18,6 +18,8 @@ import comunicaRepo from '../domain/data-access/comunica-repository';
 import { InstanceMinimal, Label } from '../types';
 import {
   complexPathUris,
+  formatFieldValueAsDate,
+  formatTypeUris,
   getAddressValue,
 } from '../utils/get-custom-form-field-value';
 
@@ -622,7 +624,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType
     WHERE {
       GRAPH ?g {
         ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
@@ -630,6 +632,7 @@ export async function getFormInstanceLabels(
 
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
+        ?field form:displayType ?displayType .
       }
     }
     ORDER BY ?fieldName
@@ -640,6 +643,7 @@ export async function getFormInstanceLabels(
       name: b.fieldName?.value,
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
+      type: b.displayType?.value,
       isCustom: true,
     };
   });
@@ -684,20 +688,23 @@ export async function updateInstancesWithComplexPath(
       const { instance, labels } = value;
       for (let index = 0; index < labels.length; index++) {
         const label = labels[index];
+        const matchIndex = updatedInstances.findIndex(
+          (i) => i.uri === instance.uri,
+        );
+        if (matchIndex == -1) {
+          return;
+        }
+        const latestInstance = updatedInstances[matchIndex];
         const complexValue = await getValueForCustomField(
           label.uri,
-          instance[label.name],
+          label.type,
+          latestInstance[label.name],
         );
-        if (complexValue) {
-          const matchIndex = updatedInstances.findIndex(
-            (i) => i.uri === instance.uri,
-          );
-          delete instance[label.name];
-          updatedInstances[matchIndex] = {
-            ...instance,
-            [label.name]: complexValue,
-          };
-        }
+        delete latestInstance[label.name];
+        updatedInstances[matchIndex] = {
+          ...latestInstance,
+          [label.name]: complexValue,
+        };
       }
     }),
   );
@@ -707,6 +714,7 @@ export async function updateInstancesWithComplexPath(
 
 export async function getValueForCustomField(
   fieldValuePath?: string,
+  fieldType?: string,
   fieldValue?: string,
 ) {
   if (!fieldValue) {
@@ -714,12 +722,20 @@ export async function getValueForCustomField(
   }
 
   const queryPathMap = {
-    [complexPathUris.address]: getAddressValue(fieldValue),
+    [complexPathUris.address]: async () => await getAddressValue(fieldValue),
   };
 
-  if (!queryPathMap[fieldValuePath]) {
-    return fieldValue;
+  if (Object.keys(queryPathMap).includes(fieldValuePath)) {
+    return await queryPathMap[fieldValuePath]();
   }
 
-  return await queryPathMap[fieldValuePath];
+  const formatMap = {
+    [formatTypeUris.date]: () => formatFieldValueAsDate(fieldValue),
+  };
+
+  if (Object.keys(formatMap).includes(fieldType)) {
+    return formatMap[fieldType]();
+  }
+
+  return fieldValue;
 }
