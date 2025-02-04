@@ -15,8 +15,11 @@ import {
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 import comunicaRepo from '../domain/data-access/comunica-repository';
-import { Label } from '../types';
-import { getAddressValue } from '../utils/get-custom-form-field-value';
+import { InstanceMinimal, Label } from '../types';
+import {
+  complexPathUris,
+  getAddressValue,
+} from '../utils/get-custom-form-field-value';
 
 type FieldDescription =
   | {
@@ -668,6 +671,40 @@ export async function getFormInstanceLabels(
   ];
 }
 
+export async function updateInstancesWithComplexPath(
+  instances: Array<InstanceMinimal>,
+  complexPathInstances: Array<{
+    instance: InstanceMinimal;
+    labels: Array<Label>;
+  }>,
+): Promise<Array<InstanceMinimal>> {
+  const updatedInstances = [...instances];
+  await Promise.all(
+    complexPathInstances.map(async (value) => {
+      const { instance, labels } = value;
+      for (let index = 0; index < labels.length; index++) {
+        const label = labels[index];
+        const complexValue = await getValueForCustomField(
+          label.uri,
+          instance[label.name],
+        );
+        if (complexValue) {
+          const matchIndex = updatedInstances.findIndex(
+            (i) => i.uri === instance.uri,
+          );
+          delete instance[label.name];
+          updatedInstances[matchIndex] = {
+            ...instance,
+            [label.name]: complexValue,
+          };
+        }
+      }
+    }),
+  );
+
+  return updatedInstances;
+}
+
 export async function getValueForCustomField(
   fieldValuePath?: string,
   fieldValue?: string,
@@ -677,11 +714,10 @@ export async function getValueForCustomField(
   }
 
   const queryPathMap = {
-    'https://data.vlaanderen.be/ns/persoon#verblijfsadres':
-      getAddressValue(fieldValue),
+    [complexPathUris.address]: getAddressValue(fieldValue),
   };
 
-  if (!fieldValue || !queryPathMap[fieldValuePath]) {
+  if (!queryPathMap[fieldValuePath]) {
     return fieldValue;
   }
 

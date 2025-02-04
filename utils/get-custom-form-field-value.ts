@@ -1,5 +1,9 @@
 import { query, sparqlEscapeUri } from 'mu';
 
+export const complexPathUris = {
+  address: 'https://data.vlaanderen.be/ns/persoon#verblijfsadres',
+};
+
 export const getAddressValue = async (instanceUri: string) => {
   const safe = {
     instance: sparqlEscapeUri(instanceUri),
