@@ -16,6 +16,7 @@ import {
 import { HttpError } from '../domain/http-error';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { Label } from '../types';
+import { getAddressValue } from '../utils/get-custom-form-field-value';
 
 type FieldDescription =
   | {
@@ -665,4 +666,24 @@ export async function getFormInstanceLabels(
     },
     ...labelsWithOrder,
   ];
+}
+
+export async function getValueForCustomField(
+  fieldValuePath?: string,
+  fieldValue?: string,
+) {
+  if (!fieldValue) {
+    return null;
+  }
+
+  const queryPathMap = {
+    'https://data.vlaanderen.be/ns/persoon#verblijfsadres':
+      getAddressValue(fieldValue),
+  };
+
+  if (!fieldValue || !queryPathMap[fieldValuePath]) {
+    return fieldValue;
+  }
+
+  return await queryPathMap[fieldValuePath];
 }

@@ -18,6 +18,7 @@ import {
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { getValueForCustomField } from '../../services/custom-forms';
 
 const fetchFormTtlById = async (
   formId: string,
@@ -252,19 +253,26 @@ const getFormInstances = async (
   const queryResult = await query(q);
 
   const instance_values: InstanceMinimal[] = [];
+  await Promise.all(
+    queryResult.results.bindings.map(async (binding) => {
+      const instance = {
+        uri: binding.uri.value,
+        id: binding.id.value,
+      };
+      for (let index = 0; index < labels.length; index++) {
+        const label = labels[index];
+        const valueForLabel = binding[label.var]
+          ? binding[label.var].value
+          : null;
 
-  queryResult.results.bindings.map((binding) => {
-    const instance = {
-      uri: binding.uri.value,
-      id: binding.id.value,
-    };
-    labels.forEach((label) => {
-      instance[label.name] = binding[label.var]
-        ? binding[label.var].value
-        : null;
-    });
-    instance_values.push(instance);
-  });
+        instance[label.name] = await getValueForCustomField(
+          label.uri,
+          valueForLabel,
+        );
+      }
+      instance_values.push(instance);
+    }),
+  );
 
   return instance_values;
 };
