@@ -700,7 +700,6 @@ export async function updateInstancesWithComplexPath(
           label.type,
           latestInstance[label.name],
         );
-        delete latestInstance[label.name];
         updatedInstances[matchIndex] = {
           ...latestInstance,
           [label.name]: complexValue,
