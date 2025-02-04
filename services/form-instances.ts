@@ -226,6 +226,7 @@ export const instancesAsCsv = async (
 ): Promise<string> => {
   const result = await getInstancesForForm(formId, {
     labels,
+    limit: 9999, // Get all instances
   });
   const instancePropertiesForLabels = result.instances.map((instance) => {
     return Object.fromEntries(
