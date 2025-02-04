@@ -17,7 +17,11 @@ instanceTableRouter.get(
   '/:formId/download',
   async (req: Request, res: Response) => {
     const labels = JSON.parse(decodeURIComponent(req.query.labels)) ?? [];
-    const csvString = await instancesAsCsv(req.params.formId, labels);
+    const csvString = await instancesAsCsv(
+      req.params.formId,
+      labels,
+      req.query.sort,
+    );
 
     res.set('Content-Type', 'text/csv');
     res.set('Content-Disposition', 'attachment; filename="instances.csv"');

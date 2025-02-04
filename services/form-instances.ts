@@ -223,9 +223,11 @@ export const deleteFormInstance = async (
 export const instancesAsCsv = async (
   formId: string,
   labels: Array<Label>,
+  sort?: string,
 ): Promise<string> => {
   const result = await getInstancesForForm(formId, {
     labels,
+    sort,
     limit: 9999, // Get all instances
   });
   const instancePropertiesForLabels = result.instances.map((instance) => {
