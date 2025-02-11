@@ -628,6 +628,7 @@ export async function getFormInstanceLabels(
         ?field sh:path ?fieldValuePath .
       }
     }
+    ORDER BY ?fieldName
   `);
 
   const customFormLabels = result?.results?.bindings.map((b) => {
