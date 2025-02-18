@@ -2,6 +2,7 @@ import { app } from 'mu';
 import { ErrorRequestHandler } from 'express';
 import { formDefinitionRouter } from './controllers/form-definitions';
 import { formInstanceRouter } from './controllers/form-instances';
+import { instanceTableRouter } from './controllers/instance-table';
 import { loadFormsFromConfig } from './services/forms-from-config';
 
 loadFormsFromConfig();
@@ -11,6 +12,8 @@ app.get('/', async (_req, res) => {
 });
 
 app.use('/', formInstanceRouter);
+
+app.use('/instance-table', instanceTableRouter);
 
 app.use('/', formDefinitionRouter);
 

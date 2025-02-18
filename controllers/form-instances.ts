@@ -27,11 +27,13 @@ formInstanceRouter.get(
     const offset = parseInt(req.query.page?.number || 0, 10) * limit;
     const sort = req.query.sort;
     const filter = req.query.filter;
+    const labels = JSON.parse(decodeURIComponent(req.query.labels)) ?? [];
     const formInstances = await getInstancesForForm(req.params.formId, {
       limit,
       offset,
       sort,
       filter,
+      labels,
     });
     res.set('X-Total-Count', formInstances.count);
     res.send({ instances: formInstances.instances });

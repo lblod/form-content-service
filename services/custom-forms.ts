@@ -9,8 +9,14 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { sparqlEscapeObject, ttlToStore } from '../helpers/ttl-helpers';
 import { fetchFormDefinition } from './form-definitions';
-import { fetchFormDefinitionByUri } from './forms-from-config';
+import {
+  fetchFormDefinitionById,
+  fetchFormDefinitionByUri,
+} from './forms-from-config';
 import { HttpError } from '../domain/http-error';
+import comunicaRepo from '../domain/data-access/comunica-repository';
+import { Label } from '../types';
+
 type FieldDescription =
   | {
       name: string;
@@ -595,4 +601,68 @@ async function getGeneratorShape(formTtl: string) {
     );
   }
   return b.get('shape').value;
+}
+
+export async function getFormInstanceLabels(
+  formId: string,
+): Promise<Array<Label>> {
+  const baseForm = await fetchFormDefinitionById(formId);
+  if (!baseForm) {
+    throw new HttpError('base form not found', 404);
+  }
+
+  const instanceLabels = await comunicaRepo.getFormLabels(baseForm.formTtl);
+
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT ?field ?fieldName ?fieldValuePath
+    WHERE {
+      GRAPH ?g {
+        ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
+        ?replacement form:includes ?field .
+
+        ?field sh:name ?fieldName .
+        ?field sh:path ?fieldValuePath .
+      }
+    }
+    ORDER BY ?fieldName
+  `);
+
+  const customFormLabels = result?.results?.bindings.map((b) => {
+    return {
+      name: b.fieldName?.value,
+      var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
+      uri: b.fieldValuePath?.value,
+      isCustom: true,
+    };
+  });
+
+  let order = 2;
+  const labelsWithOrder = [...instanceLabels, ...customFormLabels].map(
+    (label) => {
+      return {
+        ...label,
+        order: order++,
+      };
+    },
+  );
+
+  return [
+    {
+      name: 'Uri',
+      var: 'uri',
+      uri: null,
+      order: 0,
+    },
+    {
+      name: 'Id',
+      var: 'id',
+      uri: 'http://mu.semte.ch/vocabularies/core/uuid',
+      order: 1,
+    },
+    ...labelsWithOrder,
+  ];
 }

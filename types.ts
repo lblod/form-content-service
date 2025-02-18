@@ -9,6 +9,7 @@ export type Label = {
   name: string;
   uri: string;
   var: string;
+  order?: number;
 };
 
 export type InstanceMinimal = {
