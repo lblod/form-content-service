@@ -17,9 +17,8 @@ import { HttpError } from '../domain/http-error';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { InstanceMinimal, Label } from '../types';
 import {
-  complexPathUris,
+  fieldTypesUris,
   formatFieldValueAsDate,
-  formatTypeUris,
   getAddressValue,
 } from '../utils/get-custom-form-field-value';
 
@@ -696,7 +695,6 @@ export async function updateInstancesWithComplexPath(
         }
         const latestInstance = updatedInstances[matchIndex];
         const complexValue = await getValueForCustomField(
-          label.uri,
           label.type,
           latestInstance[label.name],
         );
@@ -712,24 +710,16 @@ export async function updateInstancesWithComplexPath(
 }
 
 export async function getValueForCustomField(
-  fieldValuePath?: string,
   fieldType?: string,
   fieldValue?: string,
 ) {
-  if (!fieldValue) {
+  if (!fieldValue || !fieldValue) {
     return null;
   }
 
-  const queryPathMap = {
-    [complexPathUris.address]: async () => await getAddressValue(fieldValue),
-  };
-
-  if (Object.keys(queryPathMap).includes(fieldValuePath)) {
-    return await queryPathMap[fieldValuePath]();
-  }
-
   const formatMap = {
-    [formatTypeUris.date]: () => formatFieldValueAsDate(fieldValue),
+    [fieldTypesUris.date]: () => formatFieldValueAsDate(fieldValue),
+    [fieldTypesUris.address]: async () => await getAddressValue(fieldValue),
   };
 
   if (Object.keys(formatMap).includes(fieldType)) {

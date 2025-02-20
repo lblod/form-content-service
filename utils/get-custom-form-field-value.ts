@@ -1,11 +1,8 @@
 import moment from 'moment';
 import { query, sparqlEscapeUri } from 'mu';
 
-export const complexPathUris = {
-  address: 'https://data.vlaanderen.be/ns/persoon#verblijfsadres',
-};
-
-export const formatTypeUris = {
+export const fieldTypesUris = {
+  address: 'http://lblod.data.gift/display-types/lmb/custom-address-input',
   date: 'http://lblod.data.gift/display-types/lmb/custom-date-input',
 };
 
