@@ -15,7 +15,12 @@ import {
 } from './forms-from-config';
 import { HttpError } from '../domain/http-error';
 import comunicaRepo from '../domain/data-access/comunica-repository';
-import { Label } from '../types';
+import { InstanceMinimal, Label } from '../types';
+import {
+  fieldTypesUris,
+  formatFieldValueAsDate,
+  getAddressValue,
+} from '../utils/get-custom-form-field-value';
 
 type FieldDescription =
   | {
@@ -384,7 +389,7 @@ async function addLibraryFieldToFormExtension(
         ?validationUri ?validationP ?validationO .
         ?validationUri sh:path ?path .
 
-      ${requiredConstraintTtl}        
+      ${requiredConstraintTtl}
     } WHERE {
       ${sparqlEscapeUri(libraryEntryUri)} a ext:FormLibraryEntry ;
         sh:path ?path ;
@@ -392,7 +397,7 @@ async function addLibraryFieldToFormExtension(
 
       OPTIONAL {
         ${sparqlEscapeUri(libraryEntryUri)} form:validatedBy ?validation .
-        
+
         ?validation ?validationP ?validationO .
         FILTER(?validationP != sh:path)
         BIND(URI(CONCAT(?validation, ${escapedUuid})) AS ?validationUri).
@@ -618,7 +623,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType
     WHERE {
       GRAPH ?g {
         ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
@@ -626,6 +631,7 @@ export async function getFormInstanceLabels(
 
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
+        ?field form:displayType ?displayType .
       }
     }
     ORDER BY ?fieldName
@@ -636,6 +642,7 @@ export async function getFormInstanceLabels(
       name: b.fieldName?.value,
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
+      type: b.displayType?.value,
       isCustom: true,
     };
   });
@@ -665,4 +672,59 @@ export async function getFormInstanceLabels(
     },
     ...labelsWithOrder,
   ];
+}
+
+export async function enhanceDownloadedInstancesWithComplexPaths(
+  instances: Array<InstanceMinimal>,
+  complexPathInstances: Array<{
+    instance: InstanceMinimal;
+    labels: Array<Label>;
+  }>,
+): Promise<Array<InstanceMinimal>> {
+  const enhancedInstances = [...instances];
+  await Promise.all(
+    complexPathInstances.map(async (value) => {
+      const { instance, labels } = value;
+      for (let index = 0; index < labels.length; index++) {
+        const label = labels[index];
+        const matchIndex = enhancedInstances.findIndex(
+          (i) => i.uri === instance.uri,
+        );
+        if (matchIndex == -1) {
+          return;
+        }
+        const latestInstance = enhancedInstances[matchIndex];
+        const complexValue = await getValueForCustomField(
+          label.type,
+          latestInstance[label.name],
+        );
+        enhancedInstances[matchIndex] = {
+          ...latestInstance,
+          [label.name]: complexValue,
+        };
+      }
+    }),
+  );
+
+  return enhancedInstances;
+}
+
+export async function getValueForCustomField(
+  fieldType?: string,
+  fieldValue?: string,
+) {
+  if (!fieldValue || !fieldValue) {
+    return null;
+  }
+
+  const formatMap = {
+    [fieldTypesUris.date]: () => formatFieldValueAsDate(fieldValue),
+    [fieldTypesUris.address]: async () => await getAddressValue(fieldValue),
+  };
+
+  if (Object.keys(formatMap).includes(fieldType)) {
+    return formatMap[fieldType]();
+  }
+
+  return fieldValue;
 }

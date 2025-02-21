@@ -18,6 +18,8 @@ import {
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { enhanceDownloadedInstancesWithComplexPaths } from '../../services/custom-forms';
+import { fieldTypesUris } from '../../utils/get-custom-form-field-value';
 
 const fetchFormTtlById = async (
   formId: string,
@@ -252,21 +254,32 @@ const getFormInstances = async (
   const queryResult = await query(q);
 
   const instance_values: InstanceMinimal[] = [];
-
+  const instancesWithComplexValue = [];
   queryResult.results.bindings.map((binding) => {
     const instance = {
       uri: binding.uri.value,
       id: binding.id.value,
     };
+    const complexPathLabels = [];
     labels.forEach((label) => {
       instance[label.name] = binding[label.var]
         ? binding[label.var].value
         : null;
+      if (
+        Object.values(fieldTypesUris).includes(label?.type) &&
+        instance[label.name]
+      ) {
+        complexPathLabels.push(label);
+      }
     });
     instance_values.push(instance);
+    instancesWithComplexValue.push({ instance, labels: complexPathLabels });
   });
 
-  return instance_values;
+  return await enhanceDownloadedInstancesWithComplexPaths(
+    instance_values,
+    instancesWithComplexValue,
+  );
 };
 
 const getFormInstancesWithCount = async (
