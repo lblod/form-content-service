@@ -241,5 +241,13 @@ export const instancesAsCsv = async (
     );
   });
 
-  return jsonToCsv(instancePropertiesForLabels);
+  const withNullReplaced = instancePropertiesForLabels.map((instance) => {
+    return Object.fromEntries(
+      Object.entries(instance).map(([key, value]) => {
+        return [key, value ?? ''];
+      }),
+    );
+  });
+
+  return jsonToCsv(withNullReplaced);
 };
