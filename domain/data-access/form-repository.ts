@@ -18,7 +18,7 @@ import {
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
-import { updateInstancesWithComplexPath } from '../../services/custom-forms';
+import { enhanceDownloadedInstancesWithComplexPaths } from '../../services/custom-forms';
 import { fieldTypesUris } from '../../utils/get-custom-form-field-value';
 
 const fetchFormTtlById = async (
@@ -276,7 +276,7 @@ const getFormInstances = async (
     instancesWithComplexValue.push({ instance, labels: complexPathLabels });
   });
 
-  return await updateInstancesWithComplexPath(
+  return await enhanceDownloadedInstancesWithComplexPaths(
     instance_values,
     instancesWithComplexValue,
   );

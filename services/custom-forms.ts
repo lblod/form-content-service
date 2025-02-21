@@ -389,7 +389,7 @@ async function addLibraryFieldToFormExtension(
         ?validationUri ?validationP ?validationO .
         ?validationUri sh:path ?path .
 
-      ${requiredConstraintTtl}        
+      ${requiredConstraintTtl}
     } WHERE {
       ${sparqlEscapeUri(libraryEntryUri)} a ext:FormLibraryEntry ;
         sh:path ?path ;
@@ -397,7 +397,7 @@ async function addLibraryFieldToFormExtension(
 
       OPTIONAL {
         ${sparqlEscapeUri(libraryEntryUri)} form:validatedBy ?validation .
-        
+
         ?validation ?validationP ?validationO .
         FILTER(?validationP != sh:path)
         BIND(URI(CONCAT(?validation, ${escapedUuid})) AS ?validationUri).
@@ -674,31 +674,31 @@ export async function getFormInstanceLabels(
   ];
 }
 
-export async function updateInstancesWithComplexPath(
+export async function enhanceDownloadedInstancesWithComplexPaths(
   instances: Array<InstanceMinimal>,
   complexPathInstances: Array<{
     instance: InstanceMinimal;
     labels: Array<Label>;
   }>,
 ): Promise<Array<InstanceMinimal>> {
-  const updatedInstances = [...instances];
+  const enhancedInstances = [...instances];
   await Promise.all(
     complexPathInstances.map(async (value) => {
       const { instance, labels } = value;
       for (let index = 0; index < labels.length; index++) {
         const label = labels[index];
-        const matchIndex = updatedInstances.findIndex(
+        const matchIndex = enhancedInstances.findIndex(
           (i) => i.uri === instance.uri,
         );
         if (matchIndex == -1) {
           return;
         }
-        const latestInstance = updatedInstances[matchIndex];
+        const latestInstance = enhancedInstances[matchIndex];
         const complexValue = await getValueForCustomField(
           label.type,
           latestInstance[label.name],
         );
-        updatedInstances[matchIndex] = {
+        enhancedInstances[matchIndex] = {
           ...latestInstance,
           [label.name]: complexValue,
         };
@@ -706,7 +706,7 @@ export async function updateInstancesWithComplexPath(
     }),
   );
 
-  return updatedInstances;
+  return enhancedInstances;
 }
 
 export async function getValueForCustomField(
