@@ -10,6 +10,13 @@ import {
   postFormInstance,
   updateFormInstance,
 } from '../services/form-instances';
+import {
+  createCustomFormType,
+  createEmptyCustomForm,
+  fetchCustomFormInstanceList,
+  fetchCustomFormTypeList,
+} from '../services/custom-forms';
+import { HttpError } from '../domain/http-error';
 
 const formInstanceRouter = Router();
 const getSessionId = (req: Request) => req.get('mu-session-id');
@@ -110,6 +117,53 @@ formInstanceRouter.delete(
   async (req: Request, res: Response) => {
     await deleteFormInstance(req.params.id, req.params.instanceId);
     res.sendStatus(200);
+  },
+);
+
+formInstanceRouter.post(
+  '/custom-form-type/create',
+  async (req: Request, res: Response) => {
+    if (!req.body.name) {
+      throw new HttpError('No name was provided.', 400);
+    }
+
+    const formType = await createCustomFormType(req.body.name);
+    res.status(201).send({
+      id: formType.id,
+    });
+  },
+);
+
+formInstanceRouter.get(
+  '/custom-form-type/list',
+  async (req: Request, res: Response) => {
+    const types = await fetchCustomFormTypeList();
+    res.status(200).send({ types });
+  },
+);
+
+formInstanceRouter.post(
+  '/custom-form-instance/create',
+  async (req: Request, res: Response) => {
+    if (!req.body.name) {
+      throw new HttpError('No name was provided.', 400);
+    }
+    if (!req.body.typeId) {
+      throw new HttpError('No typeId was provided.', 400);
+    }
+
+    const form = await createEmptyCustomForm(req.body.name, req.body.typeId);
+    res.status(201).send({
+      id: form.id,
+    });
+  },
+);
+
+formInstanceRouter.get(
+  '/custom-form-instance/list',
+  async (req: Request, res: Response) => {
+    const forms = await fetchCustomFormInstanceList();
+    res.status(200).send({ instances: forms });
   },
 );
 
