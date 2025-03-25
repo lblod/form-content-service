@@ -35,6 +35,7 @@ export async function createEmptyFormDefinition(
   const id = uuidv4();
   const formUri = `http://data.lblod.info/id/lmb/forms/${id}`;
   const typeUri = `http://data.lblod.info/id/lmb/form-types/${safeName}-${id}`;
+  const prefixUri = `http://data.lblod.info/id/lmb/${safeName}-${id}/`;
   const now = moment().toDate();
 
   let possibleDescription = '';
@@ -44,22 +45,49 @@ export async function createEmptyFormDefinition(
     )} dct:description ${sparqlEscapeString(description)} .`;
   }
 
+  const ttlCode = `
+    @prefix form: <http://lblod.data.gift/vocabularies/forms/>.
+    @prefix sh: <http://www.w3.org/ns/shacl#>.
+    @prefix mu: <http://mu.semte.ch/vocabularies/core/>.
+    @prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
+
+    <http://data.lblod.info/id/lmb/forms/contactpunt>
+      a form:Form, form:TopLevelForm;
+      sh:group ext:customFormPG;
+      form:initGenerator ext:customFormG;
+      form:targetType ${sparqlEscapeUri(typeUri)} ;
+      form:targetLabel ${sparqlEscapeString(name)} ;
+      ext:prefix ${sparqlEscapeUri(prefixUri)};
+      mu:uuid ${sparqlEscapeString(id)} .
+
+    ext:customFormG a form:Generator;
+      form:prototype [
+        form:shape [
+          a ${sparqlEscapeUri(typeUri)}
+        ]
+      ];
+      form:dataGenerator form:addMuUuid.
+  `;
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
     INSERT DATA {
       ${sparqlEscapeUri(formUri)} a form:Form,
                                     ext:GeneratedForm,
                                     form:TopLevelForm ;
         mu:uuid ${sparqlEscapeString(id)} ;
+        ext:isCustomForm """true"""^^xsd:boolean ;
         form:targetLabel ${sparqlEscapeString(name)} ;
         form:targetType ${sparqlEscapeUri(typeUri)} ;
-        ext:prefix ${sparqlEscapeUri(typeUri)} ;
+        ext:prefix ${sparqlEscapeUri(prefixUri)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
-        dct:modified ${sparqlEscapeDateTime(now)} .
+        dct:modified ${sparqlEscapeDateTime(now)} ;
+        ext:ttlCode ${sparqlEscapeString(ttlCode)} .
 
         ${possibleDescription}
     }
