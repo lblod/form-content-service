@@ -75,7 +75,10 @@ formDefinitionRouter.post(
       throw new HttpError('No name was provided.', 400);
     }
 
-    const id = await createEmptyFormDefinition(req.body.name);
+    const id = await createEmptyFormDefinition(
+      req.body.name,
+      req.body.description || null,
+    );
     res.status(201).send({ id });
   },
 );

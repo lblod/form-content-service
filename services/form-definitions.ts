@@ -27,12 +27,22 @@ export const fetchFormDefinition = async (id: string) => {
   };
 };
 
-export async function createEmptyFormDefinition(name: string) {
+export async function createEmptyFormDefinition(
+  name: string,
+  description?: string,
+) {
   const safeName = name.replace(/[^a-zA-Z0-9]/g, '');
   const id = uuidv4();
   const formUri = `http://data.lblod.info/id/lmb/forms/${id}`;
   const typeUri = `http://data.lblod.info/id/lmb/form-types/${safeName}-${id}`;
   const now = moment().toDate();
+
+  let possibleDescription = '';
+  if (description) {
+    possibleDescription = `${sparqlEscapeUri(
+      formUri,
+    )} dct:description ${sparqlEscapeString(description)} .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -50,6 +60,8 @@ export async function createEmptyFormDefinition(name: string) {
         ext:prefix ${sparqlEscapeUri(typeUri)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
         dct:modified ${sparqlEscapeDateTime(now)} .
+
+        ${possibleDescription}
     }
   `);
   return id;
