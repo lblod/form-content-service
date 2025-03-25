@@ -1,3 +1,6 @@
+import { v4 as uuidv4 } from 'uuid';
+import { sparqlEscapeString, sparqlEscapeUri, update } from 'mu';
+
 import { fetchFormDefinitionById } from './forms-from-config';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 
@@ -17,3 +20,27 @@ export const fetchFormDefinition = async (id: string) => {
     withHistory,
   };
 };
+
+export async function createEmptyFormDefinition(name: string) {
+  const safeName = name.replace(/[^a-zA-Z0-9]/g, '');
+  const id = uuidv4();
+  const formUri = `http://data.lblod.info/id/lmb/forms/${id}`;
+  const typeUri = `http://data.lblod.info/id/lmb/form-types/${safeName}-${id}`;
+
+  await update(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    INSERT DATA {
+      ${sparqlEscapeUri(formUri)} a form:Form,
+                                    ext:GeneratedForm,
+                                    form:TopLevelForm ;
+        mu:uuid ${sparqlEscapeString(id)} ;
+        form:targetLabel ${sparqlEscapeString(name)} ;
+        form:targetType ${sparqlEscapeUri(typeUri)} ;
+        ext:prefix ${sparqlEscapeUri(typeUri)} .
+    }
+  `);
+  return id;
+}
