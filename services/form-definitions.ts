@@ -1,8 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import { sparqlEscapeString, sparqlEscapeUri, update } from 'mu';
+import {
+  sparqlEscapeDateTime,
+  sparqlEscapeString,
+  sparqlEscapeUri,
+  update,
+} from 'mu';
 
 import { fetchFormDefinitionById } from './forms-from-config';
 import comunicaRepo from '../domain/data-access/comunica-repository';
+import moment = require('moment');
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
@@ -26,11 +32,13 @@ export async function createEmptyFormDefinition(name: string) {
   const id = uuidv4();
   const formUri = `http://data.lblod.info/id/lmb/forms/${id}`;
   const typeUri = `http://data.lblod.info/id/lmb/form-types/${safeName}-${id}`;
+  const now = moment().toDate();
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX dct: <http://purl.org/dc/terms/>
 
     INSERT DATA {
       ${sparqlEscapeUri(formUri)} a form:Form,
@@ -39,7 +47,9 @@ export async function createEmptyFormDefinition(name: string) {
         mu:uuid ${sparqlEscapeString(id)} ;
         form:targetLabel ${sparqlEscapeString(name)} ;
         form:targetType ${sparqlEscapeUri(typeUri)} ;
-        ext:prefix ${sparqlEscapeUri(typeUri)} .
+        ext:prefix ${sparqlEscapeUri(typeUri)} ;
+        dct:created ${sparqlEscapeDateTime(now)} ;
+        dct:modified ${sparqlEscapeDateTime(now)} .
     }
   `);
   return id;
