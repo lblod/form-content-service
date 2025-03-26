@@ -220,14 +220,23 @@ export const cleanAndValidateFormInstance = async function (
   const validationGraph = new NamedNode('http://data.lblod.info/validation');
   await store.parse(instanceTtl, validationGraph);
   if (definition.custom) {
-    store.addAll([
-      new Statement(
+    if (
+      !store.any(
         new NamedNode(instanceUri),
         new NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
         new NamedNode('http://mu.semte.ch/vocabularies/ext/CustomFormType'),
         validationGraph,
-      ),
-    ]);
+      )
+    ) {
+      store.addAll([
+        new Statement(
+          new NamedNode(instanceUri),
+          new NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+          new NamedNode('http://mu.semte.ch/vocabularies/ext/CustomFormType'),
+          validationGraph,
+        ),
+      ]);
+    }
   }
 
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
