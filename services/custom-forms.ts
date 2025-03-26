@@ -318,6 +318,7 @@ async function addFieldToFormExtension(
 
     INSERT DATA {
         ${sparqlEscapeUri(uri)} a form:Field;
+            sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)};
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
@@ -376,6 +377,7 @@ async function addLibraryFieldToFormExtension(
 
     INSERT {
         ${sparqlEscapeUri(uri)} a form:Field;
+            sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)} ;
             sh:name ${sparqlEscapeString(fieldDescription.name)} ;
             prov:wasDerivedFrom ${sparqlEscapeUri(libraryEntryUri)} ;
@@ -456,17 +458,28 @@ async function updateFormTtlForExtension(formUri: string) {
   const result = await query(`
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
   CONSTRUCT {
     ?s ?p ?o.
     ?field ?fieldP ?fieldO.
     ?field ext:isExtensionField true.
     ?validation ?vP ?vO.
+
+    ?group ?gp ?go .
   }
   WHERE {
     VALUES ?s {
       ${sparqlEscapeUri(formUri)}
     }
     ?s ?p ?o.
+
+    OPTIONAL {
+      ?s sh:group ?group .
+      ?group ?gp ?go .
+    }
+
+
     OPTIONAL {
       ?s form:includes ?field.
       ?field ?fieldP ?fieldO.

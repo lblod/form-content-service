@@ -35,6 +35,7 @@ export async function createEmptyFormDefinition(
   const id = uuidv4();
   const formUri = `http://data.lblod.info/id/lmb/forms/${id}`;
   const typeUri = `http://data.lblod.info/id/lmb/form-types/${safeName}-${id}`;
+  const groupUri = `http://data.lblod.info/id/lmb/form-groups/${id}`;
   const prefixUri = `http://data.lblod.info/id/lmb/${safeName}-${id}/`;
   const now = moment().toDate();
 
@@ -57,9 +58,14 @@ export async function createEmptyFormDefinition(
       sh:order 5000 ;
       sh:path skos:prefLabel .
 
-    <http://data.lblod.info/id/lmb/forms/contactpunt>
+      ${sparqlEscapeUri(groupUri)}
+        a form:PropertyGroup ;
+        sh:name "" ;
+        sh:order 1 .
+
+    <http://data.lblod.info/id/lmb/forms/custom-form>
       a form:Form, form:TopLevelForm ;
-      sh:group ext:customFormPG ;
+      sh:group ${sparqlEscapeUri(groupUri)} ;
       form:includes ext:hiddenFormNameF ;
       form:initGenerator ext:customFormG ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
@@ -82,6 +88,7 @@ export async function createEmptyFormDefinition(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
 
     INSERT DATA {
       ${sparqlEscapeUri(formUri)} a form:Form,
@@ -94,7 +101,12 @@ export async function createEmptyFormDefinition(
         ext:prefix ${sparqlEscapeUri(prefixUri)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
         dct:modified ${sparqlEscapeDateTime(now)} ;
-        ext:ttlCode ${sparqlEscapeString(ttlCode)} .
+        ext:ttlCode ${sparqlEscapeString(ttlCode)} ;
+        sh:group ${sparqlEscapeUri(groupUri)} .
+
+        ${sparqlEscapeUri(groupUri)} a form:PropertyGroup ;
+        sh:name "" ;
+        sh:order 1 .
 
         ${possibleDescription}
     }
