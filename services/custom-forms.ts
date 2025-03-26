@@ -493,13 +493,42 @@ async function updateFormTtlForExtension(formUri: string) {
   }
   `);
 
-  const resultTtl = result.results.bindings
+  const targetTypeQueryResult = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+    SELECT ?targetType
+    WHERE {
+      ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
+    }
+  `);
+
+  const targetType =
+    targetTypeQueryResult.results?.bindings[0].targetType.value;
+
+  let resultTtl = result.results.bindings
     .map((b) => {
       return `${sparqlEscapeUri(b.s.value)} ${sparqlEscapeUri(
         b.p.value,
       )} ${sparqlEscapeObject(b.o)} .`;
     })
     .join('\n');
+
+  resultTtl = `
+      @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
+      @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
+
+      ${resultTtl}
+
+      ${sparqlEscapeUri(formUri)}  form:initGenerator ext:customFormG .
+      ext:customFormG a form:Generator ;
+      form:prototype [
+        form:shape [
+          a ${sparqlEscapeUri(targetType)}, ext:CustomFormType
+        ]
+      ];
+      form:dataGenerator form:addMuUuid .
+    `;
+
   await update(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
