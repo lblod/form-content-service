@@ -83,8 +83,9 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
     WHERE {
       ?form form:targetLabel ?labelUri.
       OPTIONAL {
-        ?field sh:path ?labelUri;
-               sh:name ?labelName.
+        ?field sh:path ?labelUri ;
+          sh:name ?labelName ;
+          form:displayType ?displayType .
       }
     }
     `;

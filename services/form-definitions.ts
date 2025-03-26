@@ -46,27 +46,34 @@ export async function createEmptyFormDefinition(
   }
 
   const ttlCode = `
-    @prefix form: <http://lblod.data.gift/vocabularies/forms/>.
-    @prefix sh: <http://www.w3.org/ns/shacl#>.
-    @prefix mu: <http://mu.semte.ch/vocabularies/core/>.
-    @prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
+    @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
+    @prefix sh: <http://www.w3.org/ns/shacl#> .
+    @prefix mu: <http://mu.semte.ch/vocabularies/core/> .
+    @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
+    @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+    ext:hiddenFormNameF a form:Field ;
+      sh:name ${sparqlEscapeString(name)} ;
+      sh:order 5000 ;
+      sh:path skos:prefLabel .
 
     <http://data.lblod.info/id/lmb/forms/contactpunt>
-      a form:Form, form:TopLevelForm;
-      sh:group ext:customFormPG;
-      form:initGenerator ext:customFormG;
+      a form:Form, form:TopLevelForm ;
+      sh:group ext:customFormPG ;
+      form:includes ext:hiddenFormNameF ;
+      form:initGenerator ext:customFormG ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
-      form:targetLabel ${sparqlEscapeString(name)} ;
-      ext:prefix ${sparqlEscapeUri(prefixUri)};
+      form:targetLabel skos:prefLabel ;
+      ext:prefix ${sparqlEscapeUri(prefixUri)} ;
       mu:uuid ${sparqlEscapeString(id)} .
 
-    ext:customFormG a form:Generator;
+    ext:customFormG a form:Generator ;
       form:prototype [
         form:shape [
           a ${sparqlEscapeUri(typeUri)}
         ]
       ];
-      form:dataGenerator form:addMuUuid.
+      form:dataGenerator form:addMuUuid .
   `;
 
   await update(`
