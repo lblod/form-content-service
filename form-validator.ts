@@ -1,4 +1,4 @@
-import { NamedNode, Literal } from 'rdflib';
+import { NamedNode, Literal, Statement } from 'rdflib';
 import { FormDefinition } from './types';
 import ForkingStore from 'forking-store';
 import { sparqlEscapeUri } from 'mu';
@@ -219,6 +219,16 @@ export const cleanAndValidateFormInstance = async function (
   const store = new ForkingStore();
   const validationGraph = new NamedNode('http://data.lblod.info/validation');
   await store.parse(instanceTtl, validationGraph);
+  if (definition.custom) {
+    store.addAll([
+      new Statement(
+        new NamedNode(instanceUri),
+        new NamedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+        new NamedNode('http://mu.semte.ch/vocabularies/ext/CustomFormType'),
+        validationGraph,
+      ),
+    ]);
+  }
 
   const parsedTtl = await store.serializeDataMergedGraph(validationGraph);
   const ttlWithModifiedAt = await updatePredicateInTtl(
