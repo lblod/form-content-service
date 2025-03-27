@@ -53,23 +53,17 @@ export async function createEmptyFormDefinition(
     @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
     @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
-    ext:hiddenFormNameF a form:Field ;
-      sh:name ${sparqlEscapeString(name)} ;
-      sh:order 5000 ;
-      sh:path skos:prefLabel .
-
-      ${sparqlEscapeUri(groupUri)}
-        a form:PropertyGroup ;
-        sh:name "" ;
-        sh:order 1 .
+    ${sparqlEscapeUri(groupUri)}
+      a form:PropertyGroup ;
+      sh:name "" ;
+      sh:order 1 .
 
     <http://data.lblod.info/id/lmb/forms/custom-form>
       a form:Form, form:TopLevelForm ;
       sh:group ${sparqlEscapeUri(groupUri)} ;
-      form:includes ext:hiddenFormNameF ;
       form:initGenerator ext:customFormG ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
-      form:targetLabel skos:prefLabel ;
+      form:targetLabel mu:uuid ;
       ext:prefix ${sparqlEscapeUri(prefixUri)} ;
       mu:uuid ${sparqlEscapeString(id)} .
 
@@ -89,14 +83,16 @@ export async function createEmptyFormDefinition(
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
     INSERT DATA {
       ${sparqlEscapeUri(formUri)} a form:Form,
                                     ext:GeneratedForm,
                                     form:TopLevelForm ;
         mu:uuid ${sparqlEscapeString(id)} ;
+        skos:prefLabel ${sparqlEscapeString(name)} ;
         ext:isCustomForm """true"""^^xsd:boolean ;
-        form:targetLabel ${sparqlEscapeString(name)} ;
+        form:targetLabel mu:uuid ;
         form:targetType ${sparqlEscapeUri(typeUri)} ;
         ext:prefix ${sparqlEscapeUri(prefixUri)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
