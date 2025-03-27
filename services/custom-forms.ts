@@ -24,21 +24,21 @@ import {
 
 type FieldDescription =
   | {
-      name: string;
-      displayType: string;
-      libraryEntryUri?: never;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    }
+    name: string;
+    displayType: string;
+    libraryEntryUri?: never;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  }
   | {
-      name: string;
-      displayType?: never;
-      libraryEntryUri: string;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    };
+    name: string;
+    displayType?: never;
+    libraryEntryUri: string;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -660,7 +660,7 @@ export async function getFormInstanceLabels(
 
   const instanceLabels = await comunicaRepo.getFormLabels(baseForm.formTtl);
 
-  const result = await query(`
+  let queryString = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -677,7 +677,30 @@ export async function getFormInstanceLabels(
       }
     }
     ORDER BY ?fieldName
-  `);
+  `;
+
+  if (baseForm.custom) {
+    queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType
+    WHERE {
+      GRAPH ?g {
+        ${sparqlEscapeUri(baseForm.uri)} a ext:GeneratedForm .
+        ${sparqlEscapeUri(baseForm.uri)} form:includes ?field .
+
+        ?field sh:name ?fieldName .
+        ?field sh:path ?fieldValuePath .
+        ?field form:displayType ?displayType .
+      }
+    }
+    ORDER BY ?fieldName
+  `;
+  }
+
+  const result = await query(queryString);
 
   const customFormLabels = result?.results?.bindings.map((b) => {
     return {
@@ -727,7 +750,7 @@ export async function enhanceDownloadedInstancesWithComplexPaths(
   await Promise.all(
     complexPathInstances.map(async (value) => {
       const { instance, labels } = value;
-      for (let index = 0; index < labels.length; index++) {
+      for (let index = 0;index < labels.length;index++) {
         const label = labels[index];
         const matchIndex = enhancedInstances.findIndex(
           (i) => i.uri === instance.uri,
