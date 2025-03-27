@@ -24,21 +24,21 @@ import {
 
 type FieldDescription =
   | {
-      name: string;
-      displayType: string;
-      libraryEntryUri?: never;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    }
+    name: string;
+    displayType: string;
+    libraryEntryUri?: never;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  }
   | {
-      name: string;
-      displayType?: never;
-      libraryEntryUri: string;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-    };
+    name: string;
+    displayType?: never;
+    libraryEntryUri: string;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+  };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -493,18 +493,6 @@ async function updateFormTtlForExtension(formUri: string) {
   }
   `);
 
-  const targetTypeQueryResult = await query(`
-    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-
-    SELECT ?targetType
-    WHERE {
-      ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
-    }
-  `);
-
-  const targetType =
-    targetTypeQueryResult.results?.bindings[0].targetType.value;
-
   let resultTtl = result.results.bindings
     .map((b) => {
       return `${sparqlEscapeUri(b.s.value)} ${sparqlEscapeUri(
@@ -513,7 +501,20 @@ async function updateFormTtlForExtension(formUri: string) {
     })
     .join('\n');
 
-  resultTtl = `
+  const targetTypeQueryResult = await query(`
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  
+      SELECT ?targetType
+      WHERE {
+        ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
+      }
+    `);
+
+  const targetType =
+    targetTypeQueryResult.results.bindings?.at(0)?.targetType?.value;
+
+  if (targetType) {
+    resultTtl = `
       @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
       @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
 
@@ -528,6 +529,7 @@ async function updateFormTtlForExtension(formUri: string) {
       ];
       form:dataGenerator form:addMuUuid .
     `;
+  }
 
   await update(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -737,7 +739,7 @@ export async function enhanceDownloadedInstancesWithComplexPaths(
   await Promise.all(
     complexPathInstances.map(async (value) => {
       const { instance, labels } = value;
-      for (let index = 0; index < labels.length; index++) {
+      for (let index = 0;index < labels.length;index++) {
         const label = labels[index];
         const matchIndex = enhancedInstances.findIndex(
           (i) => i.uri === instance.uri,
