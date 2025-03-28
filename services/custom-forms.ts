@@ -30,6 +30,7 @@ type FieldDescription =
       order?: number;
       path?: string;
       isRequired?: boolean;
+      showInSummary?: boolean;
     }
   | {
       name: string;
@@ -38,12 +39,14 @@ type FieldDescription =
       order?: number;
       path?: string;
       isRequired?: boolean;
+      showInSummary?: boolean;
     };
 type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
   isRequired: boolean;
+  showInSummary?: boolean;
 };
 
 const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
@@ -94,10 +97,16 @@ export async function updateField(
     displayType: sparqlEscapeUri(description.displayType),
   };
   let requiredConstraintInsertTtl = '';
+  let showInSummaryTtl = '';
   if (description.isRequired) {
     requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
       description.field,
     );
+  }
+  if((description.showInSummary)){
+    showInSummaryTtl = `
+      ${escaped.fieldUri} form:showInSummary true .
+    `;
   }
 
   await update(`
@@ -110,18 +119,25 @@ export async function updateField(
 
       ${escaped.fieldUri} form:validatedBy ?validation .
         ?validation ?validationP ?validationO .
+      ${escaped.fieldUri} form:showInSummary ?summary .
+
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
       ${escaped.fieldUri} form:displayType ${escaped.displayType} .
 
       ${description.isRequired ? requiredConstraintInsertTtl : ''}
+      ${showInSummaryTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
         sh:name ?fieldName ;
         form:displayType ?displayType ;
         sh:path ?path .
+
+      OPTIONAL {
+        ${escaped.fieldUri} form:showInSummary ?summary .
+      }
 
       OPTIONAL {
         ${escaped.fieldUri} form:validatedBy ?validation .
@@ -309,6 +325,7 @@ async function addFieldToFormExtension(
   const requiredConstraintTtl = fieldDescription.isRequired
     ? getRequiredConstraintInsertTtl(uri, path)
     : '';
+  const showInSummaryTtl = fieldDescription.showInSummary ? `${sparqlEscapeUri(uri)} form:showInSummary true .` : '';
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -328,6 +345,7 @@ async function addFieldToFormExtension(
         ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(uri)}.
 
       ${requiredConstraintTtl}
+      ${showInSummaryTtl}
     }
   `);
   return { id, uri };
@@ -503,7 +521,7 @@ async function updateFormTtlForExtension(formUri: string) {
 
   const targetTypeQueryResult = await query(`
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-  
+
       SELECT ?targetType
       WHERE {
         ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
