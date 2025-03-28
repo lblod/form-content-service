@@ -103,7 +103,7 @@ export async function updateField(
       description.field,
     );
   }
-  if((description.showInSummary)){
+  if (description.showInSummary) {
     showInSummaryTtl = `
       ${escaped.fieldUri} form:showInSummary true .
     `;
@@ -193,9 +193,7 @@ async function fetchFieldsInGroup(form, fieldUri) {
     OPTIONAL { ?field ext:isExtensionField ?extends . }
     ?field sh:order ?order .
   } ORDER BY ?order`;
-  const bindingStream = await engine.queryBindings(query, {
-    sources: [store],
-  });
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
     return {
@@ -282,10 +280,9 @@ function verifyFieldDescription(description: FieldDescription) {
   }
 }
 
-async function createCustomExtension(formUri: string): Promise<{
-  id: string;
-  uri: string;
-}> {
+async function createCustomExtension(
+  formUri: string,
+): Promise<{ id: string; uri: string }> {
   const id = uuidv4();
   const uri = `http://data.lblod.info/id/lmb/forms/${id}`;
 
@@ -325,7 +322,9 @@ async function addFieldToFormExtension(
   const requiredConstraintTtl = fieldDescription.isRequired
     ? getRequiredConstraintInsertTtl(uri, path)
     : '';
-  const showInSummaryTtl = fieldDescription.showInSummary ? `${sparqlEscapeUri(uri)} form:showInSummary true .` : '';
+  const showInSummaryTtl = fieldDescription.showInSummary
+    ? `${sparqlEscapeUri(uri)} form:showInSummary true .`
+    : '';
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -465,9 +464,7 @@ async function fetchGroupFromFormTtl(formTtl: string) {
     } LIMIT 1
   `;
 
-  const bindingStream = await engine.queryBindings(query, {
-    sources: [store],
-  });
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings?.[0]?.get('group')?.value;
 }
@@ -653,9 +650,7 @@ async function getGeneratorShape(formTtl: string) {
     ?generator a form:Generator ;
       form:prototype / form:shape ?shape .
   }`;
-  const bindingStream = await engine.queryBindings(query, {
-    sources: [store],
-  });
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   if (!bindings.length) {
     return null;
@@ -722,20 +717,12 @@ export async function getFormInstanceLabels(
   let order = 2;
   const labelsWithOrder = [...instanceLabels, ...customFormLabels].map(
     (label) => {
-      return {
-        ...label,
-        order: order++,
-      };
+      return { ...label, order: order++ };
     },
   );
 
   return [
-    {
-      name: 'Uri',
-      var: 'uri',
-      uri: null,
-      order: 0,
-    },
+    { name: 'Uri', var: 'uri', uri: null, order: 0 },
     {
       name: 'Id',
       var: 'id',

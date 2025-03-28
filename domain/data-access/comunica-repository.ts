@@ -2,7 +2,6 @@ import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
 import { Label } from '../../types';
-import { Store } from 'n3';
 
 const getFormData = async (formTtl: string) => {
   const q = `
@@ -91,10 +90,9 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
           sh:name ?labelName ;
           form:displayType ?displayType .
       }
-    }
-    `;
+    }`;
 
-    const bindingStream = await engine.queryBindings(q, {
+  const bindingStream = await engine.queryBindings(q, {
     sources: [store],
   });
 
@@ -122,11 +120,14 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
   return labels;
 };
 
-export const getDefaultFormLabels = async (formTtl: string): Promise<Label[] | null> => {
+export const getDefaultFormLabels = async (
+  formTtl: string,
+): Promise<Label[] | null> => {
   const store = await ttlToStore(formTtl);
   const engine = new QueryEngine();
 
-  const bindingStream = await engine.queryBindings(`
+  const bindingStream = await engine.queryBindings(
+    `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -140,10 +141,10 @@ export const getDefaultFormLabels = async (formTtl: string): Promise<Label[] | n
       ?field form:displayType ?displayType .
       ?field sh:name ?labelName .
     }`,
-    {sources: [store] },
+    { sources: [store] },
   );
   const bindings = await bindingStream.toArray();
-  if(!bindings.length){
+  if (!bindings.length) {
     return getFormLabels(formTtl);
   }
   return bindings.map((binding) => {
@@ -160,7 +161,7 @@ export const getDefaultFormLabels = async (formTtl: string): Promise<Label[] | n
       uri: binding.get('labelUri')?.value ?? '',
     };
   });
-}
+};
 
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const conceptTypes = [
