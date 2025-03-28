@@ -220,7 +220,7 @@ const getFormInstances = async (
       return `?uri ${sparqlEscapeUri(label.uri)} ?${label.var} .`;
     })
     .filter((l) => l)
-    .join('\n');
+    .join('}\nOPTIONAL {\n');
   const variables = labels
     .map((label) => {
       if (['id', 'uri'].includes(label.var)) {
@@ -292,7 +292,7 @@ const getFormInstancesWithCount = async (
     getFormInstanceCount(targetType, options),
   ]);
 
-  return { instances, count };
+  return { instances, count, labels };
 };
 
 const fetchInstanceIdByUri = async (uri: string) => {
