@@ -318,6 +318,7 @@ async function addFieldToFormExtension(
 
     INSERT DATA {
         ${sparqlEscapeUri(uri)} a form:Field;
+            sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)};
             sh:name ${sparqlEscapeString(name)};
             form:displayType ${sparqlEscapeUri(fieldDescription.displayType)};
@@ -376,6 +377,7 @@ async function addLibraryFieldToFormExtension(
 
     INSERT {
         ${sparqlEscapeUri(uri)} a form:Field;
+            sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)} ;
             sh:name ${sparqlEscapeString(fieldDescription.name)} ;
             prov:wasDerivedFrom ${sparqlEscapeUri(libraryEntryUri)} ;
@@ -456,17 +458,28 @@ async function updateFormTtlForExtension(formUri: string) {
   const result = await query(`
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  PREFIX sh: <http://www.w3.org/ns/shacl#>
+
   CONSTRUCT {
     ?s ?p ?o.
     ?field ?fieldP ?fieldO.
     ?field ext:isExtensionField true.
     ?validation ?vP ?vO.
+
+    ?group ?gp ?go .
   }
   WHERE {
     VALUES ?s {
       ${sparqlEscapeUri(formUri)}
     }
     ?s ?p ?o.
+
+    OPTIONAL {
+      ?s sh:group ?group .
+      ?group ?gp ?go .
+    }
+
+
     OPTIONAL {
       ?s form:includes ?field.
       ?field ?fieldP ?fieldO.
@@ -480,13 +493,44 @@ async function updateFormTtlForExtension(formUri: string) {
   }
   `);
 
-  const resultTtl = result.results.bindings
+  let resultTtl = result.results.bindings
     .map((b) => {
       return `${sparqlEscapeUri(b.s.value)} ${sparqlEscapeUri(
         b.p.value,
       )} ${sparqlEscapeObject(b.o)} .`;
     })
     .join('\n');
+
+  const targetTypeQueryResult = await query(`
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+  
+      SELECT ?targetType
+      WHERE {
+        ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
+      }
+    `);
+
+  const targetType =
+    targetTypeQueryResult.results.bindings?.at(0)?.targetType?.value;
+
+  if (targetType) {
+    resultTtl = `
+      @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
+      @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
+
+      ${resultTtl}
+
+      ${sparqlEscapeUri(formUri)}  form:initGenerator ext:customFormG .
+      ext:customFormG a form:Generator ;
+      form:prototype [
+        form:shape [
+          a ${sparqlEscapeUri(targetType)}, ext:CustomFormType
+        ]
+      ];
+      form:dataGenerator form:addMuUuid .
+    `;
+  }
+
   await update(`
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
@@ -618,6 +662,17 @@ export async function getFormInstanceLabels(
 
   const instanceLabels = await comunicaRepo.getFormLabels(baseForm.formTtl);
 
+  let fieldsSource = `
+    ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
+    ?replacement form:includes ?field .
+  `;
+  if (baseForm.custom) {
+    fieldsSource = `
+    ${sparqlEscapeUri(baseForm.uri)} a ext:GeneratedForm .
+    ${sparqlEscapeUri(baseForm.uri)} form:includes ?field .
+  `;
+  }
+
   const result = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -626,8 +681,7 @@ export async function getFormInstanceLabels(
     SELECT ?field ?fieldName ?fieldValuePath ?displayType
     WHERE {
       GRAPH ?g {
-        ?replacement ext:replacesForm ${sparqlEscapeUri(baseForm.uri)} .
-        ?replacement form:includes ?field .
+        ${fieldsSource}
 
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .

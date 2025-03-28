@@ -1,7 +1,11 @@
-import { Request, Response } from 'express';
-import { fetchFormDefinition } from '../services/form-definitions';
-import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import Router from 'express-promise-router';
+import { Request, Response } from 'express';
+
+import {
+  createEmptyFormDefinition,
+  fetchFormDefinition,
+} from '../services/form-definitions';
+import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
   addField,
   deleteFormField,
@@ -9,6 +13,7 @@ import {
   moveField,
   updateField,
 } from '../services/custom-forms';
+import { HttpError } from '../domain/http-error';
 
 const formDefinitionRouter = Router();
 
@@ -62,5 +67,20 @@ formDefinitionRouter.delete('/fields', async (req: Request, res: Response) => {
   );
   res.send(newFormData);
 });
+
+formDefinitionRouter.post(
+  '/definition/new',
+  async (req: Request, res: Response) => {
+    if (!req.body.name) {
+      throw new HttpError('No name was provided.', 400);
+    }
+
+    const id = await createEmptyFormDefinition(
+      req.body.name,
+      req.body.description || null,
+    );
+    res.status(201).send({ id });
+  },
+);
 
 export { formDefinitionRouter };
