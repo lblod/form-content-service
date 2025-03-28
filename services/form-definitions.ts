@@ -1,14 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
+  query,
   sparqlEscapeDateTime,
   sparqlEscapeString,
   sparqlEscapeUri,
   update,
 } from 'mu';
+import moment = require('moment');
 
 import { fetchFormDefinitionById } from './forms-from-config';
 import comunicaRepo from '../domain/data-access/comunica-repository';
-import moment = require('moment');
+import { HttpError } from '../domain/http-error';
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
@@ -109,3 +111,62 @@ export async function createEmptyFormDefinition(
   `);
   return id;
 }
+
+export const findFormUsages = async (formId: string) => {
+  let results = [];
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  
+      SELECT DISTINCT ?usage
+      WHERE {
+        ?form mu:uuid ${sparqlEscapeString(formId)}.
+        ?form form:targetType ?targetType .
+  
+        ?usage a ?targetType .
+      }
+    `;
+  try {
+    const queryResult = await query(queryString);
+    results = queryResult.results.bindings;
+  } catch (error) {
+    throw new HttpError(
+      `Something went wrong while fetching usages for form with id: ${formId}`,
+      500,
+    );
+  }
+
+  return Array.from(new Set(results.map((b) => b.usage?.value)));
+};
+
+export const removeFormDefinitionUsage = async (formId: string) => {
+  const queryString = `
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    DELETE {
+      GRAPH ?g {
+        ?instance ?p ?o .
+      }
+    }
+    WHERE {
+      GRAPH ?g {
+        ?form mu:uuid ${sparqlEscapeString(formId)}.
+        ?definition form:targetType ?targetType .
+
+        ?instance a ?targetType .
+        ?instance ?p ?o .
+      }
+    }
+  `;
+  try {
+    await update(queryString);
+  } catch (error) {
+    throw new HttpError(
+      `Something went wrong while removing the form with usages (${formId})`,
+      500,
+    );
+  }
+};
