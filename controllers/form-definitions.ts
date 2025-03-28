@@ -5,6 +5,7 @@ import {
   createEmptyFormDefinition,
   fetchFormDefinition,
   findFormUsages,
+  removeFormDefinitionUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
@@ -93,6 +94,15 @@ formDefinitionRouter.get(
       hasUsage: usageUris?.length >= 1,
       usageUris,
     });
+  },
+);
+
+formDefinitionRouter.delete(
+  '/definition/:id/usage',
+  async (req: Request, res: Response) => {
+    await removeFormDefinitionUsage(req.params.id);
+
+    res.status(204).send({});
   },
 );
 
