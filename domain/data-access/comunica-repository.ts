@@ -2,6 +2,7 @@ import { QueryEngine } from '@comunica/query-sparql';
 import { queryStore } from '../../helpers/query-store';
 import { ttlToStore } from '../../helpers/ttl-helpers';
 import { Label } from '../../types';
+import { Store } from 'n3';
 
 const getFormData = async (formTtl: string) => {
   const q = `
@@ -74,12 +75,15 @@ export const getFormTarget = async (formTtl: string) => {
 };
 
 export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT DISTINCT ?labelUri ?labelName
+    SELECT DISTINCT ?labelUri ?labelName ?displayType
     WHERE {
       ?form form:targetLabel ?labelUri.
       OPTIONAL {
@@ -89,9 +93,8 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
       }
     }
     `;
-  const store = await ttlToStore(formTtl);
-  const engine = new QueryEngine();
-  const bindingStream = await engine.queryBindings(q, {
+
+    const bindingStream = await engine.queryBindings(q, {
     sources: [store],
   });
 
@@ -111,12 +114,53 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
       var:
         binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
         'label',
+      type: binding.get('displayType')?.value ?? '',
       uri: binding.get('labelUri')?.value ?? '',
     };
   });
 
   return labels;
 };
+
+export const getDefaultFormLabels = async (formTtl: string): Promise<Label[] | null> => {
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+
+  const bindingStream = await engine.queryBindings(`
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT DISTINCT ?labelUri ?labelName ?displayType
+    WHERE {
+      ?form form:includes ?field.
+      ?field a form:Field.
+      ?field form:showInSummary true.
+      ?field sh:path ?labelUri .
+      ?field form:displayType ?displayType .
+      ?field sh:name ?labelName .
+    }`,
+    {sources: [store] },
+  );
+  const bindings = await bindingStream.toArray();
+  if(!bindings.length){
+    return getFormLabels(formTtl);
+  }
+  return bindings.map((binding) => {
+    return {
+      name: binding.get('labelName')?.value ?? 'label',
+      // Remove all spaces from this string, and transform the string to lowercase
+      // as this is used as key in a later stage, which can't contain spaces.
+      // we need to do this because we want to possibly filter on certain values
+      // so the client will send a string that is transformed in the same way
+      type: binding.get('displayType')?.value ?? '',
+      var:
+        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
+        'label',
+      uri: binding.get('labelUri')?.value ?? '',
+    };
+  });
+}
 
 const fetchConceptSchemeUris = async (formTtl: string): Promise<string[]> => {
   const conceptTypes = [
@@ -195,6 +239,7 @@ export default {
   getFormData,
   getFormTarget,
   getFormLabels,
+  getDefaultFormLabels,
   fetchConceptSchemeUris,
   getUriTypes,
   isValidForm,

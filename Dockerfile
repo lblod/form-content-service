@@ -1,3 +1,2 @@
-# FROM semtech/mu-javascript-template:1.8.0
-FROM semtech/mu-javascript-template:latest
+FROM semtech/mu-javascript-template:1.8.0
 LABEL maintainer="karel.kremer@redpencil.io"
