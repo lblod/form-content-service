@@ -7,6 +7,8 @@ import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
 import { jsonToCsv } from '../utils/json-to-csv-string';
 
+import { query, sparqlEscapeString } from 'mu';
+
 export const postFormInstance = async (
   formId: string,
   body: InstanceInput,
@@ -250,4 +252,30 @@ export const instancesAsCsv = async (
   });
 
   return jsonToCsv(withNullReplaced);
+};
+
+export const findUsageOfForm = async (instanceId: string) => {
+  let results = [];
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  
+      SELECT DISTINCT ?usage
+      WHERE {
+        ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+        ?usage ?p ?instance .
+      }
+    `;
+  try {
+    const queryResult = await query(queryString);
+    results = queryResult.results.bindings;
+  } catch (error) {
+    throw new HttpError(
+      `Something went wrong while fetching usages for instance with id: ${instanceId}`,
+      500,
+    );
+  }
+
+  return Array.from(new Set(results.map((b) => b.usage?.value)));
 };
