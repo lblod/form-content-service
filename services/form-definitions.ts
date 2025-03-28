@@ -8,7 +8,7 @@ import {
 
 import { fetchFormDefinitionById } from './forms-from-config';
 import comunicaRepo from '../domain/data-access/comunica-repository';
-import moment = require('moment');
+import moment from 'moment';
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
