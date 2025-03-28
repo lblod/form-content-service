@@ -36,7 +36,10 @@ formInstanceRouter.get(
       labels,
     });
     res.set('X-Total-Count', formInstances.count);
-    res.send({ instances: formInstances.instances, labels: formInstances.labels });
+    res.send({
+      instances: formInstances.instances,
+      labels: formInstances.labels,
+    });
   },
 );
 
