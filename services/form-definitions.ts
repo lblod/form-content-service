@@ -139,3 +139,34 @@ export const findFormUsages = async (formId: string) => {
 
   return Array.from(new Set(results.map((b) => b.usage?.value)));
 };
+
+export const removeFormDefinitionUsage = async (formId: string) => {
+  const queryString = `
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    DELETE {
+      GRAPH ?g {
+        ?instance ?p ?o .
+      }
+    }
+    WHERE {
+      GRAPH ?g {
+        ?form mu:uuid ${sparqlEscapeString(formId)}.
+        ?definition form:targetType ?targetType .
+
+        ?instance a ?targetType .
+        ?instance ?p ?o .
+      }
+    }
+  `;
+  try {
+    await update(queryString);
+  } catch (error) {
+    throw new HttpError(
+      `Something went wrong while removing the form with usages (${formId})`,
+      500,
+    );
+  }
+};
