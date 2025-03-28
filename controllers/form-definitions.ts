@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import {
   createEmptyFormDefinition,
   fetchFormDefinition,
+  findFormUsages,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
@@ -80,6 +81,18 @@ formDefinitionRouter.post(
       req.body.description || null,
     );
     res.status(201).send({ id });
+  },
+);
+
+formDefinitionRouter.get(
+  '/definition/:id/has-usage',
+  async (req: Request, res: Response) => {
+    const usageUris = await findFormUsages(req.params.id);
+
+    res.status(200).send({
+      hasUsage: usageUris?.length >= 1,
+      usageUris,
+    });
   },
 );
 
