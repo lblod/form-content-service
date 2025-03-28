@@ -4,6 +4,7 @@ import {
   createHistoryForInstance,
   deleteFormInstance,
   fetchInstanceAndForm,
+  findUsageOfForm,
   getHistoryForInstance,
   getHistoryInstance,
   getInstancesForForm,
@@ -113,6 +114,18 @@ formInstanceRouter.delete(
   async (req: Request, res: Response) => {
     await deleteFormInstance(req.params.id, req.params.instanceId);
     res.sendStatus(200);
+  },
+);
+
+formInstanceRouter.get(
+  '/instance/:id/has-usage',
+  async (req: Request, res: Response) => {
+    const usageUris = await findUsageOfForm(req.params.id);
+
+    res.status(200).send({
+      hasUsage: usageUris?.length >= 1,
+      usageUris,
+    });
   },
 );
 
