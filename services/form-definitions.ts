@@ -10,7 +10,6 @@ import {
 import { fetchFormDefinitionById } from './forms-from-config';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import moment from 'moment';
-import { HttpError } from '../domain/http-error';
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
@@ -112,14 +111,13 @@ export async function createEmptyFormDefinition(
   return id;
 }
 
-export const findFormUsages = async (formId: string) => {
-  let results = [];
+export const getFormUsageCount = async (formId: string) => {
   const queryString = `
       PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-      SELECT DISTINCT ?usage
+      SELECT (COUNT(DISTINCT ?usage) AS ?count)
       WHERE {
         ?form mu:uuid ${sparqlEscapeString(formId)}.
         ?form form:targetType ?targetType .
@@ -127,21 +125,14 @@ export const findFormUsages = async (formId: string) => {
         ?usage a ?targetType .
       }
     `;
-  try {
-    const queryResult = await query(queryString);
-    results = queryResult.results.bindings;
-  } catch (error) {
-    throw new HttpError(
-      `Something went wrong while fetching usages for form with id: ${formId}`,
-      500,
-    );
-  }
+  const queryResult = await query(queryString);
+  const count = queryResult.results.bindings?.at(0)?.count.value || '0';
 
-  return Array.from(new Set(results.map((b) => b.usage?.value)));
+  return parseInt(count);
 };
 
 export const removeFormDefinitionUsage = async (formId: string) => {
-  const queryString = `
+  await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -149,6 +140,7 @@ export const removeFormDefinitionUsage = async (formId: string) => {
     DELETE {
       GRAPH ?g {
         ?instance ?p ?o .
+        ?s ?pp ?instance .
       }
     }
     WHERE {
@@ -156,17 +148,15 @@ export const removeFormDefinitionUsage = async (formId: string) => {
         ?form mu:uuid ${sparqlEscapeString(formId)}.
         ?definition form:targetType ?targetType .
 
-        ?instance a ?targetType .
-        ?instance ?p ?o .
+        OPTIONAL {
+          ?instance a ?targetType .
+          ?instance ?p ?o .
+        }
+
+        OPTIONAL {
+          ?s ?pp ?instance .
+        }
       }
     }
-  `;
-  try {
-    await update(queryString);
-  } catch (error) {
-    throw new HttpError(
-      `Something went wrong while removing the form with usages (${formId})`,
-      500,
-    );
-  }
+  `);
 };

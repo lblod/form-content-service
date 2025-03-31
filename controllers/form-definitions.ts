@@ -4,7 +4,7 @@ import { Request, Response } from 'express';
 import {
   createEmptyFormDefinition,
   fetchFormDefinition,
-  findFormUsages,
+  getFormUsageCount,
   removeFormDefinitionUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
@@ -86,13 +86,13 @@ formDefinitionRouter.post(
 );
 
 formDefinitionRouter.get(
-  '/definition/:id/has-usage',
+  '/definition/:id/usage-count',
   async (req: Request, res: Response) => {
-    const usageUris = await findFormUsages(req.params.id);
+    const usageCount = await getFormUsageCount(req.params.id);
 
     res.status(200).send({
-      hasUsage: usageUris?.length >= 1,
-      usageUris,
+      hasUsage: usageCount >= 1,
+      count: usageCount,
     });
   },
 );
