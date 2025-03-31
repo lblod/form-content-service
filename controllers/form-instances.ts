@@ -4,10 +4,10 @@ import {
   createHistoryForInstance,
   deleteFormInstance,
   fetchInstanceAndForm,
-  findUsageOfForm,
   getHistoryForInstance,
   getHistoryInstance,
   getInstancesForForm,
+  getInstanceUsageCount,
   postFormInstance,
   updateFormInstance,
 } from '../services/form-instances';
@@ -118,13 +118,13 @@ formInstanceRouter.delete(
 );
 
 formInstanceRouter.get(
-  '/instance/:id/has-usage',
+  '/instance/:id/usage-count',
   async (req: Request, res: Response) => {
-    const usageUris = await findUsageOfForm(req.params.id);
+    const usageCount = await getInstanceUsageCount(req.params.id);
 
     res.status(200).send({
-      hasUsage: usageUris?.length >= 1,
-      usageUris,
+      hasUsage: usageCount >= 1,
+      count: usageCount,
     });
   },
 );

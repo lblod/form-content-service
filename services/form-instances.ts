@@ -254,28 +254,20 @@ export const instancesAsCsv = async (
   return jsonToCsv(withNullReplaced);
 };
 
-export const findUsageOfForm = async (instanceId: string) => {
-  let results = [];
+export const getInstanceUsageCount = async (instanceId: string) => {
   const queryString = `
       PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
       PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   
-      SELECT DISTINCT ?usage
+      SELECT (COUNT(DISTINCT ?usage) AS ?count)
       WHERE {
         ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
         ?usage ?p ?instance .
       }
     `;
-  try {
-    const queryResult = await query(queryString);
-    results = queryResult.results.bindings;
-  } catch (error) {
-    throw new HttpError(
-      `Something went wrong while fetching usages for instance with id: ${instanceId}`,
-      500,
-    );
-  }
+  const queryResult = await query(queryString);
+  const count = queryResult.results.bindings?.at(0)?.count.value || '0';
 
-  return Array.from(new Set(results.map((b) => b.usage?.value)));
+  return parseInt(count);
 };
