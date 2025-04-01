@@ -362,12 +362,19 @@ async function addFieldToFormExtension(
   const showInSummaryTtl = fieldDescription.showInSummary
     ? `${sparqlEscapeUri(uri)} form:showInSummary true .`
     : '';
+  let conceptSchemeTtl = '';
+  if (isConceptSchemeRequiredField(fieldDescription.displayType)) {
+    const conceptSchemeUri = sparqlEscapeUri(fieldDescription.conceptScheme);
+    conceptSchemeTtl = `
+      ${sparqlEscapeUri(uri)} fieldOption:conceptScheme ${conceptSchemeUri} .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
 
     INSERT DATA {
         ${sparqlEscapeUri(uri)} a form:Field;
@@ -382,6 +389,7 @@ async function addFieldToFormExtension(
 
       ${requiredConstraintTtl}
       ${showInSummaryTtl}
+      ${conceptSchemeTtl}
     }
   `);
   return { id, uri };
