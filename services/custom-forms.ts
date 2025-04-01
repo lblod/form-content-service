@@ -112,9 +112,19 @@ export async function updateField(
     `;
   }
 
+  let conceptSchemeInsertTtl = '';
+  let conceptSchemeDeleteTtl = '';
+  if (isConceptSchemeRequiredField(description.displayType)) {
+    const conceptSchemeUri = sparqlEscapeUri(description.conceptScheme);
+    conceptSchemeInsertTtl = `
+    ${escaped.fieldUri} fieldOption:conceptScheme ${conceptSchemeUri} .`;
+    conceptSchemeDeleteTtl = `${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .`;
+  }
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
@@ -124,6 +134,7 @@ export async function updateField(
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
 
+      ${conceptSchemeDeleteTtl}
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -131,6 +142,7 @@ export async function updateField(
 
       ${description.isRequired ? requiredConstraintInsertTtl : ''}
       ${showInSummaryTtl}
+      ${conceptSchemeInsertTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
@@ -147,6 +159,9 @@ export async function updateField(
 
         ?validation a form:RequiredConstraint ;
           ?validationP ?validationO.
+      }
+      OPTIONAL {
+        ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       }
     }
   `);
