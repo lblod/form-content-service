@@ -31,6 +31,7 @@ type FieldDescription =
       path?: string;
       isRequired?: boolean;
       showInSummary?: boolean;
+      conceptScheme?: string;
     }
   | {
       name: string;
@@ -40,6 +41,7 @@ type FieldDescription =
       path?: string;
       isRequired?: boolean;
       showInSummary?: boolean;
+      conceptScheme?: string;
     };
 type FieldUpdateDescription = {
   field: string;
@@ -47,6 +49,7 @@ type FieldUpdateDescription = {
   displayType: string;
   isRequired: boolean;
   showInSummary?: boolean;
+  conceptScheme?: string;
 };
 
 const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
@@ -263,6 +266,15 @@ async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
   `);
 }
 
+const isConceptSchemeRequiredField = (displayType: string) => {
+  const displayTypes = [
+    'http://lblod.data.gift/display-types/lmb/custom-concept-scheme-selector-input',
+    'http://lblod.data.gift/display-types/lmb/custom-concept-scheme-multi-selector-input',
+  ];
+
+  return displayTypes.includes(displayType);
+};
+
 function verifyFieldDescription(description: FieldDescription) {
   if (!description.name || description.name.trim().length === 0) {
     throw new HttpError('Field description must have a name', 400);
@@ -275,6 +287,16 @@ function verifyFieldDescription(description: FieldDescription) {
   if (noDisplayType && noLibraryEntry) {
     throw new HttpError(
       'Field description must have a display type or a library entry id',
+      400,
+    );
+  }
+
+  if (
+    isConceptSchemeRequiredField(description.displayType) &&
+    !description.conceptScheme
+  ) {
+    throw new HttpError(
+      `Field description must have a conceptScheme. This is required for field type "${description.displayType}"`,
       400,
     );
   }
