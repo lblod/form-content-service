@@ -138,24 +138,20 @@ export const removeFormDefinitionUsage = async (formId: string) => {
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
-      GRAPH ?g {
-        ?instance ?p ?o .
-        ?s ?pp ?instance .
-      }
+      ?instance ?p ?o .
+      ?s ?pp ?instance .
     }
     WHERE {
-      GRAPH ?g {
-        ?form mu:uuid ${sparqlEscapeString(formId)}.
-        ?definition form:targetType ?targetType .
+      ?form mu:uuid ${sparqlEscapeString(formId)}.
+      ?definition form:targetType ?targetType .
 
-        OPTIONAL {
-          ?instance a ?targetType .
-          ?instance ?p ?o .
-        }
+      OPTIONAL {
+        ?instance a ?targetType .
+        ?instance ?p ?o .
+      }
 
-        OPTIONAL {
-          ?s ?pp ?instance .
-        }
+      OPTIONAL {
+        ?s ?pp ?instance .
       }
     }
   `);
