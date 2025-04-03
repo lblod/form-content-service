@@ -141,18 +141,22 @@ export const removeFormDefinitionUsage = async (formId: string) => {
       ?instance ?p ?o .
       ?s ?pp ?instance .
     }
+    INSERT {
+      ?instance a <http://www.w3.org/ns/activitystreams#Tombstone> ;
+         <http://www.w3.org/ns/activitystreams#deleted> ?now ;
+         <http://www.w3.org/ns/activitystreams#formerType> ?targetType .
+    }
     WHERE {
       ?form mu:uuid ${sparqlEscapeString(formId)}.
-      ?definition form:targetType ?targetType .
+      ?form form:targetType ?targetType .
 
-      OPTIONAL {
-        ?instance a ?targetType .
-        ?instance ?p ?o .
-      }
+      ?instance a ?targetType .
+      ?instance ?p ?o .
 
       OPTIONAL {
         ?s ?pp ?instance .
       }
+      BIND(NOW() AS ?now)
     }
   `);
 };
