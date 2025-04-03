@@ -1,6 +1,6 @@
 services:
   form-content:
-    image: local-js-template
+    image: semtech/mu-javascript-template:latest
     #build: ./
     restart: 'no'
     labels:
@@ -14,9 +14,6 @@ services:
     volumes:
       - ../app-lokaal-mandatenbeheer/config/form-content:/config
       - ./:/app
-      # ignore app/dist because this is where we map the built files to, otherwise we get an infinite loop of creating files (on mac)
-      - /app/dist
-      - ./dist:/usr/src/dist
     networks:
       - debug
 networks:
