@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
+  query,
   sparqlEscapeDateTime,
   sparqlEscapeString,
   sparqlEscapeUri,
@@ -109,3 +110,53 @@ export async function createEmptyFormDefinition(
   `);
   return id;
 }
+
+export const getFormUsageCount = async (formId: string) => {
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+      SELECT (COUNT(DISTINCT ?usage) AS ?count)
+      WHERE {
+        ?form mu:uuid ${sparqlEscapeString(formId)}.
+        ?form form:targetType ?targetType .
+
+        ?usage a ?targetType .
+      }
+    `;
+  const queryResult = await query(queryString);
+  const count = queryResult.results.bindings?.at(0)?.count.value || '0';
+
+  return parseInt(count);
+};
+
+export const removeFormDefinitionUsage = async (formId: string) => {
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    DELETE {
+      ?instance ?p ?o .
+      ?s ?pp ?instance .
+    }
+    INSERT {
+      ?instance a <http://www.w3.org/ns/activitystreams#Tombstone> ;
+         <http://www.w3.org/ns/activitystreams#deleted> ?now ;
+         <http://www.w3.org/ns/activitystreams#formerType> ?targetType .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)}.
+      ?form form:targetType ?targetType .
+
+      ?instance a ?targetType .
+      ?instance ?p ?o .
+
+      OPTIONAL {
+        ?s ?pp ?instance .
+      }
+      BIND(NOW() AS ?now)
+    }
+  `);
+};

@@ -7,6 +7,8 @@ import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
 import { jsonToCsv } from '../utils/json-to-csv-string';
 
+import { query, sparqlEscapeString } from 'mu';
+
 export const postFormInstance = async (
   formId: string,
   body: InstanceInput,
@@ -250,4 +252,22 @@ export const instancesAsCsv = async (
   });
 
   return jsonToCsv(withNullReplaced);
+};
+
+export const getInstanceUsageCount = async (instanceId: string) => {
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  
+      SELECT (COUNT(DISTINCT ?usage) AS ?count)
+      WHERE {
+        ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+        ?usage ?p ?instance .
+      }
+    `;
+  const queryResult = await query(queryString);
+  const count = queryResult.results.bindings?.at(0)?.count.value || '0';
+
+  return parseInt(count);
 };

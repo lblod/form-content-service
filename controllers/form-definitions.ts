@@ -4,6 +4,8 @@ import { Request, Response } from 'express';
 import {
   createEmptyFormDefinition,
   fetchFormDefinition,
+  getFormUsageCount,
+  removeFormDefinitionUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
@@ -80,6 +82,27 @@ formDefinitionRouter.post(
       req.body.description || null,
     );
     res.status(201).send({ id });
+  },
+);
+
+formDefinitionRouter.get(
+  '/definition/:id/usage-count',
+  async (req: Request, res: Response) => {
+    const usageCount = await getFormUsageCount(req.params.id);
+
+    res.status(200).send({
+      hasUsage: usageCount >= 1,
+      count: usageCount,
+    });
+  },
+);
+
+formDefinitionRouter.delete(
+  '/definition/:id/usage',
+  async (req: Request, res: Response) => {
+    await removeFormDefinitionUsage(req.params.id);
+
+    res.status(204).send({});
   },
 );
 
