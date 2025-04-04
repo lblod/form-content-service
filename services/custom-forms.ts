@@ -31,6 +31,7 @@ type FieldDescription =
       path?: string;
       isRequired?: boolean;
       showInSummary?: boolean;
+      conceptScheme?: string;
     }
   | {
       name: string;
@@ -40,6 +41,7 @@ type FieldDescription =
       path?: string;
       isRequired?: boolean;
       showInSummary?: boolean;
+      conceptScheme?: string;
     };
 type FieldUpdateDescription = {
   field: string;
@@ -47,6 +49,7 @@ type FieldUpdateDescription = {
   displayType: string;
   isRequired: boolean;
   showInSummary?: boolean;
+  conceptScheme?: string;
 };
 
 const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
@@ -109,9 +112,19 @@ export async function updateField(
     `;
   }
 
+  let conceptSchemeInsertTtl = '';
+  let conceptSchemeDeleteTtl = '';
+  if (isConceptSchemeRequiredField(description.displayType)) {
+    const conceptSchemeUri = sparqlEscapeUri(description.conceptScheme);
+    conceptSchemeInsertTtl = `
+    ${escaped.fieldUri} fieldOption:conceptScheme ${conceptSchemeUri} .`;
+    conceptSchemeDeleteTtl = `${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .`;
+  }
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
@@ -121,6 +134,7 @@ export async function updateField(
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
 
+      ${conceptSchemeDeleteTtl}
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -128,6 +142,7 @@ export async function updateField(
 
       ${description.isRequired ? requiredConstraintInsertTtl : ''}
       ${showInSummaryTtl}
+      ${conceptSchemeInsertTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
@@ -144,6 +159,9 @@ export async function updateField(
 
         ?validation a form:RequiredConstraint ;
           ?validationP ?validationO.
+      }
+      OPTIONAL {
+        ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       }
     }
   `);
@@ -263,6 +281,15 @@ async function updateFieldOrder(fieldUri, fieldsInGroup, direction) {
   `);
 }
 
+const isConceptSchemeRequiredField = (displayType: string) => {
+  const displayTypes = [
+    'http://lblod.data.gift/display-types/lmb/custom-concept-scheme-selector-input',
+    'http://lblod.data.gift/display-types/lmb/custom-concept-scheme-multi-selector-input',
+  ];
+
+  return displayTypes.includes(displayType);
+};
+
 function verifyFieldDescription(description: FieldDescription) {
   if (!description.name || description.name.trim().length === 0) {
     throw new HttpError('Field description must have a name', 400);
@@ -275,6 +302,16 @@ function verifyFieldDescription(description: FieldDescription) {
   if (noDisplayType && noLibraryEntry) {
     throw new HttpError(
       'Field description must have a display type or a library entry id',
+      400,
+    );
+  }
+
+  if (
+    isConceptSchemeRequiredField(description.displayType) &&
+    !description.conceptScheme
+  ) {
+    throw new HttpError(
+      `Field description must have a conceptScheme. This is required for field type "${description.displayType}"`,
       400,
     );
   }
@@ -325,12 +362,19 @@ async function addFieldToFormExtension(
   const showInSummaryTtl = fieldDescription.showInSummary
     ? `${sparqlEscapeUri(uri)} form:showInSummary true .`
     : '';
+  let conceptSchemeTtl = '';
+  if (isConceptSchemeRequiredField(fieldDescription.displayType)) {
+    const conceptSchemeUri = sparqlEscapeUri(fieldDescription.conceptScheme);
+    conceptSchemeTtl = `
+      ${sparqlEscapeUri(uri)} fieldOption:conceptScheme ${conceptSchemeUri} .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
 
     INSERT DATA {
         ${sparqlEscapeUri(uri)} a form:Field;
@@ -345,6 +389,7 @@ async function addFieldToFormExtension(
 
       ${requiredConstraintTtl}
       ${showInSummaryTtl}
+      ${conceptSchemeTtl}
     }
   `);
   return { id, uri };
