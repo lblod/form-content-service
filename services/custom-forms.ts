@@ -838,11 +838,13 @@ export async function fetchCustomFormTypes() {
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT DISTINCT ?type ?formName
+    SELECT DISTINCT ?id ?formName
     WHERE {
       ?form a ext:GeneratedForm .
       ?form form:targetType ?type .
+      ?form mu:uuid ?id .
       ?form skos:prefLabel ?formName .
       
       FILTER NOT EXISTS {
@@ -863,7 +865,7 @@ export async function fetchCustomFormTypes() {
 
   return results.map((b) => {
     return {
-      typeId: b.type.value,
+      typeId: b.id.value,
       label: b.formName.value,
     };
   });
