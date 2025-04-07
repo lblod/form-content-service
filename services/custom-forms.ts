@@ -24,25 +24,25 @@ import {
 
 type FieldDescription =
   | {
-      name: string;
-      displayType: string;
-      libraryEntryUri?: never;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-      showInSummary?: boolean;
-      conceptScheme?: string;
-    }
+    name: string;
+    displayType: string;
+    libraryEntryUri?: never;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+    showInSummary?: boolean;
+    conceptScheme?: string;
+  }
   | {
-      name: string;
-      displayType?: never;
-      libraryEntryUri: string;
-      order?: number;
-      path?: string;
-      isRequired?: boolean;
-      showInSummary?: boolean;
-      conceptScheme?: string;
-    };
+    name: string;
+    displayType?: never;
+    libraryEntryUri: string;
+    order?: number;
+    path?: string;
+    isRequired?: boolean;
+    showInSummary?: boolean;
+    conceptScheme?: string;
+  };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -735,7 +735,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath ?displayType
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType ?showInSummary
     WHERE {
       GRAPH ?g {
         ${fieldsSource}
@@ -743,6 +743,10 @@ export async function getFormInstanceLabels(
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
         ?field form:displayType ?displayType .
+
+        OPTIONAL {
+          ?field form:showInSummary ?showInSummary .
+        }
       }
     }
     ORDER BY ?fieldName
@@ -754,6 +758,7 @@ export async function getFormInstanceLabels(
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
       type: b.displayType?.value,
+      isShownInSummary: !!b.showInSummary?.value,
       isCustom: true,
     };
   });
@@ -788,7 +793,7 @@ export async function enhanceDownloadedInstancesWithComplexPaths(
   await Promise.all(
     complexPathInstances.map(async (value) => {
       const { instance, labels } = value;
-      for (let index = 0; index < labels.length; index++) {
+      for (let index = 0;index < labels.length;index++) {
         const label = labels[index];
         const matchIndex = enhancedInstances.findIndex(
           (i) => i.uri === instance.uri,
@@ -864,8 +869,48 @@ export async function fetchCustomFormTypes() {
 
   return results.map((b) => {
     return {
-      typeId: b.id.value,
+      id: b.id.value,
       label: b.formName.value,
     };
+  });
+}
+
+export async function fetchFormSummaryLabels(
+  formId: string,
+): Promise<Array<Label>> {
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT DISTINCT ?field ?name 
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+
+      ?field a form:Field .
+      ?field sh:name ?name .
+      ?field form:showInSummary """true"""^^xsd:boolean .
+      
+    } ORDER BY ?name  
+    `;
+  let results = [];
+  try {
+    const queryResults = await query(queryString);
+    results = queryResults.results.bindings || [];
+  } catch (error) {
+    throw new HttpError(
+      'Something went wrong while fetching custom form types',
+      500,
+    );
+  }
+
+  return results.map((b) => {
+    return {
+      name: b.name?.value,
+      uri: b.field?.value,
+      var: b.name?.value,
+    }
   });
 }

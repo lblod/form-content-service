@@ -82,13 +82,16 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT DISTINCT ?labelUri ?labelName ?displayType
+    SELECT DISTINCT ?labelUri ?labelName ?displayType ?showInSummary
     WHERE {
       ?form form:targetLabel ?labelUri.
       OPTIONAL {
         ?field sh:path ?labelUri ;
           sh:name ?labelName ;
           form:displayType ?displayType .
+      }
+      OPTIONAL {
+        ?field form:showInSummary ?showInSummary .
       }
     }`;
 
@@ -114,6 +117,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
         'label',
       type: binding.get('displayType')?.value ?? '',
       uri: binding.get('labelUri')?.value ?? '',
+      isShownInSummary: !!binding.get('showInSummary')?.value,
     };
   });
 
