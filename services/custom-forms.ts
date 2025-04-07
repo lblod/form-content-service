@@ -832,3 +832,39 @@ export async function getValueForCustomField(
 
   return fieldValue;
 }
+
+export async function fetchCustomFormTypes() {
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+    SELECT DISTINCT ?type ?formName
+    WHERE {
+      ?form a ext:GeneratedForm .
+      ?form form:targetType ?type .
+      ?form skos:prefLabel ?formName .
+      
+      FILTER NOT EXISTS {
+        ?form ext:extendsForm ?baseForm .
+      }
+    } ORDER BY ?type  
+    `;
+  let results = [];
+  try {
+    const queryResults = await query(queryString);
+    results = queryResults.results.bindings || [];
+  } catch (error) {
+    throw new HttpError(
+      'Something went wrong while fetching custom form types',
+      500,
+    );
+  }
+
+  return results.map((b) => {
+    return {
+      typeId: b.type.value,
+      label: b.formName.value,
+    };
+  });
+}
