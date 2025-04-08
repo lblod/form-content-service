@@ -24,25 +24,25 @@ import {
 
 type FieldDescription =
   | {
-    name: string;
-    displayType: string;
-    libraryEntryUri?: never;
-    order?: number;
-    path?: string;
-    isRequired?: boolean;
-    showInSummary?: boolean;
-    conceptScheme?: string;
-  }
+      name: string;
+      displayType: string;
+      libraryEntryUri?: never;
+      order?: number;
+      path?: string;
+      isRequired?: boolean;
+      showInSummary?: boolean;
+      conceptScheme?: string;
+    }
   | {
-    name: string;
-    displayType?: never;
-    libraryEntryUri: string;
-    order?: number;
-    path?: string;
-    isRequired?: boolean;
-    showInSummary?: boolean;
-    conceptScheme?: string;
-  };
+      name: string;
+      displayType?: never;
+      libraryEntryUri: string;
+      order?: number;
+      path?: string;
+      isRequired?: boolean;
+      showInSummary?: boolean;
+      conceptScheme?: string;
+    };
 type FieldUpdateDescription = {
   field: string;
   name: string;
@@ -793,7 +793,7 @@ export async function enhanceDownloadedInstancesWithComplexPaths(
   await Promise.all(
     complexPathInstances.map(async (value) => {
       const { instance, labels } = value;
-      for (let index = 0;index < labels.length;index++) {
+      for (let index = 0; index < labels.length; index++) {
         const label = labels[index];
         const matchIndex = enhancedInstances.findIndex(
           (i) => i.uri === instance.uri,
