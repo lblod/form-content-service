@@ -844,7 +844,7 @@ export async function fetchCustomFormTypes() {
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT DISTINCT ?id ?formName
+    SELECT DISTINCT ?id ?formName (GROUP_CONCAT(DISTINCT ?usage; separator=", ") AS ?usages)
     WHERE {
       ?form a ext:GeneratedForm .
       ?form form:targetType ?type .
@@ -854,7 +854,13 @@ export async function fetchCustomFormTypes() {
       FILTER NOT EXISTS {
         ?form ext:extendsForm ?baseForm .
       }
-    } ORDER BY ?type  
+
+      OPTIONAL {
+        ?usage a ?type .
+      }
+    }
+    GROUP BY ?id ?type ?formName
+    ORDER BY ?type 
     `;
   let results = [];
   try {
@@ -866,11 +872,12 @@ export async function fetchCustomFormTypes() {
       500,
     );
   }
-
   return results.map((b) => {
+    const usages = b.usages?.value ?? '';
     return {
       id: b.id.value,
       label: b.formName.value,
+      usageUris: usages.split(','),
     };
   });
 }
