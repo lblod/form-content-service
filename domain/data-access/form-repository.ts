@@ -182,18 +182,33 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
 const getFormInstanceCount = async (
   targetType: string,
   labels: Array<Label>,
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const filter = buildInstanceFilter(
     options?.filter,
     labels.map((l) => l.uri || null),
   );
+  let possibleInstanceUriValues = '';
+  if (options.instanceUris?.length >= 1) {
+    possibleInstanceUriValues = `
+      VALUES ?uri {
+        ${options.instanceUris.map((uri) => sparqlEscapeUri(uri)).join('\n')}
+      }
+    `;
+  }
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
+        ${possibleInstanceUriValues}
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri mu:uuid ?id .
         ${filter}
@@ -222,7 +237,13 @@ const buildInstanceFilter = (filter: string, labelUris = []) => {
 const getFormInstances = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const labelJoin = labels
     .map((label) => {
@@ -250,12 +271,21 @@ const getFormInstances = async (
     options?.filter,
     labels.map((l) => l.uri || null),
   );
+  let possibleInstanceUriValues = '';
+  if (options.instanceUris?.length >= 1) {
+    possibleInstanceUriValues = `
+      VALUES ?uri {
+        ${options.instanceUris.map((uri) => sparqlEscapeUri(uri)).join('\n')}
+      }
+    `;
+  }
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     SELECT DISTINCT ?uri ?id ${variables}
     WHERE {
+        ${possibleInstanceUriValues}
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
@@ -300,7 +330,13 @@ const getFormInstances = async (
 const getFormInstancesWithCount = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),
