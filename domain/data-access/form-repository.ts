@@ -181,9 +181,13 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
 
 const getFormInstanceCount = async (
   targetType: string,
+  labels: Array<Label>,
   options?: { limit?: number; offset?: number; sort?: string; filter?: string },
 ) => {
-  const filter = buildInstanceFilter(options?.filter);
+  const filter = buildInstanceFilter(
+    options?.filter,
+    labels.map((l) => sparqlEscapeUri(l.uri)),
+  );
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -200,11 +204,15 @@ const getFormInstanceCount = async (
   return parseInt(queryResult.results.bindings[0]?.count?.value, 10) || 0;
 };
 
-const buildInstanceFilter = (filter) => {
+const buildInstanceFilter = (filter: string, labelUris = []) => {
   if (!filter) {
     return '';
   }
-  return `?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
+  return `
+    VALUES ?p {
+      ${labelUris.join('\n')}
+    }  
+  ?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
 };
 
 const getFormInstances = async (
@@ -234,7 +242,10 @@ const getFormInstances = async (
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
   const sortName =
     order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
-  const filter = buildInstanceFilter(options?.filter);
+  const filter = buildInstanceFilter(
+    options?.filter,
+    labels.map((l) => sparqlEscapeUri(l.uri)),
+  );
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -289,7 +300,7 @@ const getFormInstancesWithCount = async (
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),
-    getFormInstanceCount(targetType, options),
+    getFormInstanceCount(targetType, labels, options),
   ]);
 
   return { instances, count, labels };
