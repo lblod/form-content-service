@@ -186,7 +186,7 @@ const getFormInstanceCount = async (
 ) => {
   const filter = buildInstanceFilter(
     options?.filter,
-    labels.map((l) => sparqlEscapeUri(l.uri)),
+    labels.map((l) => l.uri || null),
   );
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
@@ -208,9 +208,13 @@ const buildInstanceFilter = (filter: string, labelUris = []) => {
   if (!filter) {
     return '';
   }
+
+  const labelsForValues = labelUris
+    .filter((uri) => uri)
+    .map((uri) => sparqlEscapeUri(uri));
   return `
     VALUES ?p {
-      ${labelUris.join('\n')}
+      ${labelsForValues.join('\n')}
     }  
   ?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
 };
@@ -244,7 +248,7 @@ const getFormInstances = async (
     order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
   const filter = buildInstanceFilter(
     options?.filter,
-    labels.map((l) => sparqlEscapeUri(l.uri)),
+    labels.map((l) => l.uri || null),
   );
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
