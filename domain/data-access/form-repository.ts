@@ -231,7 +231,7 @@ const buildInstanceFilter = (filter: string, labelUris = []) => {
     VALUES ?p {
       ${labelsForValues.join('\n')}
     }  
-  ?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
+  ?uri ?p ?o. \n FILTER(CONTAINS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
 };
 
 const getFormInstances = async (
