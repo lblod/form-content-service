@@ -736,7 +736,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath ?displayType
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType ?showInSummary
     WHERE {
       GRAPH ?g {
         ${fieldsSource}
@@ -744,6 +744,10 @@ export async function getFormInstanceLabels(
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
         ?field form:displayType ?displayType .
+
+        OPTIONAL {
+          ?field form:showInSummary ?showInSummary .
+        }
       }
     }
     ORDER BY ?fieldName
@@ -755,6 +759,7 @@ export async function getFormInstanceLabels(
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
       type: b.displayType?.value,
+      isShownInSummary: !!b.showInSummary?.value,
       isCustom: true,
     };
   });
@@ -831,4 +836,49 @@ export async function getValueForCustomField(
   }
 
   return fieldValue;
+}
+
+export async function fetchCustomFormTypes() {
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT DISTINCT ?id ?formName (GROUP_CONCAT(DISTINCT ?usage; separator=", ") AS ?usages)
+    WHERE {
+      ?form a ext:GeneratedForm .
+      ?form form:targetType ?type .
+      ?form mu:uuid ?id .
+      ?form skos:prefLabel ?formName .
+      
+      FILTER NOT EXISTS {
+        ?form ext:extendsForm ?baseForm .
+      }
+
+      OPTIONAL {
+        ?usage a ?type .
+      }
+    }
+    GROUP BY ?id ?type ?formName
+    ORDER BY ?type 
+    `;
+  let results = [];
+  try {
+    const queryResults = await query(queryString);
+    results = queryResults.results.bindings || [];
+  } catch (error) {
+    throw new HttpError(
+      'Something went wrong while fetching custom form types',
+      500,
+    );
+  }
+  return results.map((b) => {
+    const usages = b.usages?.value ?? '';
+    return {
+      id: b.id.value,
+      label: b.formName.value,
+      usageUris: usages.split(','),
+    };
+  });
 }
