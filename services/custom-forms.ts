@@ -882,3 +882,48 @@ export async function fetchCustomFormTypes() {
     };
   });
 }
+
+export async function getFieldsInCustomForm(formId: string) {
+  const form = await fetchFormDefinition(formId);
+  if (!form.custom) {
+    throw new HttpError('Cannot get custom fields in a standard form', 400);
+  }
+  const store = await ttlToStore(form.formTtl);
+  const engine = new QueryEngine();
+  const query = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary
+    WHERE {
+      ?field a form:Field .
+      ?field sh:name ?label .
+      ?field form:displayType ?displayType .
+
+      OPTIONAL {
+        ?field sh:order ?order .
+      }
+
+      OPTIONAL {
+        ?field form:validatedBy ?validation .
+      }
+      OPTIONAL {
+        ?field form:showInSummary ?showInSummary .
+      }
+      BIND(IF(BOUND(?showInSummary), false, true) AS ?isShownInSummary)
+      BIND(IF(?validation = <http://data.lblod.info/id/lmb/custom-forms/validation/is-required>, true, false) AS ?isRequired)
+    }
+    ORDER BY ?order`;
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
+  const bindings = await bindingStream.toArray();
+  return bindings.map((b) => {
+    return {
+      uri: b.get('field').value,
+      label: b.get('label').value,
+      displayType: b.get('displayType').value,
+      order: parseInt(b.get('order').value || '0'),
+      isRequired: !!b.get('isRequired')?.value,
+      isShownInSummary: !!b.get('isShownInSummary')?.value,
+    };
+  });
+}
