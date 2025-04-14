@@ -2,7 +2,10 @@ import Router from 'express-promise-router';
 
 import { Request, Response } from 'express';
 
-import { fetchCustomFormTypes } from '../services/custom-forms';
+import {
+  fetchCustomFormTypes,
+  getFieldsInCustomForm,
+} from '../services/custom-forms';
 
 export const customFormRouter = Router();
 
@@ -18,6 +21,14 @@ customFormRouter.get(
     });
   },
 );
+
+customFormRouter.get('/:id/fields', async (req: Request, res: Response) => {
+  const fields = await getFieldsInCustomForm(req.params.id);
+
+  return res.status(200).send({
+    fields,
+  });
+});
 
 async function fetchDefaultFormTypes() {
   return [
