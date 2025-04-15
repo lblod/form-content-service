@@ -893,8 +893,9 @@ export async function getFieldsInCustomForm(formId: string) {
   const query = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
 
-    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary
+    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary ?conceptScheme
     WHERE {
       ?field a form:Field .
       ?field sh:name ?label .
@@ -910,6 +911,9 @@ export async function getFieldsInCustomForm(formId: string) {
       OPTIONAL {
         ?field form:showInSummary ?showInSummary .
       }
+      OPTIONAL {
+        ?field fieldOption:conceptScheme ?conceptScheme .
+      }
       BIND(IF(BOUND(?showInSummary), false, true) AS ?isShownInSummary)
       BIND(IF(?validation = <http://data.lblod.info/id/lmb/custom-forms/validation/is-required>, true, false) AS ?isRequired)
     }
@@ -922,6 +926,7 @@ export async function getFieldsInCustomForm(formId: string) {
       label: b.get('label').value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
+      conceptScheme: b.get('conceptScheme')?.value,
       isRequired: !!b.get('isRequired')?.value,
       isShownInSummary: !!b.get('isShownInSummary')?.value,
     };
