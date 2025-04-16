@@ -909,12 +909,13 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:validatedBy ?validation .
       }
       OPTIONAL {
-        ?field form:showInSummary ?isShownInSummary .
+        ?field form:showInSummary ?showInSummary .
       }
       OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
-      BIND(IF(?validation = <http://data.lblod.info/id/lmb/custom-forms/validation/is-required>, true, false) AS ?isRequired)
+      BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
+      BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)
     }
     ORDER BY ?order`;
   const bindingStream = await engine.queryBindings(query, { sources: [store] });
