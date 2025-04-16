@@ -63,6 +63,12 @@ formDefinitionRouter.post(
 
 // this is in semantic forms territory and there we only know uris... we can solve this with contexts if necessary
 formDefinitionRouter.delete('/fields', async (req: Request, res: Response) => {
+  if (!req.body.formUri) {
+    throw new HttpError('No formUri was provided.', 400);
+  }
+  if (!req.body.fieldUri) {
+    throw new HttpError('No fieldUri was provided.', 400);
+  }
   const newFormData = await deleteFormField(
     req.body.formUri,
     req.body.fieldUri,
