@@ -670,14 +670,13 @@ async function deleteFieldFromFormExtension(formUri: string, fieldUri: string) {
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
-        ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(fieldUri)}.
-        ${sparqlEscapeUri(fieldUri)} ?p ?o.
+      ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(fieldUri)}.
+      ${sparqlEscapeUri(fieldUri)} ?p ?o.
     }
     WHERE {
-        ${sparqlEscapeUri(formUri)} a form:Extension;
-          ext:isCustomForm true;
-          form:includes ${sparqlEscapeUri(fieldUri)}.
-        ${sparqlEscapeUri(fieldUri)} ?p ?o.
+      ${sparqlEscapeUri(formUri)} ext:isCustomForm true .
+      ${sparqlEscapeUri(formUri)} form:includes ${sparqlEscapeUri(fieldUri)} .
+      ${sparqlEscapeUri(fieldUri)} ?p ?o.
     }
   `);
 }
@@ -922,6 +921,7 @@ export async function getFieldsInCustomForm(formId: string) {
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
     return {
+      formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
       displayType: b.get('displayType').value,
