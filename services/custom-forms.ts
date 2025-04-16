@@ -909,12 +909,11 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:validatedBy ?validation .
       }
       OPTIONAL {
-        ?field form:showInSummary ?showInSummary .
+        ?field form:showInSummary ?isShownInSummary .
       }
       OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
-      BIND(IF(BOUND(?showInSummary), false, true) AS ?isShownInSummary)
       BIND(IF(?validation = <http://data.lblod.info/id/lmb/custom-forms/validation/is-required>, true, false) AS ?isRequired)
     }
     ORDER BY ?order`;
@@ -927,8 +926,23 @@ export async function getFieldsInCustomForm(formId: string) {
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
-      isRequired: !!b.get('isRequired')?.value,
-      isShownInSummary: !!b.get('isShownInSummary')?.value,
+      isRequired: stringToBoolean(b.get('isRequired')?.value),
+      isShownInSummary: stringToBoolean(b.get('isShownInSummary')?.value),
     };
   });
+}
+
+function stringToBoolean(valueAsString?: string) {
+  const mapping = {
+    '1': true,
+    '0': false,
+    true: true,
+    false: false,
+  };
+
+  if (!Object.keys(mapping).includes(valueAsString)) {
+    return false;
+  }
+
+  return mapping[valueAsString];
 }
