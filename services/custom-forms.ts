@@ -921,6 +921,7 @@ export async function getFieldsInCustomForm(formId: string) {
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
     return {
+      formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
       displayType: b.get('displayType').value,
