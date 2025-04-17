@@ -27,11 +27,6 @@ async function fetchDefaultFormTypes() {
       label: 'Bestuurseenheid Contact',
     },
     {
-      id: 'bestuursorgaan',
-      prefix: 'http://data.lblod.info/id/bestuursorganen/',
-      label: 'Bestuursorgaan',
-    },
-    {
       id: 'contactinfo',
       prefix: 'http://data.lblod.info/id/contact-punten/',
       label: 'Contact Info',
@@ -50,11 +45,6 @@ async function fetchDefaultFormTypes() {
       id: 'mandataris-edit',
       prefix: 'http://data.lblod.info/id/mandatarissen/',
       label: 'Mandataris',
-    },
-    {
-      id: 'persoon',
-      prefix: 'http://data.lblod.info/id/personen/',
-      label: 'Persoon',
     },
   ].sort((a, b) => a.label.localeCompare(b.label));
 }
