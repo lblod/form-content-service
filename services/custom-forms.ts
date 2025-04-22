@@ -123,14 +123,15 @@ export async function updateField(
   }
   let linkedFormTypeTtl = '';
   if (description.linkedFormTypeUri) {
-    const linkedFormTypeUri = sparqlEscapeUri(description.linkedFormTypeUri);
-    linkedFormTypeTtl = `${escaped.fieldUri} form:targetType ${linkedFormTypeUri} .`;
+    const linkedFormTypeId = sparqlEscapeString(description.linkedFormTypeUri);
+    linkedFormTypeTtl = `${escaped.fieldUri} ext:targetTypeId ${linkedFormTypeId} .`;
   }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
@@ -140,7 +141,7 @@ export async function updateField(
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
       ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
-      ${escaped.fieldUri} form:targetType ?linkedFormType .
+      ${escaped.fieldUri} ext:targetTypeId ?linkedFormType .
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -171,7 +172,7 @@ export async function updateField(
         ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
-        ${escaped.fieldUri} form:targetType ?linkedFormType .
+        ${escaped.fieldUri} ext:targetTypeId ?linkedFormType .
       }
     }
   `);
@@ -380,12 +381,12 @@ async function addFieldToFormExtension(
   }
   let linkedFormTypeTtl = '';
   if (fieldDescription.linkedFormTypeUri) {
-    const linkedFormTypeUri = sparqlEscapeUri(
+    const linkedFormTypeId = sparqlEscapeString(
       fieldDescription.linkedFormTypeUri,
     );
     linkedFormTypeTtl = `${sparqlEscapeUri(
       uri,
-    )} form:targetType ${linkedFormTypeUri} .`;
+    )} ext:targetTypeId ${linkedFormTypeId} .`;
   }
 
   await update(`
