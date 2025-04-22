@@ -32,6 +32,7 @@ type FieldDescription =
       isRequired?: boolean;
       showInSummary?: boolean;
       conceptScheme?: string;
+      linkedFormTypeUri?: string;
     }
   | {
       name: string;
@@ -42,6 +43,7 @@ type FieldDescription =
       isRequired?: boolean;
       showInSummary?: boolean;
       conceptScheme?: string;
+      linkedFormTypeUri?: string;
     };
 type FieldUpdateDescription = {
   field: string;
@@ -50,6 +52,7 @@ type FieldUpdateDescription = {
   isRequired: boolean;
   showInSummary?: boolean;
   conceptScheme?: string;
+  linkedFormTypeUri: string;
 };
 
 const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
@@ -113,12 +116,15 @@ export async function updateField(
   }
 
   let conceptSchemeInsertTtl = '';
-  let conceptSchemeDeleteTtl = '';
   if (isConceptSchemeRequiredField(description.displayType)) {
     const conceptSchemeUri = sparqlEscapeUri(description.conceptScheme);
     conceptSchemeInsertTtl = `
     ${escaped.fieldUri} fieldOption:conceptScheme ${conceptSchemeUri} .`;
-    conceptSchemeDeleteTtl = `${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .`;
+  }
+  let linkedFormTypeTtl = '';
+  if (description.linkedFormTypeUri) {
+    const linkedFormTypeUri = sparqlEscapeUri(description.linkedFormTypeUri);
+    linkedFormTypeTtl = `${escaped.fieldUri} form:targetType ${linkedFormTypeUri} .`;
   }
 
   await update(`
@@ -133,16 +139,17 @@ export async function updateField(
       ${escaped.fieldUri} form:validatedBy ?validation .
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
-
-      ${conceptSchemeDeleteTtl}
+      ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
+      ${escaped.fieldUri} form:targetType ?linkedFormType .
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
       ${escaped.fieldUri} form:displayType ${escaped.displayType} .
 
-      ${description.isRequired ? requiredConstraintInsertTtl : ''}
+      ${requiredConstraintInsertTtl}
       ${showInSummaryTtl}
       ${conceptSchemeInsertTtl}
+      ${linkedFormTypeTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
@@ -162,6 +169,9 @@ export async function updateField(
       }
       OPTIONAL {
         ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
+      }
+      OPTIONAL {
+        ${escaped.fieldUri} form:targetType ?linkedFormType .
       }
     }
   `);
@@ -368,6 +378,15 @@ async function addFieldToFormExtension(
     conceptSchemeTtl = `
       ${sparqlEscapeUri(uri)} fieldOption:conceptScheme ${conceptSchemeUri} .`;
   }
+  let linkedFormTypeTtl = '';
+  if (fieldDescription.linkedFormTypeUri) {
+    const linkedFormTypeUri = sparqlEscapeUri(
+      fieldDescription.linkedFormTypeUri,
+    );
+    linkedFormTypeTtl = `${sparqlEscapeUri(
+      uri,
+    )} form:targetType ${linkedFormTypeUri} .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -390,6 +409,7 @@ async function addFieldToFormExtension(
       ${requiredConstraintTtl}
       ${showInSummaryTtl}
       ${conceptSchemeTtl}
+      ${linkedFormTypeTtl}
     }
   `);
   return { id, uri };
@@ -909,7 +929,7 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:validatedBy ?validation .
       }
       OPTIONAL {
-        ?field form:showInSummary ?showInSummary .
+        ?field form:showInSummary ?isShownInSummary .
       }
       OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
