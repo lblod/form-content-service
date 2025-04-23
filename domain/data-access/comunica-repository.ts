@@ -52,6 +52,8 @@ export const getFormTarget = async (formTtl: string) => {
 
     SELECT DISTINCT ?type
     WHERE {
+        VALUES ?formType { form:Form ext:GeneratedForm form:Extension }
+        ?form a ?formType .
         ?form form:targetType ?type .
     }
     `;
