@@ -831,3 +831,119 @@ export async function getValueForCustomField(
 
   return fieldValue;
 }
+
+export async function fetchCustomFormTypes() {
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT DISTINCT ?form ?id ?formName (GROUP_CONCAT(DISTINCT ?usage; separator=", ") AS ?usages)
+    WHERE {
+      ?form a ext:GeneratedForm .
+      ?form form:targetType ?type .
+      ?form mu:uuid ?id .
+      ?form skos:prefLabel ?formName .
+      
+      FILTER NOT EXISTS {
+        ?form ext:extendsForm ?baseForm .
+      }
+
+      OPTIONAL {
+        ?usage a ?type .
+      }
+    }
+    GROUP BY ?form ?id ?type ?formName
+    ORDER BY ?type 
+    `;
+  let results = [];
+  try {
+    const queryResults = await query(queryString);
+    results = queryResults.results.bindings || [];
+  } catch (error) {
+    throw new HttpError(
+      'Something went wrong while fetching custom form types',
+      500,
+    );
+  }
+  return results.map((b) => {
+    const usages = b.usages?.value ?? '';
+    return {
+      uri: b.form.value,
+      id: b.id.value,
+      label: b.formName.value,
+      usageUris: usages.split(','),
+    };
+  });
+}
+
+export async function getFieldsInCustomForm(formId: string) {
+  const form = await fetchFormDefinition(formId);
+  if (!form.custom) {
+    throw new HttpError('Cannot get custom fields in a standard form', 400);
+  }
+  const store = await ttlToStore(form.formTtl);
+  const engine = new QueryEngine();
+  const query = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
+    WHERE {
+      ?field a form:Field .
+      ?field sh:name ?label .
+      ?field form:displayType ?displayType .
+
+      OPTIONAL {
+        ?field sh:order ?order .
+      }
+      OPTIONAL {
+        ?field form:validatedBy ?validation .
+      }
+      OPTIONAL {
+        ?field form:showInSummary ?showInSummary .
+      }
+      OPTIONAL {
+        ?field fieldOption:conceptScheme ?conceptScheme .
+      }
+      OPTIONAL {
+        ?field ext:targetTypeId ?linkedFormType .
+      }
+      BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
+      BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)
+    }
+    ORDER BY ?order`;
+  const bindingStream = await engine.queryBindings(query, { sources: [store] });
+  const bindings = await bindingStream.toArray();
+  return bindings.map((b) => {
+    return {
+      formUri: form.uri,
+      uri: b.get('field').value,
+      label: b.get('label').value,
+      displayType: b.get('displayType').value,
+      order: parseInt(b.get('order').value || '0'),
+      conceptScheme: b.get('conceptScheme')?.value,
+      linkedFormTypeUri: b.get('linkedFormType')?.value,
+      isRequired: stringToBoolean(b.get('isRequired')?.value),
+      isShownInSummary: stringToBoolean(b.get('isShownInSummary')?.value),
+    };
+  });
+}
+
+function stringToBoolean(valueAsString?: string) {
+  const mapping = {
+    '1': true,
+    '0': false,
+    true: true,
+    false: false,
+  };
+
+  if (!Object.keys(mapping).includes(valueAsString)) {
+    return false;
+  }
+
+  return mapping[valueAsString];
+}
