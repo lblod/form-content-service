@@ -123,8 +123,8 @@ export async function updateField(
   }
   let linkedFormTypeTtl = '';
   if (description.linkedFormTypeUri) {
-    const linkedFormTypeId = sparqlEscapeString(description.linkedFormTypeUri);
-    linkedFormTypeTtl = `${escaped.fieldUri} ext:targetTypeId ${linkedFormTypeId} .`;
+    const linkedFormTypeUri = sparqlEscapeString(description.linkedFormTypeUri);
+    linkedFormTypeTtl = `${escaped.fieldUri} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
   await update(`
@@ -141,7 +141,7 @@ export async function updateField(
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
       ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
-      ${escaped.fieldUri} ext:targetTypeId ?linkedFormType .
+      ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -172,7 +172,7 @@ export async function updateField(
         ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
-        ${escaped.fieldUri} ext:targetTypeId ?linkedFormType .
+        ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
       }
     }
   `);
@@ -396,7 +396,7 @@ async function addFieldToFormExtension(
     );
     linkedFormTypeTtl = `${sparqlEscapeUri(
       uri,
-    )} ext:targetTypeId ${linkedFormTypeId} .`;
+    )} ext:linkedFormType ${linkedFormTypeId} .`;
   }
 
   await update(`
@@ -967,7 +967,7 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
-        ?field ext:targetTypeId ?linkedFormType .
+        ?field ext:linkedFormType ?linkedFormType .
       }
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
       BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)
