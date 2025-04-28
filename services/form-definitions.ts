@@ -59,22 +59,23 @@ export async function createEmptyFormDefinition(
       sh:name "" ;
       sh:order 1 .
 
-    <http://data.lblod.info/id/lmb/forms/custom-form>
+    ${sparqlEscapeUri(formUri)}
       a form:Form, form:TopLevelForm ;
       sh:group ${sparqlEscapeUri(groupUri)} ;
-      form:initGenerator ext:customFormG ;
+      form:initGenerator ext:customFormG-${id} ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
       form:targetLabel mu:uuid ;
       ext:prefix ${sparqlEscapeUri(prefixUri)} ;
       mu:uuid ${sparqlEscapeString(id)} .
+    
+    ext:customFormS-${id} a ${sparqlEscapeUri(typeUri)} .
+    ext:customFormS-${id} mu:uuid ${sparqlEscapeString(id)} .
+      
+    ext:customFormP-${id} a ext:FormPrototype .
+    ext:customFormP-${id} form:shape ext:customFormS-${id} .
 
-    ext:customFormG a form:Generator ;
-      form:prototype [
-        form:shape [
-          a ${sparqlEscapeUri(typeUri)}
-        ]
-      ];
-      form:dataGenerator form:addMuUuid .
+    ext:customFormG-${id} a form:Generator .
+    ext:customFormG-${id} form:prototype ext:customFormP-${id} .
   `;
 
   await update(`

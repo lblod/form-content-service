@@ -583,32 +583,39 @@ async function updateFormTtlForExtension(formUri: string) {
     .join('\n');
 
   const targetTypeQueryResult = await query(`
-      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-      SELECT ?targetType
-      WHERE {
-        ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
-      }
-    `);
+    SELECT ?targetType ?formId
+    WHERE {
+      ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
+      ${sparqlEscapeUri(formUri)} mu:uuid ?formId .
+    }
+  `);
 
   const targetType =
     targetTypeQueryResult.results.bindings?.at(0)?.targetType?.value;
+  const formId = targetTypeQueryResult.results.bindings?.at(0)?.formId?.value;
 
   if (targetType) {
     resultTtl = `
       @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
       @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
+      @prefix mu: <http://mu.semte.ch/vocabularies/core/> .
 
       ${resultTtl}
 
-      ${sparqlEscapeUri(formUri)}  form:initGenerator ext:customFormG .
-      ext:customFormG a form:Generator ;
-      form:prototype [
-        form:shape [
-          a ${sparqlEscapeUri(targetType)}, ext:CustomFormType
-        ]
-      ];
-      form:dataGenerator form:addMuUuid .
+      ${sparqlEscapeUri(formUri)} form:initGenerator ext:customFormG-${formId} .
+
+      ext:customFormS-${formId} a ${sparqlEscapeUri(targetType)},
+                                  ext:CustomFormType .
+      ext:customFormS-${formId} mu:uuid ${sparqlEscapeString(formId)} .
+        
+      ext:customFormP-${formId} a ext:FormPrototype .
+      ext:customFormP-${formId} form:shape ext:customFormS-${formId} .
+
+      ext:customFormG-${formId} a form:Generator .
+      ext:customFormG-${formId} form:prototype ext:customFormP-${formId} .
     `;
   }
 
