@@ -598,6 +598,10 @@ async function updateFormTtlForExtension(formUri: string) {
   const formId = targetTypeQueryResult.results.bindings?.at(0)?.formId?.value;
 
   if (targetType) {
+    const { generatorUri, generatorTtl } = createCustomFormGeneratorTtl(
+      targetType,
+      formId,
+    );
     resultTtl = `
       @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
       @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
@@ -605,17 +609,8 @@ async function updateFormTtlForExtension(formUri: string) {
 
       ${resultTtl}
 
-      ${sparqlEscapeUri(formUri)} form:initGenerator ext:customFormG-${formId} .
-
-      ext:customFormS-${formId} a ${sparqlEscapeUri(targetType)},
-                                  ext:CustomFormType .
-      ext:customFormS-${formId} mu:uuid ${sparqlEscapeString(formId)} .
-        
-      ext:customFormP-${formId} a ext:FormPrototype .
-      ext:customFormP-${formId} form:shape ext:customFormS-${formId} .
-
-      ext:customFormG-${formId} a form:Generator .
-      ext:customFormG-${formId} form:prototype ext:customFormP-${formId} .
+      ${sparqlEscapeUri(formUri)} form:initGenerator ${generatorUri} .
+      ${generatorTtl}
     `;
   }
 
@@ -638,6 +633,25 @@ async function updateFormTtlForExtension(formUri: string) {
       }
     }
   `);
+}
+
+export function createCustomFormGeneratorTtl(formType: string, formId: string) {
+  const ttl = `
+    ext:customFormS-${formId} a ${sparqlEscapeUri(formType)},
+                              ext:CustomFormType .
+      
+    ext:customFormP-${formId} a ext:FormPrototype .
+    ext:customFormP-${formId} form:shape ext:customFormS-${formId} .
+
+    ext:customFormG-${formId} a form:Generator .
+    ext:customFormG-${formId} form:prototype ext:customFormP-${formId} .
+    ext:customFormG-${formId} form:dataGenerator form:addMuUuid .
+  `;
+
+  return {
+    generatorUri: `ext:customFormG-${formId}`,
+    generatorTtl: ttl,
+  };
 }
 
 async function markReplacement(

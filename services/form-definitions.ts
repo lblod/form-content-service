@@ -8,6 +8,7 @@ import {
 } from 'mu';
 
 import { fetchFormDefinitionById } from './forms-from-config';
+import { createCustomFormGeneratorTtl } from './custom-forms';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import moment from 'moment';
 
@@ -47,6 +48,10 @@ export async function createEmptyFormDefinition(
     )} dct:description ${sparqlEscapeString(description)} .`;
   }
 
+  const { generatorUri, generatorTtl } = createCustomFormGeneratorTtl(
+    typeUri,
+    id,
+  );
   const ttlCode = `
     @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
     @prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -62,20 +67,13 @@ export async function createEmptyFormDefinition(
     ${sparqlEscapeUri(formUri)}
       a form:Form, form:TopLevelForm ;
       sh:group ${sparqlEscapeUri(groupUri)} ;
-      form:initGenerator ext:customFormG-${id} ;
+      form:initGenerator ${generatorUri} ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
       form:targetLabel mu:uuid ;
       ext:prefix ${sparqlEscapeUri(prefixUri)} ;
       mu:uuid ${sparqlEscapeString(id)} .
     
-    ext:customFormS-${id} a ${sparqlEscapeUri(typeUri)} .
-    ext:customFormS-${id} mu:uuid ${sparqlEscapeString(id)} .
-      
-    ext:customFormP-${id} a ext:FormPrototype .
-    ext:customFormP-${id} form:shape ext:customFormS-${id} .
-
-    ext:customFormG-${id} a form:Generator .
-    ext:customFormG-${id} form:prototype ext:customFormP-${id} .
+    ${generatorTtl}
   `;
 
   await update(`
