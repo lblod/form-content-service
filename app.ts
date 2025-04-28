@@ -5,7 +5,6 @@ import { formInstanceRouter } from './controllers/form-instances';
 import { instanceTableRouter } from './controllers/instance-table';
 import { customFormRouter } from './controllers/custom-forms';
 import { loadFormsFromConfig } from './services/forms-from-config';
-import { customFormRouter } from './controllers/custom-forms';
 
 loadFormsFromConfig();
 

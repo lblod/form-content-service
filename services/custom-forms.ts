@@ -930,7 +930,7 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:validatedBy ?validation .
       }
       OPTIONAL {
-        ?field form:showInSummary ?isShownInSummary .
+        ?field form:showInSummary ?showInSummary .
       }
       OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
