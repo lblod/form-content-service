@@ -33,29 +33,20 @@ customFormRouter.get('/:id/fields', async (req: Request, res: Response) => {
 async function fetchDefaultFormTypes() {
   return [
     {
-      id: 'bestuurseenheid-contact',
-      prefix: 'http://data.lblod.info/id/BestuurseenheidContact/',
-      label: 'Bestuurseenheid Contact',
-    },
-    {
-      id: 'contactinfo',
-      prefix: 'http://data.lblod.info/id/contact-punten/',
-      label: 'Contact Info',
-    },
-    {
-      id: 'fractie',
-      prefix: 'http://data.lblod.info/id/fracties/',
-      label: 'Fractie',
-    },
-    {
-      id: 'mandaat',
-      prefix: 'http://data.lblod.info/id/mandaten/',
-      label: 'Mandaat',
-    },
-    {
-      id: 'mandataris-edit',
-      prefix: 'http://data.lblod.info/id/mandatarissen/',
       label: 'Mandataris',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Mandataris',
+    },
+    {
+      label: 'Mandaat',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Mandaat',
+    },
+    {
+      label: 'Fractie',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Fractie',
+    },
+    {
+      label: 'Bestuurseenheid-contact',
+      uri: 'http://mu.semte.ch/vocabularies/ext/BestuurseenheidContact',
     },
   ].sort((a, b) => a.label.localeCompare(b.label));
 }

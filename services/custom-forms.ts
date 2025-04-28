@@ -123,7 +123,7 @@ export async function updateField(
   }
   let linkedFormTypeTtl = '';
   if (description.linkedFormTypeUri) {
-    const linkedFormTypeUri = sparqlEscapeString(description.linkedFormTypeUri);
+    const linkedFormTypeUri = sparqlEscapeUri(description.linkedFormTypeUri);
     linkedFormTypeTtl = `${escaped.fieldUri} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
@@ -391,12 +391,12 @@ async function addFieldToFormExtension(
   }
   let linkedFormTypeTtl = '';
   if (fieldDescription.linkedFormTypeUri) {
-    const linkedFormTypeId = sparqlEscapeString(
+    const linkedFormTypeUri = sparqlEscapeUri(
       fieldDescription.linkedFormTypeUri,
     );
     linkedFormTypeTtl = `${sparqlEscapeUri(
       uri,
-    )} ext:linkedFormType ${linkedFormTypeId} .`;
+    )} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
   await update(`
@@ -896,22 +896,17 @@ export async function fetchCustomFormTypes() {
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT DISTINCT ?form ?id ?formName (GROUP_CONCAT(DISTINCT ?usage; separator=", ") AS ?usages)
+    SELECT DISTINCT ?form ?formName
     WHERE {
       ?form a ext:GeneratedForm .
       ?form form:targetType ?type .
-      ?form mu:uuid ?id .
       ?form skos:prefLabel ?formName .
       
       FILTER NOT EXISTS {
         ?form ext:extendsForm ?baseForm .
       }
-
-      OPTIONAL {
-        ?usage a ?type .
-      }
     }
-    GROUP BY ?form ?id ?type ?formName
+    GROUP BY ?form ?type ?formName
     ORDER BY ?type 
     `;
   let results = [];
@@ -925,12 +920,9 @@ export async function fetchCustomFormTypes() {
     );
   }
   return results.map((b) => {
-    const usages = b.usages?.value ?? '';
     return {
       uri: b.form.value,
-      id: b.id.value,
       label: b.formName.value,
-      usageUris: usages.split(','),
     };
   });
 }
