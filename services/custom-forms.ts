@@ -326,6 +326,16 @@ function verifyFieldDescription(description: FieldDescription) {
       400,
     );
   }
+  if (
+    description.displayType ===
+      'http://lblod.data.gift/display-types/lmb/custom-link-to-form-selector-input' &&
+    !description.linkedFormTypeUri
+  ) {
+    throw new HttpError(
+      `Field description must have a linkedFormTypeUri. This is required for field type "${description.displayType}"`,
+      400,
+    );
+  }
 }
 
 async function createCustomExtension(
