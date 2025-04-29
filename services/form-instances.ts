@@ -81,23 +81,27 @@ export const getInstancesForForm = async (
 };
 export const getInstancesForFormByUris = async (
   formDefinitionId: string,
-  formUris: Array<string>,
-  labels?: Array<Label>,
+  options: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    labels?: Array<Label>;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const form = await fetchFormDefinitionById(formDefinitionId);
   if (!form) {
     throw new HttpError('Form not found', 404);
   }
 
+  let labels = options.labels;
   const type = await comunicaRepo.getFormTarget(form.formTtl);
   if (!labels || labels.length === 0) {
     labels = await comunicaRepo.getDefaultFormLabels(form.formTtl);
   }
 
-  return await formRepo.getFormInstancesWithCount(type, labels, {
-    limit: formUris.length,
-    instanceUris: formUris,
-  });
+  return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
 
 export const getHistoryForInstance = async (

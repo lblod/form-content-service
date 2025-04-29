@@ -11,6 +11,34 @@ import { fetchFormDefinitionById } from './forms-from-config';
 import { createCustomFormGeneratorTtl } from './custom-forms';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import moment from 'moment';
+import { defaultFormTypes } from '../controllers/custom-forms';
+
+export async function fetchFormDefinitionIdByUri(formDefinitionUri: string) {
+  // As long as the default forms are not in the database we have to check it manually
+  // TODO: default forms from the app to the database OR move this to a config in the app
+  const defaultForm = defaultFormTypes().find(
+    (t) => t.uri === formDefinitionUri,
+  );
+  if (defaultForm) {
+    return defaultForm.id;
+  }
+
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?id
+    WHERE {
+      ${sparqlEscapeUri(formDefinitionUri)} mu:uuid ?id .
+      ${sparqlEscapeUri(formDefinitionUri)} form:targetType ?type .
+    } LIMIT 1
+  `;
+
+  const result = await query(queryString);
+  const firstResult = result.results.bindings[0];
+
+  return firstResult?.id?.value;
+}
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
