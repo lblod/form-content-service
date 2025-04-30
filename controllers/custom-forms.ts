@@ -56,7 +56,7 @@ export function defaultFormTypes() {
 }
 
 customFormRouter.get('/find-usage', async (req: Request, res: Response) => {
-  const instanceUri = req.query.instanceUri.toString();;
+  const instanceUri = req.query.instanceUri.toString();
 
   const users = await getUsingForms(instanceUri);
   return res.status(200).send({

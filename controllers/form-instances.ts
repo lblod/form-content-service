@@ -90,7 +90,7 @@ formInstanceRouter.post(
 
 formInstanceRouter.post(
   '/:formId/get-instances-by-uri',
-   async (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const labels = req.body.labels ?? [];
     const instanceUris = req.body.uris ?? [];
 
@@ -102,20 +102,16 @@ formInstanceRouter.post(
       });
       return;
     }
-    const formInstances = await getInstancesForFormByUris(
-      req.params.formId,
-      {
-        instanceUris,
-        labels,
-      }
-    );
+    const formInstances = await getInstancesForFormByUris(req.params.formId, {
+      instanceUris,
+      labels,
+    });
     res.set('X-Total-Count', formInstances.count);
     res.send({
       instances: formInstances.instances,
     });
   },
 );
-
 
 formInstanceRouter.get(
   '/:id/instances/:instanceId',

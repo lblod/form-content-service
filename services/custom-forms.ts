@@ -1008,7 +1008,7 @@ function stringToBoolean(valueAsString?: string) {
   return mapping[valueAsString];
 }
 
-export async function getUsingForms(instanceUri:string) {
+export async function getUsingForms(instanceUri: string) {
   const findUsersQuery = `
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
