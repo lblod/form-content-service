@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import {
   fetchCustomFormTypes,
   getFieldsInCustomForm,
+  getUsingForms,
 } from '../services/custom-forms';
 
 export const customFormRouter = Router();
@@ -53,3 +54,12 @@ export function defaultFormTypes() {
     },
   ].sort((a, b) => a.label.localeCompare(b.label));
 }
+
+customFormRouter.get('/find-usage', async (req: Request, res: Response) => {
+  const instanceUri = req.query.instanceUri.toString();;
+
+  const users = await getUsingForms(instanceUri);
+  return res.status(200).send({
+    users,
+  });
+});

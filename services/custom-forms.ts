@@ -660,7 +660,7 @@ export function createCustomFormGeneratorTtl(formType: string, formId: string) {
   const ttl = `
     ${uris.shape} a ${sparqlEscapeUri(formType)},
                               ext:CustomFormType .
-      
+
     ${uris.prototype} a ext:FormPrototype .
     ${uris.prototype} form:shape ${uris.shape} .
 
@@ -912,13 +912,13 @@ export async function fetchCustomFormTypes() {
       ?form a ext:GeneratedForm .
       ?form form:targetType ?type .
       ?form skos:prefLabel ?formName .
-      
+
       FILTER NOT EXISTS {
         ?form ext:extendsForm ?baseForm .
       }
     }
     GROUP BY ?form ?type ?formName
-    ORDER BY ?type 
+    ORDER BY ?type
     `;
   let results = [];
   try {
@@ -1006,4 +1006,41 @@ function stringToBoolean(valueAsString?: string) {
   }
 
   return mapping[valueAsString];
+}
+
+export async function getUsingForms(instanceUri:string) {
+  const findUsersQuery = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+    SELECT DISTINCT ?formUri ?formId ?formLabel ?userInstanceUri ?userInstanceId ?instanceType WHERE {
+      ?userInstanceUri ?linkingPredicate ${sparqlEscapeUri(instanceUri)} .
+      ?userInstanceUri mu:uuid ?userInstanceId .
+      ?g ext:ownedBy ?someone.
+      ?field sh:path ?linkingPredicate.
+      ?formUri form:includes ?field .
+      ?formUri a ext:GeneratedForm .
+      ?formUri mu:uuid ?formId .
+      ?userInstanceUri a ?instanceType.
+      FILTER(?instanceType != <http://mu.semte.ch/vocabularies/ext/CustomFormType>)
+      OPTIONAL {
+        ?formUri skos:prefLabel ?formLabel .
+      }
+    }
+  `;
+  const result = await query(findUsersQuery);
+  const bindings = result.results.bindings || [];
+  return bindings.map((b) => {
+    return {
+      formUri: b.formUri.value,
+      formId: b.formId.value,
+      instanceUri: b.userInstanceUri.value,
+      instanceId: b.userInstanceId.value,
+      instanceType: b.instanceType.value,
+      formLabel: b.formLabel?.value, // in the case of extending existing forms, the label is sometimes not present
+    };
+  });
 }
