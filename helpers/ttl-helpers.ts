@@ -1,5 +1,5 @@
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
-import { Quad } from 'n3';
+import { Quad, Parser, Writer } from 'n3';
 import N3 from 'n3';
 
 const datatypeNames = {
@@ -66,39 +66,13 @@ export const ttlToStore = function (
   });
 };
 
-export const ttlToTriplesAndPrefixes = function (ttl: string) {
-  const lines = ttl.split(/\.\s/);
-  const prefixLines = [] as string[];
-  const insertLines = [] as string[];
+export const ttlToQuadStrings = function (ttl: string): Array<string> {
+  const parser = new Parser();
+  const quads = parser.parse(ttl);
+  const writer = new Writer({ prefixes: {} });
+  writer.addQuads(quads);
 
-  lines.forEach((line) => {
-    const trimmedLine = line.trim();
-    if (trimmedLine.toLowerCase().startsWith('@prefix')) {
-      prefixLines.push(`PREFIX ${trimmedLine.substring(8)}`);
-    } else {
-      insertLines.push(trimmedLine);
-    }
-  });
-
-  return { prefixLines, insertLines };
-};
-
-/**
- * This is a naive implementation that will not work for data of the format:
- * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
- *
- * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
- *
- * We probably don't care.
- */
-export const ttlToInsert = function (ttl) {
-  const { insertLines, prefixLines } = ttlToTriplesAndPrefixes(ttl);
-
-  return `${prefixLines.join('\n')}
-
-  INSERT DATA {
-    ${insertLines.join('.\n')}
-  }`;
+  return quads.map((q) => writer.quadsToString([q]));
 };
 
 export const addTripleToTtl = function (

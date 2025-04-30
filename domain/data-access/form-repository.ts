@@ -12,8 +12,7 @@ import {
 import {
   computeInstanceDeltaQuery,
   sparqlEscapeObject,
-  ttlToInsert,
-  ttlToTriplesAndPrefixes,
+  ttlToQuadStrings,
 } from '../../helpers/ttl-helpers';
 import { v4 as uuid } from 'uuid';
 import comunicaRepo from './comunica-repository';
@@ -136,7 +135,12 @@ const updateFormInstance = async (
 };
 
 const addFormInstance = async (instanceContent: string) => {
-  await query(ttlToInsert(instanceContent));
+  const insertLines = ttlToQuadStrings(instanceContent);
+
+  await query(`
+  INSERT DATA {
+    ${insertLines.join('\n')}
+  }`);
 };
 
 const computeTombstoneInserts = (
@@ -337,9 +341,6 @@ const saveInstanceVersion = async (
   creatorUri: string,
   description?: string,
 ) => {
-  const { insertLines, prefixLines } =
-    await ttlToTriplesAndPrefixes(instanceTtl);
-
   const historyGraphUri = sparqlEscapeUri(
     `http://mu.semte.ch/graphs/formHistory/${uuid()}`,
   );
@@ -350,7 +351,6 @@ const saveInstanceVersion = async (
   }
 
   const insertQuery = `
-    ${prefixLines.join('\n')}
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX dc: <http://purl.org/dc/elements/1.1/>
     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
@@ -363,7 +363,7 @@ const saveInstanceVersion = async (
           dct:creator ${sparqlEscapeUri(creatorUri)} ${descriptionInsert}.
       }
       GRAPH ${historyGraphUri} {
-        ${insertLines.join('.\n')}
+        ${ttlToQuadStrings(instanceTtl).join('\n')}
       }
     }
   `;
