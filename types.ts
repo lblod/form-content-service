@@ -11,6 +11,7 @@ export type Label = {
   var: string;
   order?: number;
   type?: string;
+  isShownInSummary?: boolean;
 };
 
 export type InstanceMinimal = {

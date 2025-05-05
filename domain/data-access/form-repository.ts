@@ -185,15 +185,34 @@ const deleteFormInstance = async (formTtl: string, instanceUri: string) => {
 
 const getFormInstanceCount = async (
   targetType: string,
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  labels: Array<Label>,
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
-  const filter = buildInstanceFilter(options?.filter);
+  const filter = buildInstanceFilter(
+    options?.filter,
+    labels.map((l) => l.uri || null),
+  );
+  let possibleInstanceUriValues = '';
+  if (options.instanceUris?.length >= 1) {
+    possibleInstanceUriValues = `
+      VALUES ?uri {
+        ${options.instanceUris.map((uri) => sparqlEscapeUri(uri)).join('\n')}
+      }
+    `;
+  }
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     SELECT (COUNT(DISTINCT ?uri) as ?count)
     WHERE {
+        ${possibleInstanceUriValues}
         ?uri a ${sparqlEscapeUri(targetType)} .
         ?uri mu:uuid ?id .
         ${filter}
@@ -204,17 +223,31 @@ const getFormInstanceCount = async (
   return parseInt(queryResult.results.bindings[0]?.count?.value, 10) || 0;
 };
 
-const buildInstanceFilter = (filter) => {
+const buildInstanceFilter = (filter: string, labelUris = []) => {
   if (!filter) {
     return '';
   }
-  return `?uri ?p ?o. \n FILTER(STRSTARTS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
+
+  const labelsForValues = labelUris
+    .filter((uri) => uri)
+    .map((uri) => sparqlEscapeUri(uri));
+  return `
+    VALUES ?p {
+      ${labelsForValues.join('\n')}
+    }  
+  ?uri ?p ?o. \n FILTER(CONTAINS(LCASE(STR(?o)), LCASE("${filter}"))) .`;
 };
 
 const getFormInstances = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const labelJoin = labels
     .map((label) => {
@@ -238,13 +271,25 @@ const getFormInstances = async (
   const order = options?.sort?.charAt(0) == '-' ? 'DESC' : 'ASC';
   const sortName =
     order == 'DESC' ? options?.sort?.substring(1) : options?.sort;
-  const filter = buildInstanceFilter(options?.filter);
+  const filter = buildInstanceFilter(
+    options?.filter,
+    labels.map((l) => l.uri || null),
+  );
+  let possibleInstanceUriValues = '';
+  if (options.instanceUris?.length >= 1) {
+    possibleInstanceUriValues = `
+      VALUES ?uri {
+        ${options.instanceUris.map((uri) => sparqlEscapeUri(uri)).join('\n')}
+      }
+    `;
+  }
   const q = `
     PREFIX inst: <http://data.lblod.info/form-data/instances/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     SELECT DISTINCT ?uri ?id ${variables}
     WHERE {
+        ${possibleInstanceUriValues}
         ?uri a ${sparqlEscapeUri(targetType)} .
         OPTIONAL { ${labelJoin} }
         ?uri mu:uuid ?id .
@@ -289,11 +334,17 @@ const getFormInstances = async (
 const getFormInstancesWithCount = async (
   targetType: string,
   labels: Label[],
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    instanceUris?: Array<string>;
+  },
 ) => {
   const [instances, count] = await Promise.all([
     getFormInstances(targetType, labels, options),
-    getFormInstanceCount(targetType, options),
+    getFormInstanceCount(targetType, labels, options),
   ]);
 
   return { instances, count, labels };

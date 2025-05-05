@@ -32,6 +32,7 @@ type FieldDescription =
       isRequired?: boolean;
       showInSummary?: boolean;
       conceptScheme?: string;
+      linkedFormTypeUri?: string;
     }
   | {
       name: string;
@@ -42,6 +43,7 @@ type FieldDescription =
       isRequired?: boolean;
       showInSummary?: boolean;
       conceptScheme?: string;
+      linkedFormTypeUri?: string;
     };
 type FieldUpdateDescription = {
   field: string;
@@ -50,6 +52,7 @@ type FieldUpdateDescription = {
   isRequired: boolean;
   showInSummary?: boolean;
   conceptScheme?: string;
+  linkedFormTypeUri: string;
 };
 
 const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
@@ -113,18 +116,22 @@ export async function updateField(
   }
 
   let conceptSchemeInsertTtl = '';
-  let conceptSchemeDeleteTtl = '';
   if (isConceptSchemeRequiredField(description.displayType)) {
     const conceptSchemeUri = sparqlEscapeUri(description.conceptScheme);
     conceptSchemeInsertTtl = `
     ${escaped.fieldUri} fieldOption:conceptScheme ${conceptSchemeUri} .`;
-    conceptSchemeDeleteTtl = `${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .`;
+  }
+  let linkedFormTypeTtl = '';
+  if (description.linkedFormTypeUri) {
+    const linkedFormTypeUri = sparqlEscapeUri(description.linkedFormTypeUri);
+    linkedFormTypeTtl = `${escaped.fieldUri} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
@@ -133,16 +140,17 @@ export async function updateField(
       ${escaped.fieldUri} form:validatedBy ?validation .
         ?validation ?validationP ?validationO .
       ${escaped.fieldUri} form:showInSummary ?summary .
-
-      ${conceptSchemeDeleteTtl}
+      ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
+      ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
       ${escaped.fieldUri} form:displayType ${escaped.displayType} .
 
-      ${description.isRequired ? requiredConstraintInsertTtl : ''}
+      ${requiredConstraintInsertTtl}
       ${showInSummaryTtl}
       ${conceptSchemeInsertTtl}
+      ${linkedFormTypeTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
@@ -162,6 +170,9 @@ export async function updateField(
       }
       OPTIONAL {
         ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
+      }
+      OPTIONAL {
+        ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
       }
     }
   `);
@@ -315,6 +326,16 @@ function verifyFieldDescription(description: FieldDescription) {
       400,
     );
   }
+  if (
+    description.displayType ===
+      'http://lblod.data.gift/display-types/lmb/custom-link-to-form-selector-input' &&
+    !description.linkedFormTypeUri
+  ) {
+    throw new HttpError(
+      `Field description must have a linkedFormTypeUri. This is required for field type "${description.displayType}"`,
+      400,
+    );
+  }
 }
 
 async function createCustomExtension(
@@ -368,6 +389,15 @@ async function addFieldToFormExtension(
     conceptSchemeTtl = `
       ${sparqlEscapeUri(uri)} fieldOption:conceptScheme ${conceptSchemeUri} .`;
   }
+  let linkedFormTypeTtl = '';
+  if (fieldDescription.linkedFormTypeUri) {
+    const linkedFormTypeUri = sparqlEscapeUri(
+      fieldDescription.linkedFormTypeUri,
+    );
+    linkedFormTypeTtl = `${sparqlEscapeUri(
+      uri,
+    )} ext:linkedFormType ${linkedFormTypeUri} .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -390,6 +420,7 @@ async function addFieldToFormExtension(
       ${requiredConstraintTtl}
       ${showInSummaryTtl}
       ${conceptSchemeTtl}
+      ${linkedFormTypeTtl}
     }
   `);
   return { id, uri };
@@ -562,32 +593,34 @@ async function updateFormTtlForExtension(formUri: string) {
     .join('\n');
 
   const targetTypeQueryResult = await query(`
-      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-      SELECT ?targetType
-      WHERE {
-        ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
-      }
-    `);
+    SELECT ?targetType ?formId
+    WHERE {
+      ${sparqlEscapeUri(formUri)} form:targetType ?targetType .
+      ${sparqlEscapeUri(formUri)} mu:uuid ?formId .
+    }
+  `);
 
   const targetType =
     targetTypeQueryResult.results.bindings?.at(0)?.targetType?.value;
+  const formId = targetTypeQueryResult.results.bindings?.at(0)?.formId?.value;
 
   if (targetType) {
+    const { generatorUri, generatorTtl } = createCustomFormGeneratorTtl(
+      targetType,
+      formId,
+    );
     resultTtl = `
       @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
       @prefix ext: <http://mu.semte.ch/vocabularies/ext/> .
+      @prefix mu: <http://mu.semte.ch/vocabularies/core/> .
 
       ${resultTtl}
 
-      ${sparqlEscapeUri(formUri)}  form:initGenerator ext:customFormG .
-      ext:customFormG a form:Generator ;
-      form:prototype [
-        form:shape [
-          a ${sparqlEscapeUri(targetType)}, ext:CustomFormType
-        ]
-      ];
-      form:dataGenerator form:addMuUuid .
+      ${sparqlEscapeUri(formUri)} form:initGenerator ${generatorUri} .
+      ${generatorTtl}
     `;
   }
 
@@ -610,6 +643,36 @@ async function updateFormTtlForExtension(formUri: string) {
       }
     }
   `);
+}
+
+export function createCustomFormGeneratorTtl(formType: string, formId: string) {
+  const uris = {
+    shape: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormS-${formId}`,
+    ),
+    prototype: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormP-${formId}`,
+    ),
+    generator: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormG-${formId}`,
+    ),
+  };
+  const ttl = `
+    ${uris.shape} a ${sparqlEscapeUri(formType)},
+                              ext:CustomFormType .
+      
+    ${uris.prototype} a ext:FormPrototype .
+    ${uris.prototype} form:shape ${uris.shape} .
+
+    ${uris.generator} a form:Generator .
+    ${uris.generator} form:prototype ${uris.prototype} .
+    ${uris.generator} form:dataGenerator form:addMuUuid .
+  `;
+
+  return {
+    generatorUri: uris.generator,
+    generatorTtl: ttl,
+  };
 }
 
 async function markReplacement(
@@ -735,7 +798,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath ?displayType
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType ?showInSummary
     WHERE {
       GRAPH ?g {
         ${fieldsSource}
@@ -743,6 +806,10 @@ export async function getFormInstanceLabels(
         ?field sh:name ?fieldName .
         ?field sh:path ?fieldValuePath .
         ?field form:displayType ?displayType .
+
+        OPTIONAL {
+          ?field form:showInSummary ?showInSummary .
+        }
       }
     }
     ORDER BY ?fieldName
@@ -754,6 +821,7 @@ export async function getFormInstanceLabels(
       var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
       type: b.displayType?.value,
+      isShownInSummary: !!b.showInSummary?.value,
       isCustom: true,
     };
   });
@@ -839,22 +907,17 @@ export async function fetchCustomFormTypes() {
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 
-    SELECT DISTINCT ?form ?id ?formName (GROUP_CONCAT(DISTINCT ?usage; separator=", ") AS ?usages)
+    SELECT DISTINCT ?form ?formName
     WHERE {
       ?form a ext:GeneratedForm .
       ?form form:targetType ?type .
-      ?form mu:uuid ?id .
       ?form skos:prefLabel ?formName .
       
       FILTER NOT EXISTS {
         ?form ext:extendsForm ?baseForm .
       }
-
-      OPTIONAL {
-        ?usage a ?type .
-      }
     }
-    GROUP BY ?form ?id ?type ?formName
+    GROUP BY ?form ?type ?formName
     ORDER BY ?type 
     `;
   let results = [];
@@ -868,12 +931,9 @@ export async function fetchCustomFormTypes() {
     );
   }
   return results.map((b) => {
-    const usages = b.usages?.value ?? '';
     return {
       uri: b.form.value,
-      id: b.id.value,
       label: b.formName.value,
-      usageUris: usages.split(','),
     };
   });
 }
@@ -910,7 +970,7 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
-        ?field ext:targetTypeId ?linkedFormType .
+        ?field ext:linkedFormType ?linkedFormType .
       }
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
       BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)

@@ -8,8 +8,37 @@ import {
 } from 'mu';
 
 import { fetchFormDefinitionById } from './forms-from-config';
+import { createCustomFormGeneratorTtl } from './custom-forms';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import moment from 'moment';
+import { defaultFormTypes } from '../controllers/custom-forms';
+
+export async function fetchFormDefinitionIdByUri(formDefinitionUri: string) {
+  // As long as the default forms are not in the database we have to check it manually
+  // TODO: default forms from the app to the database OR move this to a config in the app
+  const defaultForm = defaultFormTypes().find(
+    (t) => t.uri === formDefinitionUri,
+  );
+  if (defaultForm) {
+    return defaultForm.id;
+  }
+
+  const queryString = `
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?id
+    WHERE {
+      ${sparqlEscapeUri(formDefinitionUri)} mu:uuid ?id .
+      ${sparqlEscapeUri(formDefinitionUri)} form:targetType ?type .
+    } LIMIT 1
+  `;
+
+  const result = await query(queryString);
+  const firstResult = result.results.bindings[0];
+
+  return firstResult?.id?.value;
+}
 
 export const fetchFormDefinition = async (id: string) => {
   const formDefinition = await fetchFormDefinitionById(id);
@@ -47,6 +76,10 @@ export async function createEmptyFormDefinition(
     )} dct:description ${sparqlEscapeString(description)} .`;
   }
 
+  const { generatorUri, generatorTtl } = createCustomFormGeneratorTtl(
+    typeUri,
+    id,
+  );
   const ttlCode = `
     @prefix form: <http://lblod.data.gift/vocabularies/forms/> .
     @prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -59,22 +92,16 @@ export async function createEmptyFormDefinition(
       sh:name "" ;
       sh:order 1 .
 
-    <http://data.lblod.info/id/lmb/forms/custom-form>
+    ${sparqlEscapeUri(formUri)}
       a form:Form, form:TopLevelForm ;
       sh:group ${sparqlEscapeUri(groupUri)} ;
-      form:initGenerator ext:customFormG ;
+      form:initGenerator ${generatorUri} ;
       form:targetType ${sparqlEscapeUri(typeUri)} ;
       form:targetLabel mu:uuid ;
       ext:prefix ${sparqlEscapeUri(prefixUri)} ;
       mu:uuid ${sparqlEscapeString(id)} .
-
-    ext:customFormG a form:Generator ;
-      form:prototype [
-        form:shape [
-          a ${sparqlEscapeUri(typeUri)}
-        ]
-      ];
-      form:dataGenerator form:addMuUuid .
+    
+    ${generatorTtl}
   `;
 
   await update(`

@@ -7,10 +7,14 @@ import {
   getHistoryForInstance,
   getHistoryInstance,
   getInstancesForForm,
+  getInstancesForFormByUris,
   getInstanceUsageCount,
   postFormInstance,
   updateFormInstance,
 } from '../services/form-instances';
+import { HttpError } from '../domain/http-error';
+import { fetchFormDefinitionIdByUri } from '../services/form-definitions';
+import { getFormInstanceLabels } from '../services/custom-forms';
 
 const formInstanceRouter = Router();
 const getSessionId = (req: Request) => req.get('mu-session-id');
@@ -36,6 +40,46 @@ formInstanceRouter.get(
       filter,
       labels,
     });
+    res.set('X-Total-Count', formInstances.count);
+    res.send({
+      instances: formInstances.instances,
+      labels: formInstances.labels,
+    });
+  },
+);
+
+formInstanceRouter.post(
+  '/instances/by-form-definition-uri',
+  async (req: Request, res: Response) => {
+    if (!req.body.formDefinitionUri) {
+      throw new HttpError('No formDefinitionUri was provided.', 400);
+    }
+
+    const instanceUris = req.body.instanceUris || [];
+    const limit =
+      instanceUris.length || parseInt(req.query.page?.size || 10, 10);
+    const offset = parseInt(req.query.page?.number || 0, 10) * limit;
+    const sort = req.query.sort;
+    const filter = req.query.filter;
+
+    const formDefinitionId = await fetchFormDefinitionIdByUri(
+      req.body.formDefinitionUri,
+    );
+    if (!formDefinitionId) {
+      throw new HttpError(
+        `No id for formDefinition uri: ${req.body.formDefinitionUri}`,
+        404,
+      );
+    }
+    const labels = await getFormInstanceLabels(formDefinitionId);
+    const formInstances = await getInstancesForFormByUris(formDefinitionId, {
+      offset,
+      sort,
+      filter,
+      labels: labels.filter((l) => l.isShownInSummary),
+      instanceUris,
+    });
+
     res.set('X-Total-Count', formInstances.count);
     res.send({
       instances: formInstances.instances,

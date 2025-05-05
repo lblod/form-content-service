@@ -12,11 +12,10 @@ export const customFormRouter = Router();
 customFormRouter.get(
   '/form-type-options',
   async (req: Request, res: Response) => {
-    const defaultTypes = await fetchDefaultFormTypes();
     const customTypes = await fetchCustomFormTypes();
 
     return res.status(200).send({
-      defaultTypes,
+      defaultTypes: defaultFormTypes(),
       customTypes,
     });
   },
@@ -30,32 +29,27 @@ customFormRouter.get('/:id/fields', async (req: Request, res: Response) => {
   });
 });
 
-async function fetchDefaultFormTypes() {
+export function defaultFormTypes() {
   return [
     {
-      id: 'bestuurseenheid-contact',
-      prefix: 'http://data.lblod.info/id/BestuurseenheidContact/',
-      label: 'Bestuurseenheid Contact',
-    },
-    {
-      id: 'contactinfo',
-      prefix: 'http://data.lblod.info/id/contact-punten/',
-      label: 'Contact Info',
-    },
-    {
-      id: 'fractie',
-      prefix: 'http://data.lblod.info/id/fracties/',
-      label: 'Fractie',
-    },
-    {
-      id: 'mandaat',
-      prefix: 'http://data.lblod.info/id/mandaten/',
-      label: 'Mandaat',
-    },
-    {
-      id: 'mandataris-edit',
-      prefix: 'http://data.lblod.info/id/mandatarissen/',
       label: 'Mandataris',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Mandataris',
+      id: 'mandataris-edit',
+    },
+    {
+      label: 'Mandaat',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Mandaat',
+      id: 'mandaat',
+    },
+    {
+      label: 'Fractie',
+      uri: 'http://data.vlaanderen.be/ns/mandaat#Fractie',
+      id: 'fractie',
+    },
+    {
+      label: 'Bestuurseenheid-contact',
+      uri: 'http://mu.semte.ch/vocabularies/ext/BestuurseenheidContact',
+      id: 'bestuurseenheid-contact',
     },
   ].sort((a, b) => a.label.localeCompare(b.label));
 }
