@@ -646,20 +646,31 @@ async function updateFormTtlForExtension(formUri: string) {
 }
 
 export function createCustomFormGeneratorTtl(formType: string, formId: string) {
+  const uris = {
+    shape: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormS-${formId}`,
+    ),
+    prototype: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormP-${formId}`,
+    ),
+    generator: sparqlEscapeUri(
+      `http://mu.semte.ch/vocabularies/ext/customFormG-${formId}`,
+    ),
+  };
   const ttl = `
-    ext:customFormS-${formId} a ${sparqlEscapeUri(formType)},
+    ${uris.shape} a ${sparqlEscapeUri(formType)},
                               ext:CustomFormType .
       
-    ext:customFormP-${formId} a ext:FormPrototype .
-    ext:customFormP-${formId} form:shape ext:customFormS-${formId} .
+    ${uris.prototype} a ext:FormPrototype .
+    ${uris.prototype} form:shape ${uris.shape} .
 
-    ext:customFormG-${formId} a form:Generator .
-    ext:customFormG-${formId} form:prototype ext:customFormP-${formId} .
-    ext:customFormG-${formId} form:dataGenerator form:addMuUuid .
+    ${uris.generator} a form:Generator .
+    ${uris.generator} form:prototype ${uris.prototype} .
+    ${uris.generator} form:dataGenerator form:addMuUuid .
   `;
 
   return {
-    generatorUri: `ext:customFormG-${formId}`,
+    generatorUri: uris.generator,
     generatorTtl: ttl,
   };
 }
