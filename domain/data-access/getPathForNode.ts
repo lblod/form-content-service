@@ -89,7 +89,7 @@ export const getPathsForFieldsQuerySingleQuery = async function (
   });
 };
 
-const getSimplePaths = async function (formStore: N3.Store) {
+const getSimplePaths = async function (formStore: N3.Store, node: string) {
   // NOTE: we don't support simple paths with modifiers (e.g. inverse path),
   // in that case, just write it as ( [ sh:inversePath <predicate> ] ) instead of
   // [ sh:inversePath <predicate> ], i.e. make it a complex path
@@ -101,7 +101,8 @@ const getSimplePaths = async function (formStore: N3.Store) {
     SELECT
     ?field ?path
     WHERE {
-      ?field a form:Field.
+      BIND(${sparqlEscapeUri(node)} as ?field)
+
       ?field sh:path ?path.
       # simple paths with direct predicates
       ?field sh:path ?path.
@@ -124,7 +125,7 @@ const getSimplePaths = async function (formStore: N3.Store) {
   });
 };
 
-const getComplexPathHeads = async function (formStore: N3.Store) {
+const getComplexPathHeads = async function (formStore: N3.Store, node: string) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -133,7 +134,8 @@ const getComplexPathHeads = async function (formStore: N3.Store) {
     SELECT
     ?field ?path ?node ?modifier ?predicate
     WHERE {
-      ?field a form:Field.
+      BIND(${sparqlEscapeUri(node)} as ?field)
+
       ?field sh:path ?path.
 
       # first step of a complex path (blank node)
@@ -168,7 +170,10 @@ const getComplexPathHeads = async function (formStore: N3.Store) {
   });
 };
 
-const getComplexPathsTails = async function (formStore: N3.Store) {
+const getComplexPathsTails = async function (
+  formStore: N3.Store,
+  node: string,
+) {
   const query = `
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -177,7 +182,7 @@ const getComplexPathsTails = async function (formStore: N3.Store) {
     SELECT
     ?field ?previous ?step ?node ?modifier ?predicate
     WHERE {
-      ?field a form:Field.
+      BIND(${sparqlEscapeUri(node)} as ?field)
       ?field sh:path ?path.
       # mid or last step of a complex path (blank node)
       ?path rdf:rest+ ?step.
@@ -236,11 +241,14 @@ const getComplexPathsTails = async function (formStore: N3.Store) {
  * "fields:1","nodeID://b10098","nodeID://b10100","dct:subject",,
  * "fields:1","nodeID://b10101","nodeID://b10103","prov:startedAtTime",,
  */
-export const getPathsForFieldsQuery = async function (formStore: N3.Store) {
+export const getPathForNodeQuery = async function (
+  formStore: N3.Store,
+  node: string,
+) {
   const [simple, heads, tails] = await Promise.all([
-    getSimplePaths(formStore),
-    getComplexPathHeads(formStore),
-    getComplexPathsTails(formStore),
+    getSimplePaths(formStore, node),
+    getComplexPathHeads(formStore, node),
+    getComplexPathsTails(formStore, node),
   ]);
   const bindings = [...simple, ...heads, ...tails];
   return bindings;
