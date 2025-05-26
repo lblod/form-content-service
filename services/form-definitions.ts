@@ -99,6 +99,7 @@ export async function createEmptyFormDefinition(
       form:targetType ${sparqlEscapeUri(typeUri)} ;
       form:targetLabel mu:uuid ;
       ext:prefix ${sparqlEscapeUri(prefixUri)} ;
+      ext:isCustomForm """true"""^^xsd:boolean ;
       mu:uuid ${sparqlEscapeString(id)} .
     
     ${generatorTtl}
