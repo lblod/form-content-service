@@ -73,6 +73,7 @@ formInstanceRouter.post(
     }
     const labels = await getFormInstanceLabels(formDefinitionId);
     const formInstances = await getInstancesForFormByUris(formDefinitionId, {
+      limit,
       offset,
       sort,
       filter,
