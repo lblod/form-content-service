@@ -818,7 +818,7 @@ export async function getFormInstanceLabels(
   const customFormLabels = result?.results?.bindings.map((b) => {
     return {
       name: b.fieldName?.value,
-      var: b.fieldName?.value.replace(/ /g, '')?.toLowerCase(),
+      var: b.fieldName?.value.replace(/\W/g, '')?.toLowerCase(),
       uri: b.fieldValuePath?.value,
       type: b.displayType?.value,
       isShownInSummary: !!b.showInSummary?.value,

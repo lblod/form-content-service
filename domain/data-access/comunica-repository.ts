@@ -115,7 +115,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
       // we need to do this because we want to possibly filter on certain values
       // so the client will send a string that is transformed in the same way
       var:
-        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
+        binding.get('labelName')?.value.replace(/\W/g, '')?.toLowerCase() ??
         'label',
       type: binding.get('displayType')?.value ?? '',
       uri: binding.get('labelUri')?.value ?? '',
@@ -162,7 +162,7 @@ export const getDefaultFormLabels = async (
       // so the client will send a string that is transformed in the same way
       type: binding.get('displayType')?.value ?? '',
       var:
-        binding.get('labelName')?.value.replace(/ /g, '')?.toLowerCase() ??
+        binding.get('labelName')?.value.replace(/\W/g, '')?.toLowerCase() ??
         'label',
       uri: binding.get('labelUri')?.value ?? '',
     };
