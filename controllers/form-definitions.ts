@@ -5,6 +5,7 @@ import {
   createEmptyFormDefinition,
   fetchFormDefinition,
   getFormUsageCount,
+  isFormTypeUsedInCustomFormConfiguration,
   removeFormDefinitionUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
@@ -100,6 +101,14 @@ formDefinitionRouter.get(
       hasUsage: usageCount >= 1,
       count: usageCount,
     });
+  },
+);
+formDefinitionRouter.get(
+  '/definition/:id/used-in-custom-form-configuration',
+  async (req: Request, res: Response) => {
+    const isUsed = await isFormTypeUsedInCustomFormConfiguration(req.params.id);
+
+    res.status(200).send(isUsed);
   },
 );
 
