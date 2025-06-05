@@ -159,6 +159,27 @@ export const getFormUsageCount = async (formId: string) => {
   return parseInt(count);
 };
 
+export const isFormTypeUsedInCustomFormConfiguration = async (
+  formId: string,
+) => {
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+      ASK {
+        ?form mu:uuid ${sparqlEscapeString(formId)}.
+        ?form form:targetType ?targetType .
+
+        ?field ext:linkedFormType ?form .
+      }
+    `;
+  const queryResult = (await query(queryString)) as unknown as {
+    boolean: boolean;
+  };
+  return queryResult.boolean;
+};
+
 export const removeFormDefinitionUsage = async (formId: string) => {
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
