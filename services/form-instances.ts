@@ -77,11 +77,23 @@ export const getInstancesForForm = async (
   if (!labels || labels.length === 0) {
     labels = await comunicaRepo.getDefaultFormLabels(form.formTtl);
   }
-  const allLabelsWithOrder = await getFormInstanceLabels(formId);
   const labelVariables = labels.map((l) => l.var);
-  labels = allLabelsWithOrder.filter((label) =>
-    labelVariables.includes(label.var),
+  const allLabelsWithOrder = (await getFormInstanceLabels(formId)).map(
+    (label) => {
+      const match = labels.find((l) => l.var === label.var);
+      if (match && match.order) {
+        delete label.order;
+        return {
+          ...label,
+          order: match.order,
+        };
+      }
+      return label;
+    },
   );
+  labels = allLabelsWithOrder
+    .filter((label) => labelVariables.includes(label.var))
+    .sort((a, b) => a.order - b.order);
 
   return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
@@ -261,6 +273,7 @@ export const instancesAsCsv = async (
     limit?: number;
   } = { limit: 9999 }, // Get all instances
 ): Promise<string> => {
+  console.log({ labels });
   const result = await getInstancesForForm(formId, {
     labels,
     ...options,
