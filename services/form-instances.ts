@@ -6,6 +6,7 @@ import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
 import { jsonToCsv } from '../utils/json-to-csv-string';
+import { getFormInstanceLabels } from './custom-forms';
 
 import { query, sparqlEscapeString } from 'mu';
 
@@ -76,6 +77,11 @@ export const getInstancesForForm = async (
   if (!labels || labels.length === 0) {
     labels = await comunicaRepo.getDefaultFormLabels(form.formTtl);
   }
+  const allLabelsWithOrder = await getFormInstanceLabels(formId);
+  const labelVariables = labels.map((l) => l.var);
+  labels = allLabelsWithOrder.filter((label) =>
+    labelVariables.includes(label.var),
+  );
 
   return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
