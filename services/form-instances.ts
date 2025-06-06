@@ -273,7 +273,6 @@ export const instancesAsCsv = async (
     limit?: number;
   } = { limit: 9999 }, // Get all instances
 ): Promise<string> => {
-  console.log({ labels });
   const result = await getInstancesForForm(formId, {
     labels,
     ...options,
