@@ -84,7 +84,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT DISTINCT ?labelUri ?labelName ?displayType ?showInSummary
+    SELECT DISTINCT ?labelUri ?labelName ?displayType ?showInSummary ?order
     WHERE {
       ?form form:targetLabel ?labelUri.
       OPTIONAL {
@@ -93,6 +93,9 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
           form:displayType ?displayType .
         OPTIONAL {
           ?field form:showInSummary ?showInSummary .
+        }
+        OPTIONAL {
+          ?field sh:order ?order .
         }
       }
     }`;
@@ -108,6 +111,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
   }
 
   const labels = bindings.map((binding) => {
+    const order = binding.get('order')?.value;
     return {
       name: binding.get('labelName')?.value ?? 'label',
       // Remove all spaces from this string, and transform the string to lowercase
@@ -120,6 +124,7 @@ export const getFormLabels = async (formTtl: string): Promise<Label[]> => {
       type: binding.get('displayType')?.value ?? '',
       uri: binding.get('labelUri')?.value ?? '',
       isShownInSummary: !!binding.get('showInSummary')?.value,
+      order: order ? parseInt(order) : null,
     };
   });
 
@@ -138,7 +143,7 @@ export const getDefaultFormLabels = async (
     PREFIX form:  <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT DISTINCT ?labelUri ?labelName ?displayType
+    SELECT DISTINCT ?labelUri ?labelName ?displayType ?order
     WHERE {
       ?form form:includes ?field.
       ?field a form:Field.
@@ -146,6 +151,9 @@ export const getDefaultFormLabels = async (
       ?field sh:path ?labelUri .
       ?field form:displayType ?displayType .
       ?field sh:name ?labelName .
+      OPTIONAL {
+        ?field sh:order ?order .
+      }
     }`,
     { sources: [store] },
   );
@@ -153,7 +161,10 @@ export const getDefaultFormLabels = async (
   if (!bindings.length) {
     return getFormLabels(formTtl);
   }
+
   return bindings.map((binding) => {
+    const order = binding.get('order')?.value;
+
     return {
       name: binding.get('labelName')?.value ?? 'label',
       // Remove all spaces from this string, and transform the string to lowercase
@@ -165,6 +176,8 @@ export const getDefaultFormLabels = async (
         binding.get('labelName')?.value.replace(/\W/g, '')?.toLowerCase() ??
         'label',
       uri: binding.get('labelUri')?.value ?? '',
+      isShownInSummary: !!binding.get('showInSummary')?.value,
+      order: order ? parseInt(order) : null,
     };
   });
 };
