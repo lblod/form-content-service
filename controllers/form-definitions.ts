@@ -106,9 +106,13 @@ formDefinitionRouter.get(
 formDefinitionRouter.get(
   '/definition/:id/used-in-custom-form-configuration',
   async (req: Request, res: Response) => {
-    const isUsed = await isFormTypeUsedInCustomFormConfiguration(req.params.id);
+    const { hasUsage, formLabels } =
+      await isFormTypeUsedInCustomFormConfiguration(req.params.id);
 
-    res.status(200).send(isUsed);
+    res.status(200).send({
+      hasUsage,
+      formLabels,
+    });
   },
 );
 

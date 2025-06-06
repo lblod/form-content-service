@@ -163,21 +163,40 @@ export const isFormTypeUsedInCustomFormConfiguration = async (
   formId: string,
 ) => {
   const queryString = `
-      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
-      ASK {
-        ?form mu:uuid ${sparqlEscapeString(formId)}.
-        ?form form:targetType ?targetType .
+    SELECT DISTINCT ?formLabel
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)}.
+      ?form form:targetType ?targetType .
 
-        ?field ext:linkedFormType ?form .
+      ?field ext:linkedFormType ?form .
+
+      ?usage form:includes ?field .
+      OPTIONAL {
+        ?usage skos:prefLabel ?usageLabel .
+      }.
+      OPTIONAL {
+        ?usage ext:extendsForm / mu:uuid ?extensionId .
       }
-    `;
-  const queryResult = (await query(queryString)) as unknown as {
-    boolean: boolean;
+
+      FILTER (?usage != ?form)
+      BIND(IF(BOUND(?usageLabel), ?usageLabel, ?usage) AS ?saveUsageLabel)
+      BIND(IF(BOUND(?extensionId), ?extensionId, ?saveUsageLabel) AS ?formLabel)
+    }
+  `;
+  const queryResult = await query(queryString);
+  const formUsageLabels = queryResult.results.bindings.map(
+    (b) => b.formLabel.value,
+  );
+
+  return {
+    hasUsage: formUsageLabels.length >= 1,
+    formLabels: formUsageLabels,
   };
-  return queryResult.boolean;
 };
 
 export const removeFormDefinitionUsage = async (formId: string) => {
