@@ -199,7 +199,25 @@ export const isFormTypeUsedInCustomFormConfiguration = async (
   };
 };
 
-export const removeFormDefinitionUsage = async (formId: string) => {
+export const removeFormDefinitionAndUsage = async (formId: string) => {
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+    DELETE {
+      ?s ?pp ?instance .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:targetType ?targetType .
+
+      ?instance a ?targetType .
+      ?s ?pp ?instance .
+
+      BIND(NOW() AS ?now)
+    }
+  `);
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -207,7 +225,6 @@ export const removeFormDefinitionUsage = async (formId: string) => {
 
     DELETE {
       ?instance ?p ?o .
-      ?s ?pp ?instance .
     }
     INSERT {
       ?instance a <http://www.w3.org/ns/activitystreams#Tombstone> ;
@@ -215,15 +232,33 @@ export const removeFormDefinitionUsage = async (formId: string) => {
          <http://www.w3.org/ns/activitystreams#formerType> ?targetType .
     }
     WHERE {
-      ?form mu:uuid ${sparqlEscapeString(formId)}.
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
       ?form form:targetType ?targetType .
 
       ?instance a ?targetType .
       ?instance ?p ?o .
+      BIND(NOW() AS ?now)
+    }
+  `);
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX streams: <http://www.w3.org/ns/activitystreams#>
 
-      OPTIONAL {
-        ?s ?pp ?instance .
-      }
+    DELETE {
+      ?form ?fp ?fo .
+    }
+    INSERT {
+      ?form a streams:Tombstone ;
+        streams:deleted ?now ;
+        streams:formerType ?type .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form a ?type .
+      ?form ?fp ?fo .
+
       BIND(NOW() AS ?now)
     }
   `);

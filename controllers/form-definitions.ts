@@ -6,7 +6,7 @@ import {
   fetchFormDefinition,
   getFormUsageCount,
   isFormTypeUsedInCustomFormConfiguration,
-  removeFormDefinitionUsage,
+  removeFormDefinitionAndUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
@@ -119,7 +119,7 @@ formDefinitionRouter.get(
 formDefinitionRouter.delete(
   '/definition/:id/usage',
   async (req: Request, res: Response) => {
-    await removeFormDefinitionUsage(req.params.id);
+    await removeFormDefinitionAndUsage(req.params.id);
 
     res.status(204).send({});
   },
