@@ -203,7 +203,6 @@ export const removeFormDefinitionAndUsage = async (formId: string) => {
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
     DELETE {
       ?s ?pp ?instance .
@@ -221,15 +220,15 @@ export const removeFormDefinitionAndUsage = async (formId: string) => {
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX astreams: <http://www.w3.org/ns/activitystreams#>
 
     DELETE {
       ?instance ?p ?o .
     }
     INSERT {
-      ?instance a <http://www.w3.org/ns/activitystreams#Tombstone> ;
-         <http://www.w3.org/ns/activitystreams#deleted> ?now ;
-         <http://www.w3.org/ns/activitystreams#formerType> ?targetType .
+      ?instance a astreams:Tombstone .
+      ?instance astreams:deleted ?now .
+      ?instance astreams:formerType ?targetType .
     }
     WHERE {
       ?form mu:uuid ${sparqlEscapeString(formId)} .
@@ -243,16 +242,15 @@ export const removeFormDefinitionAndUsage = async (formId: string) => {
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
-    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-    PREFIX streams: <http://www.w3.org/ns/activitystreams#>
+    PREFIX astreams: <http://www.w3.org/ns/activitystreams#>
 
     DELETE {
       ?form ?fp ?fo .
     }
     INSERT {
-      ?form a streams:Tombstone ;
-        streams:deleted ?now ;
-        streams:formerType ?type .
+      ?form a astreams:Tombstone .
+      ?form astreams:deleted ?now .
+      ?form astreams:formerType ?type .
     }
     WHERE {
       ?form mu:uuid ${sparqlEscapeString(formId)} .
