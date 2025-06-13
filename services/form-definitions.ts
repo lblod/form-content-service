@@ -213,8 +213,6 @@ export const removeFormDefinitionAndUsage = async (formId: string) => {
 
       ?instance a ?targetType .
       ?s ?pp ?instance .
-
-      BIND(NOW() AS ?now)
     }
   `);
   await update(`
