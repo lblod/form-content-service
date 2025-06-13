@@ -159,31 +159,102 @@ export const getFormUsageCount = async (formId: string) => {
   return parseInt(count);
 };
 
-export const removeFormDefinitionUsage = async (formId: string) => {
-  await update(`
+export const isFormTypeUsedInCustomFormConfiguration = async (
+  formId: string,
+) => {
+  const queryString = `
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
-    DELETE {
-      ?instance ?p ?o .
-      ?s ?pp ?instance .
-    }
-    INSERT {
-      ?instance a <http://www.w3.org/ns/activitystreams#Tombstone> ;
-         <http://www.w3.org/ns/activitystreams#deleted> ?now ;
-         <http://www.w3.org/ns/activitystreams#formerType> ?targetType .
-    }
+    SELECT DISTINCT ?formLabel
     WHERE {
       ?form mu:uuid ${sparqlEscapeString(formId)}.
       ?form form:targetType ?targetType .
 
+      ?field ext:linkedFormType ?form .
+
+      ?usage form:includes ?field .
+      OPTIONAL {
+        ?usage skos:prefLabel ?usageLabel .
+      }.
+      OPTIONAL {
+        ?usage ext:extendsForm / mu:uuid ?extensionId .
+      }
+
+      FILTER (?usage != ?form)
+      BIND(IF(BOUND(?usageLabel), ?usageLabel, ?usage) AS ?saveUsageLabel)
+      BIND(IF(BOUND(?extensionId), ?extensionId, ?saveUsageLabel) AS ?formLabel)
+    }
+  `;
+  const queryResult = await query(queryString);
+  const formUsageLabels = queryResult.results.bindings.map(
+    (b) => b.formLabel.value,
+  );
+
+  return {
+    hasUsage: formUsageLabels.length >= 1,
+    formLabels: formUsageLabels,
+  };
+};
+
+export const removeFormDefinitionAndUsage = async (formId: string) => {
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+    DELETE {
+      ?s ?pp ?instance .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:targetType ?targetType .
+
+      ?instance a ?targetType .
+      ?s ?pp ?instance .
+    }
+  `);
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX astreams: <http://www.w3.org/ns/activitystreams#>
+
+    DELETE {
+      ?instance ?p ?o .
+    }
+    INSERT {
+      ?instance a astreams:Tombstone .
+      ?instance astreams:deleted ?now .
+      ?instance astreams:formerType ?targetType .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:targetType ?targetType .
+
       ?instance a ?targetType .
       ?instance ?p ?o .
+      BIND(NOW() AS ?now)
+    }
+  `);
+  await update(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX astreams: <http://www.w3.org/ns/activitystreams#>
 
-      OPTIONAL {
-        ?s ?pp ?instance .
-      }
+    DELETE {
+      ?form ?fp ?fo .
+    }
+    INSERT {
+      ?form a astreams:Tombstone .
+      ?form astreams:deleted ?now .
+      ?form astreams:formerType ?type .
+    }
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form a ?type .
+      ?form ?fp ?fo .
+
       BIND(NOW() AS ?now)
     }
   `);

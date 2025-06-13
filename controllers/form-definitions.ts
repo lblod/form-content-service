@@ -5,7 +5,8 @@ import {
   createEmptyFormDefinition,
   fetchFormDefinition,
   getFormUsageCount,
-  removeFormDefinitionUsage,
+  isFormTypeUsedInCustomFormConfiguration,
+  removeFormDefinitionAndUsage,
 } from '../services/form-definitions';
 import { fetchFormDirectoryNames } from '../services/forms-from-config';
 import {
@@ -102,11 +103,23 @@ formDefinitionRouter.get(
     });
   },
 );
+formDefinitionRouter.get(
+  '/definition/:id/used-in-custom-form-configuration',
+  async (req: Request, res: Response) => {
+    const { hasUsage, formLabels } =
+      await isFormTypeUsedInCustomFormConfiguration(req.params.id);
+
+    res.status(200).send({
+      hasUsage,
+      formLabels,
+    });
+  },
+);
 
 formDefinitionRouter.delete(
   '/definition/:id/usage',
   async (req: Request, res: Response) => {
-    await removeFormDefinitionUsage(req.params.id);
+    await removeFormDefinitionAndUsage(req.params.id);
 
     res.status(204).send({});
   },
