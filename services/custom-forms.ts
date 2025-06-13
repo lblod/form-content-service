@@ -798,7 +798,7 @@ export async function getFormInstanceLabels(
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
 
-    SELECT ?field ?fieldName ?fieldValuePath ?displayType ?showInSummary
+    SELECT ?field ?fieldName ?fieldValuePath ?displayType ?showInSummary ?order
     WHERE {
       GRAPH ?g {
         ${fieldsSource}
@@ -807,6 +807,9 @@ export async function getFormInstanceLabels(
         ?field sh:path ?fieldValuePath .
         ?field form:displayType ?displayType .
 
+        OPTIONAL {
+          ?field sh:order ?order .
+        }
         OPTIONAL {
           ?field form:showInSummary ?showInSummary .
         }
@@ -823,16 +826,20 @@ export async function getFormInstanceLabels(
       type: b.displayType?.value,
       isShownInSummary: !!b.showInSummary?.value,
       isCustom: true,
+      order: b.order?.value ? parseInt(b.order.value) : null,
     };
   });
 
   let order = 2;
-  const labelsWithOrder = [...instanceLabels, ...customFormLabels].map(
-    (label) => {
-      return { ...label, order: order++ };
-    },
-  );
+  const labelsWithOrder = [...instanceLabels, ...customFormLabels]
+    .map((label) => {
+      if (label.order) {
+        return label;
+      }
 
+      return { ...label, order: order++ };
+    })
+    .sort((a, b) => a.order - b.order);
   return [
     { name: 'Uri', var: 'uri', uri: null, order: 0 },
     {
