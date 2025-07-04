@@ -957,13 +957,17 @@ export async function getFieldsInCustomForm(formId: string) {
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
 
-    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
+    SELECT DISTINCT ?field ?displayType ?libraryEntryUri ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
     WHERE {
       ?field a form:Field .
       ?field sh:name ?label .
       ?field form:displayType ?displayType .
 
+      OPTIONAL {
+        ?field prov:wasDerivedFrom ?libraryEntryUri .
+      }
       OPTIONAL {
         ?field sh:order ?order .
       }
@@ -990,6 +994,7 @@ export async function getFieldsInCustomForm(formId: string) {
       formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
+      libraryEntryUri: b.get('libraryEntryUri')?.value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
