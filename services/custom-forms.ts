@@ -26,7 +26,7 @@ type FieldDescription =
   | {
       name: string;
       displayType: string;
-      libraryEntryUri?: never;
+      libraryEntryUri?: string;
       order?: number;
       path?: string;
       isRequired?: boolean;
@@ -49,6 +49,7 @@ type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
+  libraryEntryUri?: string;
   isRequired: boolean;
   showInSummary?: boolean;
   conceptScheme?: string;
@@ -68,6 +69,49 @@ const getRequiredConstraintInsertTtl = (fieldUri: string, path?: string) => {
       sh:path ${path ? sparqlEscapeUri(path) : '?path'} .
   `;
 };
+
+async function getLibraryEntryForField(
+  fieldUri: string,
+  libraryEntryUri?: string,
+) {
+  if (!libraryEntryUri) {
+    return null;
+  }
+
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    SELECT ?libraryEntry ?fieldPath ?validationUri
+    WHERE {
+      VALUES ( ?field ?libraryEntry ) {
+        (${sparqlEscapeUri(fieldUri)} ${sparqlEscapeUri(libraryEntryUri)})
+      }
+
+      ?field mu:uuid ?fieldId .
+
+      ?libraryEntry a ext:FormLibraryEntry ;
+        sh:path ?fieldPath ;
+        form:displayType ?displayType .
+
+      OPTIONAL {
+        ?libraryEntry form:validatedBy ?validation .
+
+        ?validation ?validationP ?validationO .
+        FILTER(?validationP != sh:path)
+        BIND(URI(CONCAT(?validation, ?fieldId)) AS ?validationUri).
+      }
+    }  
+  `);
+  const firstResult = result?.results.bindings?.[0];
+  return {
+    libraryEntryUri: firstResult.libraryEntry?.value,
+    validationUri: firstResult.validationUri?.value,
+    fieldPath: firstResult.fieldPath?.value,
+  };
+}
 
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
@@ -127,11 +171,42 @@ export async function updateField(
     linkedFormTypeTtl = `${escaped.fieldUri} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
+  const libraryEntryData = await getLibraryEntryForField(
+    description.field,
+    description.libraryEntryUri,
+  );
+  let libraryEntryInsertTtl = '';
+  let removeFieldPathWhenLibraryField = '';
+  if (libraryEntryData) {
+    const _escaped = {
+      libraryEntry: sparqlEscapeUri(libraryEntryData.libraryEntryUri),
+      validation: libraryEntryData.validationUri
+        ? sparqlEscapeUri(libraryEntryData.validationUri)
+        : null,
+      path: sparqlEscapeUri(libraryEntryData.fieldPath),
+    };
+    let validation = '';
+    if (libraryEntryData.validationUri) {
+      validation = `
+        ${escaped.fieldUri} form:validatedBy ${_escaped.validation} .
+        ${_escaped.validation} sh:path ${_escaped.path} .
+      `;
+    }
+    libraryEntryInsertTtl = `
+      ${escaped.fieldUri} prov:wasDerivedFrom ${_escaped.libraryEntry} .
+      ${escaped.fieldUri} sh:path ${_escaped.path} .
+      ${validation}
+    `;
+
+    removeFieldPathWhenLibraryField = `${escaped.fieldUri} sh:path ?path .`;
+  }
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
@@ -142,6 +217,9 @@ export async function updateField(
       ${escaped.fieldUri} form:showInSummary ?summary .
       ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
+      ${escaped.fieldUri} prov:wasDerivedFrom ?libraryFieldUri .
+
+      ${removeFieldPathWhenLibraryField}
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -151,6 +229,7 @@ export async function updateField(
       ${showInSummaryTtl}
       ${conceptSchemeInsertTtl}
       ${linkedFormTypeTtl}
+      ${libraryEntryInsertTtl}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
@@ -165,14 +244,16 @@ export async function updateField(
       OPTIONAL {
         ${escaped.fieldUri} form:validatedBy ?validation .
 
-        ?validation a form:RequiredConstraint ;
-          ?validationP ?validationO.
+        ?validation ?validationP ?validationO.
       }
       OPTIONAL {
         ${escaped.fieldUri} fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
         ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
+      }
+      OPTIONAL {
+        ${escaped.fieldUri} prov:wasDerivedFrom ?libraryFieldUri .
       }
     }
   `);
