@@ -113,6 +113,17 @@ async function getLibraryEntryForField(
   };
 }
 
+async function isFieldOfTypeLibraryEntry(fieldUri: string): Promise<boolean> {
+  const result = await query(`
+    ASK {
+      ${sparqlEscapeUri(fieldUri)} prov:wasDerivedFrom ?libraryFieldUri .
+    }  
+  `);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (result as any).boolean as boolean;
+}
+
 export async function addField(formId: string, description: FieldDescription) {
   verifyFieldDescription(description);
   let form = await fetchFormDefinition(formId);
@@ -169,9 +180,12 @@ export async function updateField(
     description.field,
     description.libraryEntryUri,
   );
+  let fieldPath = null;
   let libraryEntryInsertTtl = '';
-  let removeFieldPathWhenLibraryField = '';
+  let removeFieldPathWhen = '';
+  let insertFieldPathWhen = '';
   if (libraryEntryData) {
+    fieldPath = libraryEntryData.fieldPath;
     const _escaped = {
       libraryEntry: sparqlEscapeUri(libraryEntryData.libraryEntryUri),
       validation: libraryEntryData.validationUri
@@ -191,14 +205,31 @@ export async function updateField(
       ${escaped.fieldUri} sh:path ${_escaped.path} .
       ${validation}
     `;
-
-    removeFieldPathWhenLibraryField = `${escaped.fieldUri} sh:path ?path .`;
   }
+
+  const currentFieldTypeIsLibraryEntry = await isFieldOfTypeLibraryEntry(
+    description.field,
+  );
+  if (
+    libraryEntryData ||
+    (!libraryEntryData && currentFieldTypeIsLibraryEntry)
+  ) {
+    removeFieldPathWhen = `${escaped.fieldUri} sh:path ?path .`;
+  }
+
+  if (!libraryEntryData && currentFieldTypeIsLibraryEntry) {
+    const safeName = description.name.replace(/[^a-zA-Z0-9]/g, '');
+    fieldPath = `http://data.lblod.info/id/lmb/form-fields-path/${uuidv4()}/${safeName}`;
+    insertFieldPathWhen = `${sparqlEscapeUri(
+      description.field,
+    )} sh:path ${sparqlEscapeUri(fieldPath)} .`;
+  }
+
   let requiredConstraintInsertTtl = '';
   if (description.isRequired) {
     requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
       description.field,
-      libraryEntryData ? libraryEntryData.fieldPath : null,
+      fieldPath,
     );
   }
 
@@ -220,7 +251,7 @@ export async function updateField(
       ${escaped.fieldUri} ext:linkedFormType ?linkedFormType .
       ${escaped.fieldUri} prov:wasDerivedFrom ?libraryFieldUri .
 
-      ${removeFieldPathWhenLibraryField}
+      ${removeFieldPathWhen}
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
@@ -231,6 +262,8 @@ export async function updateField(
       ${conceptSchemeInsertTtl}
       ${linkedFormTypeTtl}
       ${libraryEntryInsertTtl}
+
+      ${insertFieldPathWhen}
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
