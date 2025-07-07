@@ -146,13 +146,7 @@ export async function updateField(
     name: sparqlEscapeString(description.name),
     displayType: sparqlEscapeUri(description.displayType),
   };
-  let requiredConstraintInsertTtl = '';
   let showInSummaryTtl = '';
-  if (description.isRequired) {
-    requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
-      description.field,
-    );
-  }
   if (description.showInSummary) {
     showInSummaryTtl = `
       ${escaped.fieldUri} form:showInSummary true .
@@ -199,6 +193,13 @@ export async function updateField(
     `;
 
     removeFieldPathWhenLibraryField = `${escaped.fieldUri} sh:path ?path .`;
+  }
+  let requiredConstraintInsertTtl = '';
+  if (description.isRequired) {
+    requiredConstraintInsertTtl = getRequiredConstraintInsertTtl(
+      description.field,
+      libraryEntryData ? libraryEntryData.fieldPath : null,
+    );
   }
 
   await update(`
