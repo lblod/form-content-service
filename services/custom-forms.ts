@@ -135,7 +135,6 @@ export async function updateField(
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
-      ${escaped.fieldUri} form:displayType ?displayType .
 
       ${escaped.fieldUri} form:validatedBy ?validation .
         ?validation ?validationP ?validationO .
@@ -145,7 +144,6 @@ export async function updateField(
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
-      ${escaped.fieldUri} form:displayType ${escaped.displayType} .
 
       ${requiredConstraintInsertTtl}
       ${showInSummaryTtl}
@@ -154,9 +152,7 @@ export async function updateField(
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
-        sh:name ?fieldName ;
-        form:displayType ?displayType ;
-        sh:path ?path .
+        sh:name ?fieldName .
 
       OPTIONAL {
         ${escaped.fieldUri} form:showInSummary ?summary .
