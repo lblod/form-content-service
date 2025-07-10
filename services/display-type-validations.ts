@@ -7,7 +7,7 @@ export async function createDisplayTypeConstraintsTtlForFieldPath(
   displayTypeUri: string,
 ) {
   const validationUris = await getValidationUrisForDisplayType(displayTypeUri);
-  const ttl = await constructValidationTtlForUris(
+  const constructed = await constructValidationTtlForUris(
     validationUris,
     displayTypeUri,
     fieldPath,
@@ -15,8 +15,8 @@ export async function createDisplayTypeConstraintsTtlForFieldPath(
 
   return {
     hasValidations: validationUris.length >= 1,
-    validationUris,
-    ttl,
+    validationUris: constructed.validationUris,
+    ttl: constructed.ttl,
   };
 }
 
@@ -39,15 +39,20 @@ async function constructValidationTtlForUris(
   fieldPath: string,
 ) {
   if (validationUris.length === 0) {
-    return '';
+    return {
+      ttl: '',
+      validationUris: [],
+    };
   }
 
-  const values = validationUris.map((uri) => {
-    const validation = sparqlEscapeUri(uri);
-    const newUri = sparqlEscapeUri(`${displayTypeUri}/${uuidv4()}`);
-
-    return `(${validation} ${newUri})`;
+  const linkedUris = validationUris.map((uri) => {
+    return { validation: uri, newUri: `${displayTypeUri}/${uuidv4()}` };
   });
+  const values = linkedUris.map(
+    ({ validation, newUri }) =>
+      `(${sparqlEscapeUri(validation)} ${sparqlEscapeUri(newUri)})`,
+  );
+
   const constructedResult = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
@@ -75,5 +80,8 @@ async function constructValidationTtlForUris(
       binding.p.value,
     )} ${sparqlEscapeObject(binding.o)} .`;
 
-  return constructedResult.results.bindings.map(bindingToTriple).join('\n');
+  return {
+    ttl: constructedResult.results.bindings.map(bindingToTriple).join('\n'),
+    validationUris: linkedUris.map(({ newUri }) => newUri),
+  };
 }
