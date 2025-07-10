@@ -153,6 +153,7 @@ export async function updateField(
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
+        sh:path ?path ;
         sh:name ?fieldName .
 
       OPTIONAL {
@@ -986,7 +987,8 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field sh:order ?order .
       }
       OPTIONAL {
-        ?field form:validatedBy ?validation .
+        ?field form:validatedBy ?requiredValidation.
+        ?requiredValidation a form:RequiredConstraint .
       }
       OPTIONAL {
         ?field form:showInSummary ?showInSummary .
@@ -997,10 +999,11 @@ export async function getFieldsInCustomForm(formId: string) {
       OPTIONAL {
         ?field ext:linkedFormType ?linkedFormType .
       }
+      BIND(IF(BOUND(?requiredValidation), true, false) AS ?isRequired)
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
-      BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)
     }
-    ORDER BY ?order`;
+    ORDER BY ?order
+  `;
   const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
