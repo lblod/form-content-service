@@ -1,5 +1,6 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import {
+  BindingObject,
   query,
   sparqlEscapeInt,
   sparqlEscapeString,
@@ -36,7 +37,7 @@ type FieldDescription =
     }
   | {
       name: string;
-      displayType?: never;
+      displayType: string;
       libraryEntryUri: string;
       order?: number;
       path?: string;
@@ -355,6 +356,47 @@ async function createCustomExtension(
   return { id, uri };
 }
 
+async function getDisplayTypeConstraintTtlForField(
+  fieldPath: string,
+  displayTypeUri: string,
+) {
+  const uniqueValidationUri = `${displayTypeUri}-${uuidv4()}`;
+  const escapedValidationUri = sparqlEscapeUri(uniqueValidationUri);
+  const constructedResult = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+    CONSTRUCT {
+      ${escapedValidationUri} a ?type .
+      ${escapedValidationUri} form:grouping ?grouping .
+      ${escapedValidationUri} sh:resultMessage ?resultMessage .
+      ${escapedValidationUri} sh:path ${sparqlEscapeUri(fieldPath)} .
+    } WHERE {
+      ${sparqlEscapeUri(displayTypeUri)} a ?type .
+      OPTIONAL {
+        ${sparqlEscapeUri(displayTypeUri)} form:validatedBy ?validation .
+      
+        ?validation form:grouping ?grouping .
+        ?validation sh:resultMessage ?resultMessage .
+      }
+    }
+  `);
+
+  const bindingToTriple = (binding: BindingObject) =>
+    `${sparqlEscapeUri(binding.s.value)} ${sparqlEscapeUri(
+      binding.p.value,
+    )} ${sparqlEscapeObject(binding.o)} .`;
+
+  const triples = constructedResult.results.bindings
+    .map(bindingToTriple)
+    .join('\n');
+
+  return {
+    validationUri: uniqueValidationUri,
+    validationTriples: triples,
+  };
+}
+
 async function addFieldToFormExtension(
   formUri: string,
   formTtl: string,
@@ -395,6 +437,11 @@ async function addFieldToFormExtension(
     )} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
+  const displayTypeConstraintTtl = await getDisplayTypeConstraintTtlForField(
+    path,
+    fieldDescription.displayType,
+  );
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -419,6 +466,7 @@ async function addFieldToFormExtension(
       ${linkedFormTypeTtl}
     }
   `);
+
   return { id, uri };
 }
 
