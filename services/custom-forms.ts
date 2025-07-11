@@ -21,6 +21,7 @@ import {
   formatFieldValueAsDate,
   getAddressValue,
 } from '../utils/get-custom-form-field-value';
+import { createDisplayTypeConstraintsTtlForFieldPath } from './display-type-validations';
 
 type FieldDescription =
   | {
@@ -36,7 +37,7 @@ type FieldDescription =
     }
   | {
       name: string;
-      displayType?: never;
+      displayType: string;
       libraryEntryUri: string;
       order?: number;
       path?: string;
@@ -135,7 +136,6 @@ export async function updateField(
 
     DELETE {
       ${escaped.fieldUri} sh:name ?fieldName .
-      ${escaped.fieldUri} form:displayType ?displayType .
 
       ${escaped.fieldUri} form:validatedBy ?validation .
         ?validation ?validationP ?validationO .
@@ -145,7 +145,6 @@ export async function updateField(
     }
     INSERT {
       ${escaped.fieldUri} sh:name ${escaped.name} .
-      ${escaped.fieldUri} form:displayType ${escaped.displayType} .
 
       ${requiredConstraintInsertTtl}
       ${showInSummaryTtl}
@@ -154,9 +153,8 @@ export async function updateField(
     }
     WHERE {
       ${escaped.fieldUri} a form:Field ;
-        sh:name ?fieldName ;
-        form:displayType ?displayType ;
-        sh:path ?path .
+        sh:path ?path ;
+        sh:name ?fieldName .
 
       OPTIONAL {
         ${escaped.fieldUri} form:showInSummary ?summary .
@@ -399,6 +397,25 @@ async function addFieldToFormExtension(
     )} ext:linkedFormType ${linkedFormTypeUri} .`;
   }
 
+  let displayTypeConstraintTtl = '';
+  const displayTypeConstraints =
+    await createDisplayTypeConstraintsTtlForFieldPath(
+      path,
+      fieldDescription.displayType,
+    );
+
+  if (displayTypeConstraints.hasValidations) {
+    const addToField = displayTypeConstraints.validationUris.map(
+      (validation) =>
+        `${sparqlEscapeUri(uri)} 
+          form:validatedBy ${sparqlEscapeUri(validation)} .`,
+    );
+    displayTypeConstraintTtl = `
+      ${addToField}
+      ${displayTypeConstraints.ttl}
+    `;
+  }
+
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -421,8 +438,10 @@ async function addFieldToFormExtension(
       ${showInSummaryTtl}
       ${conceptSchemeTtl}
       ${linkedFormTypeTtl}
+      ${displayTypeConstraintTtl}
     }
   `);
+
   return { id, uri };
 }
 
@@ -968,7 +987,8 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field sh:order ?order .
       }
       OPTIONAL {
-        ?field form:validatedBy ?validation .
+        ?field form:validatedBy ?requiredValidation.
+        ?requiredValidation a form:RequiredConstraint .
       }
       OPTIONAL {
         ?field form:showInSummary ?showInSummary .
@@ -979,10 +999,11 @@ export async function getFieldsInCustomForm(formId: string) {
       OPTIONAL {
         ?field ext:linkedFormType ?linkedFormType .
       }
+      BIND(IF(BOUND(?requiredValidation), true, false) AS ?isRequired)
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
-      BIND(IF(CONTAINS(STR(?validation),"http://data.lblod.info/id/lmb/custom-forms/validation/is-required/"), true, false) AS ?isRequired)
     }
-    ORDER BY ?order`;
+    ORDER BY ?order
+  `;
   const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
