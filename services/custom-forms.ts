@@ -108,12 +108,12 @@ async function updateFieldPath(
     DELETE {
       ?field sh:path ?path .
       ?validation sh:path ?validationPath .
-      ?form ?path ?fieldValue .
+      ?instance ?path ?fieldValue .
     }
     INSERT {
       ?field sh:path ${newPath} .
       ?validation sh:path ${newPath} .
-      ?form ${newPath} ?fieldValue .
+      ?instance ${newPath} ?fieldValue .
     }
     WHERE {
       VALUES ?field { ${sparqlEscapeUri(fieldUri)} }
@@ -123,8 +123,11 @@ async function updateFieldPath(
         ?validation sh:path ?validationPath .
       }
       ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ?form form:targetType ?target .
       OPTIONAL {
-        ?form ?path ?fieldValue .
+        ?instance a ?target .
+        ?instance ?path ?fieldValue .
       }
     }  
   `);
