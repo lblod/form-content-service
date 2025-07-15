@@ -90,7 +90,11 @@ export async function addField(formId: string, description: FieldDescription) {
   return form;
 }
 
-async function updateFieldPath(fieldUri: string, pathUri?: string) {
+async function updateFieldPath(
+  formId: string,
+  fieldUri: string,
+  pathUri?: string,
+) {
   if (!pathUri) {
     return;
   }
@@ -99,23 +103,34 @@ async function updateFieldPath(fieldUri: string, pathUri?: string) {
   await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
     DELETE {
       ?field sh:path ?path .
       ?validation sh:path ?validationPath .
+      ?form ?path ?fieldValue .
     }
     INSERT {
       ?field sh:path ${newPath} .
       ?validation sh:path ${newPath} .
+      ?form ${newPath} ?fieldValue .
     }
     WHERE {
-      VALUES ?field { <http://data.lblod.info/id/lmb/form-fields/9e1099bb-29f8-46c8-aa5f-7fad777f3472> }
+      VALUES ?field { ${sparqlEscapeUri(fieldUri)} }
       ?field sh:path ?path .
       OPTIONAL {
         ?field form:validatedBy ?validation .
         ?validation sh:path ?validationPath .
       }
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      OPTIONAL {
+        ?form ?path ?fieldValue .
+      }
     }  
   `);
+
+  const formOld = await fetchFormDefinition(formId);
+  await updateFormTtlForExtension(formOld.uri);
 }
 
 export async function updateField(
@@ -203,9 +218,8 @@ export async function updateField(
       }
     }
   `);
-  await updateFieldPath(description.field, description.path);
+  await updateFieldPath(formId, description.field, description.path);
   const form = await fetchFormDefinition(formId);
-  await updateFormTtlForExtension(form.uri);
 
   return form;
 }
@@ -1007,9 +1021,10 @@ export async function getFieldsInCustomForm(formId: string) {
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
+    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
     WHERE {
       ?field a form:Field .
+      ?field sh:path ?path .
       ?field sh:name ?label .
       ?field form:displayType ?displayType .
 
@@ -1041,6 +1056,7 @@ export async function getFieldsInCustomForm(formId: string) {
       formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
+      fieldPath: b.get('path').value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
