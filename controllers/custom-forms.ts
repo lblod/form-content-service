@@ -74,7 +74,7 @@ customFormRouter.post(
     }
 
     const illegalUris = [
-      'http://www.w3.org/1999/02/22-rdf-syntax-ns#>Type',
+      'http://www.w3.org/1999/02/22-rdf-syntax-ns#Type',
       'http://lblod.data.gift/vocabularies/forms/displayType',
       'http://lblod.data.gift/vocabularies/forms/includes',
       'http://lblod.data.gift/vocabularies/forms/initGenerator',
