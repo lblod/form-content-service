@@ -50,6 +50,7 @@ type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
+  path?: string;
   isRequired: boolean;
   showInSummary?: boolean;
   conceptScheme?: string;
@@ -87,6 +88,34 @@ export async function addField(formId: string, description: FieldDescription) {
   await getGeneratorShape(form.formTtl);
 
   return form;
+}
+
+async function updateFieldPath(fieldUri: string, pathUri?: string) {
+  if (!pathUri) {
+    return;
+  }
+
+  const newPath = sparqlEscapeUri(pathUri);
+  await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    DELETE {
+      ?field sh:path ?path .
+      ?validation sh:path ?validationPath .
+    }
+    INSERT {
+      ?field sh:path ${newPath} .
+      ?validation sh:path ${newPath} .
+    }
+    WHERE {
+      VALUES ?field { <http://data.lblod.info/id/lmb/form-fields/9e1099bb-29f8-46c8-aa5f-7fad777f3472> }
+      ?field sh:path ?path .
+      OPTIONAL {
+        ?field form:validatedBy ?validation .
+        ?validation sh:path ?validationPath .
+      }
+    }  
+  `);
 }
 
 export async function updateField(
@@ -174,6 +203,7 @@ export async function updateField(
       }
     }
   `);
+  await updateFieldPath(description.field, description.path);
   const form = await fetchFormDefinition(formId);
   await updateFormTtlForExtension(form.uri);
 
