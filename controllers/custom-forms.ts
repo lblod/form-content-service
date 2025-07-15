@@ -7,6 +7,7 @@ import {
   getFieldsInCustomForm,
   getUsingForms,
 } from '../services/custom-forms';
+import { HttpError } from '../domain/http-error';
 
 export const customFormRouter = Router();
 
@@ -63,3 +64,50 @@ customFormRouter.get('/find-usage', async (req: Request, res: Response) => {
     users,
   });
 });
+
+customFormRouter.post(
+  '/field/is-uri-allowed-as-path',
+  async (req: Request, res: Response) => {
+    const uri = req.body?.uri ?? null;
+    if (!uri) {
+      throw new HttpError('No uri was provided.', 400);
+    }
+
+    const illegalUris = [
+      'http://www.w3.org/1999/02/22-rdf-syntax-ns#>Type',
+      'http://lblod.data.gift/vocabularies/forms/displayType',
+      'http://lblod.data.gift/vocabularies/forms/includes',
+      'http://lblod.data.gift/vocabularies/forms/initGenerator',
+      'http://lblod.data.gift/vocabularies/forms/validatedBy',
+      'http://lblod.data.gift/vocabularies/forms/targetType',
+      'http://lblod.data.gift/vocabularies/forms/targetLabel',
+      'http://lblod.data.gift/vocabularies/forms/initGenerator',
+      'http://lblod.data.gift/vocabularies/forms/prototype',
+      'http://lblod.data.gift/vocabularies/forms/dataGenerator',
+      'http://lblod.data.gift/vocabularies/forms/shape',
+      'http://lblod.data.gift/vocabularies/forms/prefix',
+      'http://lblod.data.gift/vocabularies/forms/forType',
+      'http://lblod.data.gift/vocabularies/forms/showInSummary',
+      'http://www.w3.org/ns/shacl#name',
+      'http://www.w3.org/ns/shacl#order',
+      'http://www.w3.org/ns/shacl#datatype',
+      'http://www.w3.org/ns/shacl#path',
+      'http://www.w3.org/ns/shacl#group',
+      'http://www.w3.org/ns/shacl#severity',
+      'http://www.w3.org/ns/shacl#resultMessage',
+      'http://mu.semte.ch/vocabularies/ext/ValueToCompare',
+      'http://mu.semte.ch/vocabularies/ext/prefix',
+      'http://mu.semte.ch/vocabularies/ext/withHistory',
+      'http://mu.semte.ch/vocabularies/core/uuid',
+    ];
+
+    const regex = '^(https?://)[a-zA-Z0-9-]+(.[a-zA-Z0-9-]+)*(/.*)?$';
+    const uriRegex = new RegExp(regex);
+    const isValid = uriRegex.test(req.body?.uri);
+
+    return res.status(200).send({
+      isValidUri: isValid,
+      isAllowed: !illegalUris.includes(uri),
+    });
+  },
+);
