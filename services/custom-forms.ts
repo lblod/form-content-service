@@ -536,6 +536,7 @@ async function addLibraryFieldToFormExtension(
 
     INSERT {
         ${sparqlEscapeUri(uri)} a form:Field;
+            ext:isLibraryEntryField """true"""^^xsd:boolean ;
             sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)} ;
             sh:name ${sparqlEscapeString(fieldDescription.name)} ;
@@ -1024,7 +1025,7 @@ export async function getFieldsInCustomForm(formId: string) {
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
+    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?isLibraryField ?conceptScheme ?linkedFormType
     WHERE {
       ?field a form:Field .
       ?field sh:path ?path .
@@ -1042,6 +1043,9 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:showInSummary ?showInSummary .
       }
       OPTIONAL {
+        ?field ext:isLibraryEntryField ?isLibraryEntryField .
+      }
+      OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
@@ -1049,17 +1053,19 @@ export async function getFieldsInCustomForm(formId: string) {
       }
       BIND(IF(BOUND(?requiredValidation), true, false) AS ?isRequired)
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
+      BIND(IF(BOUND(?isLibraryEntryField), true, false) AS ?isLibraryField)
     }
     ORDER BY ?order
   `;
   const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
+    const isLibraryEntryField = stringToBoolean(b.get('isLibraryField').value);
     return {
       formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
-      fieldPath: b.get('path').value,
+      path: isLibraryEntryField ? null : b.get('path').value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
