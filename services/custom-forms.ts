@@ -98,9 +98,25 @@ async function updateFieldPath(
   if (!pathUri) {
     return;
   }
-
   const newPath = sparqlEscapeUri(pathUri);
-  await query(`
+
+  const currentPath = (
+    await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?path
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ${sparqlEscapeUri(fieldUri)} sh:path ?path .
+    } LIMIT 1
+  `)
+  ).results.bindings[0]?.path?.value;
+
+  if (currentPath !== pathUri) {
+    await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -131,9 +147,7 @@ async function updateFieldPath(
       }
     }  
   `);
-
-  const formOld = await fetchFormDefinition(formId);
-  await updateFormTtlForExtension(formOld.uri);
+  }
 }
 
 export async function updateField(
@@ -223,6 +237,7 @@ export async function updateField(
   `);
   await updateFieldPath(formId, description.field, description.path);
   const form = await fetchFormDefinition(formId);
+  await updateFormTtlForExtension(form.uri);
 
   return form;
 }
