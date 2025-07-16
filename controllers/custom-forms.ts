@@ -8,6 +8,7 @@ import {
   getUsingForms,
 } from '../services/custom-forms';
 import { HttpError } from '../domain/http-error';
+import { DCTERMS, EXT, FORM, LMB, MANDAAT, MU, RDF, SHACL } from '../utils/uri';
 
 export const customFormRouter = Router();
 
@@ -74,31 +75,37 @@ customFormRouter.post(
     }
 
     const illegalUris = [
-      'http://www.w3.org/1999/02/22-rdf-syntax-ns#Type',
-      'http://lblod.data.gift/vocabularies/forms/displayType',
-      'http://lblod.data.gift/vocabularies/forms/includes',
-      'http://lblod.data.gift/vocabularies/forms/initGenerator',
-      'http://lblod.data.gift/vocabularies/forms/validatedBy',
-      'http://lblod.data.gift/vocabularies/forms/targetType',
-      'http://lblod.data.gift/vocabularies/forms/targetLabel',
-      'http://lblod.data.gift/vocabularies/forms/initGenerator',
-      'http://lblod.data.gift/vocabularies/forms/prototype',
-      'http://lblod.data.gift/vocabularies/forms/dataGenerator',
-      'http://lblod.data.gift/vocabularies/forms/shape',
-      'http://lblod.data.gift/vocabularies/forms/prefix',
-      'http://lblod.data.gift/vocabularies/forms/forType',
-      'http://lblod.data.gift/vocabularies/forms/showInSummary',
-      'http://www.w3.org/ns/shacl#name',
-      'http://www.w3.org/ns/shacl#order',
-      'http://www.w3.org/ns/shacl#datatype',
-      'http://www.w3.org/ns/shacl#path',
-      'http://www.w3.org/ns/shacl#group',
-      'http://www.w3.org/ns/shacl#severity',
-      'http://www.w3.org/ns/shacl#resultMessage',
-      'http://mu.semte.ch/vocabularies/ext/ValueToCompare',
-      'http://mu.semte.ch/vocabularies/ext/prefix',
-      'http://mu.semte.ch/vocabularies/ext/withHistory',
-      'http://mu.semte.ch/vocabularies/core/uuid',
+      RDF('type'),
+      MU('uuid'),
+      DCTERMS('modified'),
+      DCTERMS('isVersionOf'),
+      FORM('displayType'),
+      FORM('includes'),
+      FORM('initGenerator'),
+      FORM('validatedBy'),
+      FORM('targetType'),
+      FORM('targetLabel'),
+      FORM('initGenerator'),
+      FORM('prototype'),
+      FORM('dataGenerator'),
+      FORM('shape'),
+      FORM('prefix'),
+      FORM('forType'),
+      FORM('showInSummary'),
+      SHACL('name'),
+      SHACL('order'),
+      SHACL('datatype'),
+      SHACL('path'),
+      SHACL('group'),
+      SHACL('severity'),
+      SHACL('resultMessage'),
+      EXT('ValueToCompare'),
+      EXT('prefix'),
+      EXT('withHistory'),
+      EXT('isLibraryEntryField'),
+      EXT('hasUserInputPath'),
+      LMB('hasPublicationStatus'),
+      MANDAAT('bekrachtigtAanstellingVan'),
     ];
 
     const regex = '^(https?://)[a-zA-Z0-9-]+(.[a-zA-Z0-9-]+)*(/.*)?$';
