@@ -75,6 +75,11 @@ customFormRouter.post(
       throw new HttpError('No uri was provided.', 400);
     }
 
+    const regex = '^(https?://)[a-zA-Z0-9-]+(.[a-zA-Z0-9-]+)*(/.*)?$';
+    const uriRegex = new RegExp(regex);
+    const isValid = uriRegex.test(uri);
+    const hasSpaces = /\s/.test(uri);
+
     const illegalUris = [
       RDF('type'),
       MU('uuid'),
@@ -108,16 +113,12 @@ customFormRouter.post(
       LMB('hasPublicationStatus'),
       MANDAAT('bekrachtigtAanstellingVan'),
     ];
-
-    const regex = '^(https?://)[a-zA-Z0-9-]+(.[a-zA-Z0-9-]+)*(/.*)?$';
-    const uriRegex = new RegExp(regex);
-    const isValid = uriRegex.test(uri);
-    const hasSpaces = /\s/.test(uri);
+    const isAllowed = !illegalUris.includes(uri);
 
     const formId = req.body?.formId ?? null;
     const fieldUri = req.body?.fieldUri ?? null;
     let isUniquePathInForm = true;
-    if (formId) {
+    if (formId && isValid) {
       isUniquePathInForm = await isUriUsedAsPredicateInForm(
         formId,
         uri,
@@ -125,9 +126,27 @@ customFormRouter.post(
       );
     }
 
+    const errorMessageMapping = [
+      {
+        message: 'Deze URI wordt al gebruikt in het formulier',
+        isActive: isValid && !isUniquePathInForm,
+      },
+      {
+        message: 'Deze URI is niet toegestaan',
+        isActive: isValid && !isAllowed,
+      },
+      {
+        message: 'Geef een geldige URI',
+        isActive: !isValid,
+      },
+    ];
+    const errorMessageMatch = errorMessageMapping.find(
+      (option) => option.isActive,
+    );
+
     return res.status(200).send({
-      isValidUri: isValid && !hasSpaces && isUniquePathInForm,
-      isAllowed: !illegalUris.includes(uri),
+      isValid: isValid && !hasSpaces && isUniquePathInForm && isAllowed,
+      errorMessage: errorMessageMatch?.message,
     });
   },
 );
