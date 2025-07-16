@@ -68,7 +68,7 @@ customFormRouter.get('/find-usage', async (req: Request, res: Response) => {
 customFormRouter.post(
   '/field/is-uri-allowed-as-path',
   async (req: Request, res: Response) => {
-    const uri = req.body?.uri ?? null;
+    const uri = req.body?.uri?.trim() ?? null;
     if (!uri) {
       throw new HttpError('No uri was provided.', 400);
     }
@@ -103,10 +103,11 @@ customFormRouter.post(
 
     const regex = '^(https?://)[a-zA-Z0-9-]+(.[a-zA-Z0-9-]+)*(/.*)?$';
     const uriRegex = new RegExp(regex);
-    const isValid = uriRegex.test(req.body?.uri);
+    const isValid = uriRegex.test(uri);
+    const hasSpaces = /\s/.test(uri);
 
     return res.status(200).send({
-      isValidUri: isValid,
+      isValidUri: isValid && !hasSpaces,
       isAllowed: !illegalUris.includes(uri),
     });
   },
