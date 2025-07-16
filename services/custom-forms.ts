@@ -477,6 +477,11 @@ async function addFieldToFormExtension(
       ${displayTypeConstraints.ttl}
     `;
   }
+  let pathTtl = '';
+  if (path !== generatedPath) {
+    pathTtl = `
+    ${sparqlEscapeUri(uri)} ext:hasUserInputPath """true"""^^xsd:boolean .`;
+  }
 
   await update(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
@@ -501,6 +506,7 @@ async function addFieldToFormExtension(
       ${conceptSchemeTtl}
       ${linkedFormTypeTtl}
       ${displayTypeConstraintTtl}
+      ${pathTtl}
     }
   `);
 
@@ -1040,7 +1046,7 @@ export async function getFieldsInCustomForm(formId: string) {
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?isLibraryField ?conceptScheme ?linkedFormType
+    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?isLibraryField ?conceptScheme ?linkedFormType ?isUserInputPath
     WHERE {
       ?field a form:Field .
       ?field sh:path ?path .
@@ -1061,6 +1067,9 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field ext:isLibraryEntryField ?isLibraryEntryField .
       }
       OPTIONAL {
+        ?field ext:hasUserInputPath ?hasUserInputPath .
+      }
+      OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
@@ -1069,6 +1078,7 @@ export async function getFieldsInCustomForm(formId: string) {
       BIND(IF(BOUND(?requiredValidation), true, false) AS ?isRequired)
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
       BIND(IF(BOUND(?isLibraryEntryField), true, false) AS ?isLibraryField)
+      BIND(IF(BOUND(?hasUserInputPath), true, false) AS ?isUserInputPath)
     }
     ORDER BY ?order
   `;
@@ -1076,11 +1086,13 @@ export async function getFieldsInCustomForm(formId: string) {
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
     const isLibraryEntryField = stringToBoolean(b.get('isLibraryField').value);
+    const isUserInputPath = stringToBoolean(b.get('isUserInputPath').value);
     return {
       formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
-      path: isLibraryEntryField ? null : b.get('path').value,
+      path:
+        isLibraryEntryField || !isUserInputPath ? null : b.get('path').value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
