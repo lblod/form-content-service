@@ -6,6 +6,7 @@ import {
   fetchCustomFormTypes,
   getFieldsInCustomForm,
   getUsingForms,
+  isUriUsedAsPredicateInForm,
 } from '../services/custom-forms';
 import { HttpError } from '../domain/http-error';
 import { DCTERMS, EXT, FORM, LMB, MANDAAT, MU, RDF, SHACL } from '../utils/uri';
@@ -113,8 +114,19 @@ customFormRouter.post(
     const isValid = uriRegex.test(uri);
     const hasSpaces = /\s/.test(uri);
 
+    const formId = req.body?.formId ?? null;
+    const fieldUri = req.body?.fieldUri ?? null;
+    let isUniquePathInForm = true;
+    if (formId) {
+      isUniquePathInForm = await isUriUsedAsPredicateInForm(
+        formId,
+        uri,
+        fieldUri,
+      );
+    }
+
     return res.status(200).send({
-      isValidUri: isValid && !hasSpaces,
+      isValidUri: isValid && !hasSpaces && isUniquePathInForm,
       isAllowed: !illegalUris.includes(uri),
     });
   },

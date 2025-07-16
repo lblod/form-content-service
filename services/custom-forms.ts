@@ -1154,3 +1154,31 @@ export async function getUsingForms(instanceUri: string) {
     };
   });
 }
+
+export async function isUriUsedAsPredicateInForm(
+  formId: string,
+  pathUri: string,
+  fieldUri: string,
+) {
+  let fieldFilter = '';
+  if (fieldUri) {
+    fieldFilter = `FILTER(?field != ${sparqlEscapeUri(fieldUri)})`;
+  }
+
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    
+    SELECT DISTINCT ?field
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ?field sh:path ${sparqlEscapeUri(pathUri)} .
+
+      ${fieldFilter}
+    }
+  `);
+
+  return result.results.bindings.length === 0;
+}
