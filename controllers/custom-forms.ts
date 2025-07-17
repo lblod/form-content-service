@@ -9,7 +9,8 @@ import {
   isUriUsedAsPredicateInForm,
 } from '../services/custom-forms';
 import { HttpError } from '../domain/http-error';
-import { DCTERMS, EXT, FORM, LMB, MANDAAT, MU, RDF, SHACL } from '../utils/uri';
+import { MU, RDF } from '../utils/uri';
+import { illegalPathUris } from '../config/config';
 
 export const customFormRouter = Router();
 
@@ -81,39 +82,7 @@ customFormRouter.post(
     const hasSpaces = /\s/.test(uri);
     const isValid = isUri && !hasSpaces;
 
-    const illegalUris = [
-      RDF('type'),
-      MU('uuid'),
-      DCTERMS('modified'),
-      DCTERMS('isVersionOf'),
-      FORM('displayType'),
-      FORM('includes'),
-      FORM('initGenerator'),
-      FORM('validatedBy'),
-      FORM('targetType'),
-      FORM('targetLabel'),
-      FORM('initGenerator'),
-      FORM('prototype'),
-      FORM('dataGenerator'),
-      FORM('shape'),
-      FORM('prefix'),
-      FORM('forType'),
-      FORM('showInSummary'),
-      SHACL('name'),
-      SHACL('order'),
-      SHACL('datatype'),
-      SHACL('path'),
-      SHACL('group'),
-      SHACL('severity'),
-      SHACL('resultMessage'),
-      EXT('ValueToCompare'),
-      EXT('prefix'),
-      EXT('withHistory'),
-      EXT('isLibraryEntryField'),
-      EXT('hasUserInputPath'),
-      LMB('hasPublicationStatus'),
-      MANDAAT('bekrachtigtAanstellingVan'),
-    ];
+    const illegalUris = [RDF('type'), MU('uuid'), ...illegalPathUris];
     const isAllowed = !illegalUris.includes(uri);
 
     const formId = req.body?.formId ?? null;
