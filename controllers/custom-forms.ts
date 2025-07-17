@@ -7,6 +7,7 @@ import {
   getFieldsInCustomForm,
   getUsingForms,
   isUriUsedAsPredicateInForm,
+  isUriUsedInFormAsPredicate,
 } from '../services/custom-forms';
 import { HttpError } from '../domain/http-error';
 import { MU, RDF } from '../utils/uri';
@@ -80,26 +81,29 @@ customFormRouter.post(
     const uriRegex = new RegExp(regex);
     const isUri = uriRegex.test(uri);
     const hasSpaces = /\s/.test(uri);
-    const isValid = isUri && !hasSpaces;
 
     const illegalUris = [RDF('type'), MU('uuid'), ...illegalPathUris];
     const isAllowed = !illegalUris.includes(uri);
 
+    const isValid = isUri && !hasSpaces && isAllowed;
+
     const formId = req.body?.formId ?? null;
     const fieldUri = req.body?.fieldUri ?? null;
     let isUniquePathInForm = true;
+    let isUsedAsFormPredicate = false;
     if (formId && isValid) {
       isUniquePathInForm = await isUriUsedAsPredicateInForm(
         formId,
         uri,
         fieldUri,
       );
+      isUsedAsFormPredicate = await isUriUsedInFormAsPredicate(formId, uri);
     }
 
     const errorMessageMapping = [
       {
         message: 'Deze URI wordt al gebruikt in het formulier',
-        isActive: isValid && !isUniquePathInForm,
+        isActive: isValid && (!isUniquePathInForm || isUsedAsFormPredicate),
       },
       {
         message: 'Deze URI is niet toegestaan',
@@ -115,7 +119,7 @@ customFormRouter.post(
     );
 
     return res.status(200).send({
-      isValid: isValid && isUniquePathInForm && isAllowed,
+      isValid: isValid && isUniquePathInForm && !isUsedAsFormPredicate,
       errorMessage: errorMessageMatch?.message,
     });
   },

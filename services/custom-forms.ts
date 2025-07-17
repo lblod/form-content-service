@@ -1182,3 +1182,22 @@ export async function isUriUsedAsPredicateInForm(
 
   return result.results.bindings.length === 0;
 }
+
+export async function isUriUsedInFormAsPredicate(
+  formId: string,
+  pathUri: string,
+) {
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    
+    SELECT DISTINCT ?form
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form ${sparqlEscapeUri(pathUri)} ?fo .
+    }
+  `);
+
+  return result.results.bindings.length >= 1;
+}
