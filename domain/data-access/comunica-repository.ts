@@ -45,6 +45,38 @@ const getFormData = async (formTtl: string) => {
   };
 };
 
+export const getFormType = async (formTtl: string) => {
+  const q = `
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+
+      SELECT DISTINCT ?type
+      WHERE {
+          ?s form:targetType ?type.
+      } LIMIT 1
+      `;
+  const store = await ttlToStore(formTtl);
+  const engine = new QueryEngine();
+  const bindingStream = await engine.queryBindings(q, {
+    sources: [store],
+  });
+
+
+  const bindings = await bindingStream.toArray();
+  if (bindings.length === 0) {
+    throw new Error('Form definition does not specify a target type!');
+  }
+
+  let type = bindings[0].get('type')?.value;
+
+  if (!type || type.length < 1) {
+    throw new Error(
+      'The form definition you tried to access does not define a valid target type!',
+    );
+  }
+
+  return type;
+}
+
 export const getFormTarget = async (formTtl: string) => {
   const q = `
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -263,4 +295,5 @@ export default {
   fetchConceptSchemeUris,
   getUriTypes,
   isValidForm,
+  getFormType
 };

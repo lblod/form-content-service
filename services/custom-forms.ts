@@ -145,7 +145,7 @@ async function updateFieldPath(
         ?instance a ?target .
         ?instance ?path ?fieldValue .
       }
-    }  
+    }
   `);
   }
 }
@@ -469,7 +469,7 @@ async function addFieldToFormExtension(
   if (displayTypeConstraints.hasValidations) {
     const addToField = displayTypeConstraints.validationUris.map(
       (validation) =>
-        `${sparqlEscapeUri(uri)} 
+        `${sparqlEscapeUri(uri)}
           form:validatedBy ${sparqlEscapeUri(validation)} .`,
     );
     displayTypeConstraintTtl = `
@@ -1169,7 +1169,7 @@ export async function isUriUsedAsPredicateInForm(
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-    
+
     SELECT DISTINCT ?field
     WHERE {
       ?form mu:uuid ${sparqlEscapeString(formId)} .
@@ -1177,27 +1177,33 @@ export async function isUriUsedAsPredicateInForm(
       ?field sh:path ${sparqlEscapeUri(pathUri)} .
 
       ${fieldFilter}
-    }
+    } LIMIT 1
   `);
 
-  return result.results.bindings.length === 0;
+  return result.results.bindings.length > 0;
 }
 
-export async function isUriUsedInFormAsPredicate(
+export async function hasFormInstanceWithValueForPredicate(
   formId: string,
   pathUri: string,
 ) {
+  const formDefinition = await fetchFormDefinitionById(formId);
+  if (!formDefinition) {
+    throw new Error("Unknown form");
+  }
+  const formType = await comunicaRepo.getFormType(formDefinition.formTtl);
+
   const result = await query(`
     PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
     PREFIX sh: <http://www.w3.org/ns/shacl#>
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-    
+
     SELECT DISTINCT ?form
     WHERE {
-      ?form mu:uuid ${sparqlEscapeString(formId)} .
-      ?form ${sparqlEscapeUri(pathUri)} ?fo .
-    }
+      ?instance a ${sparqlEscapeUri(formType)}.
+      ?instance ${sparqlEscapeUri(pathUri)} ?o .
+    } LIMIT 1
   `);
 
-  return result.results.bindings.length >= 1;
+  return result.results.bindings.length > 0;
 }

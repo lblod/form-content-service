@@ -7,7 +7,7 @@ import {
   getFieldsInCustomForm,
   getUsingForms,
   isUriUsedAsPredicateInForm,
-  isUriUsedInFormAsPredicate,
+  hasFormInstanceWithValueForPredicate,
 } from '../services/custom-forms';
 import { HttpError } from '../domain/http-error';
 import { MU, RDF } from '../utils/uri';
@@ -89,21 +89,19 @@ customFormRouter.post(
 
     const formId = req.body?.formId ?? null;
     const fieldUri = req.body?.fieldUri ?? null;
-    let isUniquePathInForm = true;
-    let isUsedAsFormPredicate = false;
+    let isPathAlreadyUsedInForm = true;
+    let hasExistingValueForPredicate = false;
     if (formId && isValid) {
-      isUniquePathInForm = await isUriUsedAsPredicateInForm(
-        formId,
-        uri,
-        fieldUri,
-      );
-      isUsedAsFormPredicate = await isUriUsedInFormAsPredicate(formId, uri);
+      [ isPathAlreadyUsedInForm, hasExistingValueForPredicate] = await Promise.all([
+         isUriUsedAsPredicateInForm(formId,uri,fieldUri),
+         hasFormInstanceWithValueForPredicate(formId, uri)
+      ]);
     }
 
     const errorMessageMapping = [
       {
         message: 'Deze URI wordt al gebruikt in het formulier',
-        isActive: isValid && (!isUniquePathInForm || isUsedAsFormPredicate),
+        isActive: isValid && (isPathAlreadyUsedInForm || hasExistingValueForPredicate),
       },
       {
         message: 'Deze URI is niet toegestaan',
@@ -119,7 +117,7 @@ customFormRouter.post(
     );
 
     return res.status(200).send({
-      isValid: isValid && isUniquePathInForm && !isUsedAsFormPredicate,
+      isValid: isValid && !isPathAlreadyUsedInForm && !hasExistingValueForPredicate,
       errorMessage: errorMessageMatch?.message,
     });
   },
