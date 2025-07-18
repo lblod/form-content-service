@@ -50,6 +50,7 @@ type FieldUpdateDescription = {
   field: string;
   name: string;
   displayType: string;
+  path?: string;
   isRequired: boolean;
   showInSummary?: boolean;
   conceptScheme?: string;
@@ -87,6 +88,66 @@ export async function addField(formId: string, description: FieldDescription) {
   await getGeneratorShape(form.formTtl);
 
   return form;
+}
+
+async function updateFieldPath(
+  formId: string,
+  fieldUri: string,
+  pathUri?: string,
+) {
+  if (!pathUri) {
+    return;
+  }
+  const newPath = sparqlEscapeUri(pathUri);
+
+  const currentPath = (
+    await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT ?path
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ${sparqlEscapeUri(fieldUri)} sh:path ?path .
+    } LIMIT 1
+  `)
+  ).results.bindings[0]?.path?.value;
+
+  if (currentPath !== pathUri) {
+    await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    DELETE {
+      ?field sh:path ?path .
+      ?validation sh:path ?validationPath .
+      ?instance ?path ?fieldValue .
+    }
+    INSERT {
+      ?field sh:path ${newPath} .
+      ?validation sh:path ${newPath} .
+      ?instance ${newPath} ?fieldValue .
+    }
+    WHERE {
+      VALUES ?field { ${sparqlEscapeUri(fieldUri)} }
+      ?field sh:path ?path .
+      OPTIONAL {
+        ?field form:validatedBy ?validation .
+        ?validation sh:path ?validationPath .
+      }
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ?form form:targetType ?target .
+      OPTIONAL {
+        ?instance a ?target .
+        ?instance ?path ?fieldValue .
+      }
+    }
+  `);
+  }
 }
 
 export async function updateField(
@@ -174,6 +235,7 @@ export async function updateField(
       }
     }
   `);
+  await updateFieldPath(formId, description.field, description.path);
   const form = await fetchFormDefinition(formId);
   await updateFormTtlForExtension(form.uri);
 
@@ -407,13 +469,18 @@ async function addFieldToFormExtension(
   if (displayTypeConstraints.hasValidations) {
     const addToField = displayTypeConstraints.validationUris.map(
       (validation) =>
-        `${sparqlEscapeUri(uri)} 
+        `${sparqlEscapeUri(uri)}
           form:validatedBy ${sparqlEscapeUri(validation)} .`,
     );
     displayTypeConstraintTtl = `
       ${addToField}
       ${displayTypeConstraints.ttl}
     `;
+  }
+  let pathTtl = '';
+  if (path !== generatedPath) {
+    pathTtl = `
+    ${sparqlEscapeUri(uri)} ext:hasUserInputPath """true"""^^xsd:boolean .`;
   }
 
   await update(`
@@ -439,6 +506,7 @@ async function addFieldToFormExtension(
       ${conceptSchemeTtl}
       ${linkedFormTypeTtl}
       ${displayTypeConstraintTtl}
+      ${pathTtl}
     }
   `);
 
@@ -489,6 +557,7 @@ async function addLibraryFieldToFormExtension(
 
     INSERT {
         ${sparqlEscapeUri(uri)} a form:Field;
+            ext:isLibraryEntryField """true"""^^xsd:boolean ;
             sh:group ${sparqlEscapeUri(fieldGroupUri)} ;
             ext:extendsGroup ${sparqlEscapeUri(fieldGroupUri)} ;
             sh:name ${sparqlEscapeString(fieldDescription.name)} ;
@@ -977,9 +1046,10 @@ export async function getFieldsInCustomForm(formId: string) {
     PREFIX fieldOption: <http://lblod.data.gift/vocabularies/form-field-options/>
     PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
-    SELECT DISTINCT ?field ?displayType ?label ?order ?isRequired ?isShownInSummary ?conceptScheme ?linkedFormType
+    SELECT DISTINCT ?field ?displayType ?path ?label ?order ?isRequired ?isShownInSummary ?isLibraryField ?conceptScheme ?linkedFormType ?isUserInputPath
     WHERE {
       ?field a form:Field .
+      ?field sh:path ?path .
       ?field sh:name ?label .
       ?field form:displayType ?displayType .
 
@@ -994,6 +1064,12 @@ export async function getFieldsInCustomForm(formId: string) {
         ?field form:showInSummary ?showInSummary .
       }
       OPTIONAL {
+        ?field ext:isLibraryEntryField ?isLibraryEntryField .
+      }
+      OPTIONAL {
+        ?field ext:hasUserInputPath ?hasUserInputPath .
+      }
+      OPTIONAL {
         ?field fieldOption:conceptScheme ?conceptScheme .
       }
       OPTIONAL {
@@ -1001,16 +1077,22 @@ export async function getFieldsInCustomForm(formId: string) {
       }
       BIND(IF(BOUND(?requiredValidation), true, false) AS ?isRequired)
       BIND(IF(BOUND(?showInSummary), true, false) AS ?isShownInSummary)
+      BIND(IF(BOUND(?isLibraryEntryField), true, false) AS ?isLibraryField)
+      BIND(IF(BOUND(?hasUserInputPath), true, false) AS ?isUserInputPath)
     }
     ORDER BY ?order
   `;
   const bindingStream = await engine.queryBindings(query, { sources: [store] });
   const bindings = await bindingStream.toArray();
   return bindings.map((b) => {
+    const isLibraryEntryField = stringToBoolean(b.get('isLibraryField').value);
+    const isUserInputPath = stringToBoolean(b.get('isUserInputPath').value);
     return {
       formUri: form.uri,
       uri: b.get('field').value,
       label: b.get('label').value,
+      path:
+        isLibraryEntryField || !isUserInputPath ? null : b.get('path').value,
       displayType: b.get('displayType').value,
       order: parseInt(b.get('order').value || '0'),
       conceptScheme: b.get('conceptScheme')?.value,
@@ -1071,4 +1153,57 @@ export async function getUsingForms(instanceUri: string) {
       formLabel: b.formLabel?.value, // in the case of extending existing forms, the label is sometimes not present
     };
   });
+}
+
+export async function isUriUsedAsPredicateInForm(
+  formId: string,
+  pathUri: string,
+  fieldUri: string,
+) {
+  let fieldFilter = '';
+  if (fieldUri) {
+    fieldFilter = `FILTER(?field != ${sparqlEscapeUri(fieldUri)})`;
+  }
+
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT DISTINCT ?field
+    WHERE {
+      ?form mu:uuid ${sparqlEscapeString(formId)} .
+      ?form form:includes ?field .
+      ?field sh:path ${sparqlEscapeUri(pathUri)} .
+
+      ${fieldFilter}
+    } LIMIT 1
+  `);
+
+  return result.results.bindings.length > 0;
+}
+
+export async function hasFormInstanceWithValueForPredicate(
+  formId: string,
+  pathUri: string,
+) {
+  const formDefinition = await fetchFormDefinitionById(formId);
+  if (!formDefinition) {
+    throw new Error('Unknown form');
+  }
+  const formType = await comunicaRepo.getFormType(formDefinition.formTtl);
+
+  const result = await query(`
+    PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+    PREFIX sh: <http://www.w3.org/ns/shacl#>
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+
+    SELECT DISTINCT ?form
+    WHERE {
+      ?instance a ${sparqlEscapeUri(formType)}.
+      ?instance ${sparqlEscapeUri(pathUri)} ?o .
+    } LIMIT 1
+  `);
+
+  return result.results.bindings.length > 0;
 }

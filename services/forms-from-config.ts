@@ -129,5 +129,13 @@ export const loadFormsFromConfig = async () => {
 };
 
 export const fetchFormDirectoryNames = async () => {
-  return await fs.readdir(formDirectory);
+  const directoryNames = await fs.readdir(formDirectory);
+
+  return directoryNames.filter((name) => {
+    const isFile = name.includes('.');
+    if (isFile) {
+      return;
+    }
+    return name;
+  });
 };
