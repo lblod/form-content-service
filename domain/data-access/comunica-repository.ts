@@ -45,7 +45,7 @@ const getFormData = async (formTtl: string) => {
   };
 };
 
-export const getFormType = async (formTtl: string) => {
+const getFormType = async (formTtl: string) => {
   const q = `
       PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
 
@@ -60,13 +60,12 @@ export const getFormType = async (formTtl: string) => {
     sources: [store],
   });
 
-
   const bindings = await bindingStream.toArray();
   if (bindings.length === 0) {
     throw new Error('Form definition does not specify a target type!');
   }
 
-  let type = bindings[0].get('type')?.value;
+  const type = bindings[0].get('type')?.value;
 
   if (!type || type.length < 1) {
     throw new Error(
@@ -75,7 +74,7 @@ export const getFormType = async (formTtl: string) => {
   }
 
   return type;
-}
+};
 
 export const getFormTarget = async (formTtl: string) => {
   const q = `
@@ -295,5 +294,5 @@ export default {
   fetchConceptSchemeUris,
   getUriTypes,
   isValidForm,
-  getFormType
+  getFormType,
 };

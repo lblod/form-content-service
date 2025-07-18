@@ -92,16 +92,18 @@ customFormRouter.post(
     let isPathAlreadyUsedInForm = true;
     let hasExistingValueForPredicate = false;
     if (formId && isValid) {
-      [ isPathAlreadyUsedInForm, hasExistingValueForPredicate] = await Promise.all([
-         isUriUsedAsPredicateInForm(formId,uri,fieldUri),
-         hasFormInstanceWithValueForPredicate(formId, uri)
-      ]);
+      [isPathAlreadyUsedInForm, hasExistingValueForPredicate] =
+        await Promise.all([
+          isUriUsedAsPredicateInForm(formId, uri, fieldUri),
+          hasFormInstanceWithValueForPredicate(formId, uri),
+        ]);
     }
 
     const errorMessageMapping = [
       {
         message: 'Deze URI wordt al gebruikt in het formulier',
-        isActive: isValid && (isPathAlreadyUsedInForm || hasExistingValueForPredicate),
+        isActive:
+          isValid && (isPathAlreadyUsedInForm || hasExistingValueForPredicate),
       },
       {
         message: 'Deze URI is niet toegestaan',
@@ -117,7 +119,8 @@ customFormRouter.post(
     );
 
     return res.status(200).send({
-      isValid: isValid && !isPathAlreadyUsedInForm && !hasExistingValueForPredicate,
+      isValid:
+        isValid && !isPathAlreadyUsedInForm && !hasExistingValueForPredicate,
       errorMessage: errorMessageMatch?.message,
     });
   },

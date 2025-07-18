@@ -1189,7 +1189,7 @@ export async function hasFormInstanceWithValueForPredicate(
 ) {
   const formDefinition = await fetchFormDefinitionById(formId);
   if (!formDefinition) {
-    throw new Error("Unknown form");
+    throw new Error('Unknown form');
   }
   const formType = await comunicaRepo.getFormType(formDefinition.formTtl);
 
