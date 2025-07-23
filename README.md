@@ -23,6 +23,10 @@ Normally this file is not available in **lblod** service as it is not the prefer
 
 When this service is added to a semantic-stack project you can run `docker compose up -d` in the root of this project. So it can connect to your main project. Make sure to update the volume to your `app`.
 
+### Packages
+
+This service works best in combination with the [`ember-semantic-forms`](https://github.com/lblod/ember-semantic-forms) addon. This will help with visualization of of forms. For working with fully generated forms **Lokaal Mandatenbeheer** has added a custom-form-builder to it's application where a user can create a form from scratch [`<EditableForm/>`](https://github.com/lblod/frontend-lokaal-mandatenbeheer/blob/master/app/components/editable-form.js).
+
 ### Project Structure
 
 - Routing and anything Express related resides in `/controllers`. The routes should be simple methods that call services.
@@ -137,7 +141,7 @@ In this data, the graph containing the history information is used as the subjec
 
 There are three different type of forms that this service is able to manage. Every type of form needs the correct structure so the service known how to manage every one of them. Instances can be created for every type of form.
 
-1. Forms (1*)
+1. Forms (1\*)
 
 These forms work with a static form-definition that lives in the config folder. A form definition folder structure can be as followed with form.ttl
 
