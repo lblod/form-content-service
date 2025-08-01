@@ -1,38 +1,40 @@
 # Form Content Service
 
-This is a service that manages the contents of instances created through semantic forms. The definitions of forms are not (currently?) managed by this service.
+Managing Semantic Form instances. These instances are created from a form-definition. These definitions can be static or controlled by the end-user.
 
-> [!CAUTION]
-> This service is under construction and is not ready to be used in a production environment
+## Getting started
 
-## Local Development
+### Local development
 
-To build this service, first user docker build, e.g.
+#### Docker image
 
-```
-docker build -t local-form-manager .
-```
+1. Build an image from the Dockerfile (e.g. `local-form-content`)
+2. Run the container in development
 
-Then run it by running e.g.:
-
-```
-docker run --rm -it -p 9229:9229 -p 8081:80 -e NODE_ENV=development local-form-manager
+```bash
+docker run --rm -it -p 9229:9229 -p 8081:80 -e NODE_ENV=development local-form-content
 ```
 
-Running it in development mode and exposing port 9229 allows you to connect your debugger to the docker.
+3. Running it in development mode and exposing port 9229 allows you to connect your debugger to the docker.
+
+#### Debug Compose
+
+This file is available for convenience while developing, it has sane defaults for connecting it to the app-lokaal-mandatenbeheer docker-compose setup where it was conceived. Take note that this depends on your app connecting its database and dispatcher to the debug network as well as to its default network.
+
+### Packages
+
+This service works best in combination with the [`ember-semantic-forms`](https://github.com/lblod/ember-semantic-forms) addon. This will help with visualization of of forms. For working with fully generated forms **Lokaal Mandatenbeheer** has added a custom-form-builder to it's application where a user can create a form from scratch [`<EditableForm/>`](https://github.com/lblod/frontend-lokaal-mandatenbeheer/blob/master/app/components/editable-form.js).
 
 ### Project Structure
 
-The project follows the Model-view-controller (MVC) architecture.
-
 - Routing and anything Express related resides in `/controllers`. The routes should be simple methods that call services.
 - Services reside in `/services`. This is where the business logic and validations are.
-- Querries for the database or Comunica go in `/domain/data-access`. These query methods should only contain the means to query or mutate the data, and return the result in a format that the service understands.
-- Helpers reside in `/helpers` and contain functionality that is used in multiple services or querries.
+- Queries for the database or Comunica go in `/domain/data-access`. These query methods should only contain the means to query or mutate the data, and return the result in a format that the service understands.
+- Helpers reside in `/helpers` and contain functionality that is used in multiple services or queries.
 
 ## Model
 
-This service follows the semantic forms model and to that end uses the ember-submission-form-fields package. However, some extensions are needed and they may not have made it into the form spec yet. The main extensions are: listing form instance, defining the uri prefix for form instances, linking to other types (possibly forms) using dropdowns etc.
+This service follows the semantic forms model and to that end uses the [ember-semantic-forms](https://github.com/lblod/ember-semantic-forms) package. However, some extensions are needed and they may not have made it into the form spec yet. The main extensions are: listing form instance, defining the uri prefix for form instances, linking to other types (possibly forms) using dropdowns etc.
 
 ### Listing Form Instances
 
@@ -98,13 +100,13 @@ ext:personG a form:Generator;
 When a form instance is deleted, a [tombstone](https://www.stevebate.net/ontologies/activitystreams2/class-astombstone.html) is erected for every uri where a triple was removed that expresses the type for that uri. E.g. if on delete of a form instance, the following triple is removed
 
 ```
-  ext:1 a foaf:Person .
+ext:1 a foaf:Person .
 ```
 
 Then the following data is inserted in the store:
 
 ```
-  ext:1 a as:Tombstone ;
+ext:1 a as:Tombstone ;
         as:formerType foaf:Person ;
         as:deleted "thetimeofdelete"^^xsd:dateTime  .
 ```
@@ -116,22 +118,94 @@ Form definitions can specify that their history should be tracked by adding a tr
 Meta information about this update is written to a specific graph `<http://mu.semte.ch/graphs/formHistory>`. This meta information describes the historyInstanceUri and is made up of the following triples:
 
 ```
-  @prefix dc: <http://purl.org/dc/elements/1.1/>.
-  @prefix dct: <http://purl.org/dc/terms/>.
-  @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
-  @prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
+@prefix dc: <http://purl.org/dc/elements/1.1/>.
+@prefix dct: <http://purl.org/dc/terms/>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
 
-  <historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
-                       dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
-                       dct:creator <uriOfCreatorUser> ;
-                       ext:createdByForm <uriOfFormDefinition> ;
-                       dc:description "updated the name of the organization" .
+<historyInstanceUri> dct:isVersionOf <formInstanceUri> ;
+                      dct:issued "2024-03-12T12:29:00.000Z"^^xsd:dateTime ;
+                      dct:creator <uriOfCreatorUser> ;
+                      ext:createdByForm <uriOfFormDefinition> ;
+                      dc:description "updated the name of the organization" .
 ```
 
 In this data, the graph containing the history information is used as the subject. It refers to the form instance it's a history entry of using `dct:IsVersionOf`. The time at which the version was created is stored using `dct:issued`. The user that created the instance can be found by following the `dct:creator` predicate. The uri of the form definition of the form used to create this content is added as well so that if the instance can be modified by different forms, the user can find the form that made this change (e.g. when trying to restore the instance to this version). Finally, a `dc:description` can be provided (optionally) that contains a free form text description of the change.
 
 > [!CAUTION]
 > Careful: a form instance can possibly be updated through different form definitions, each with their own fields. A history item will ONLY keep track of the properties that are controlled by their own (that is ext:createdByForm) form definition. E.g. if you have a form that controls only the end date of an event and a form that controls all properties of the event (e.g. name), the history item linked to updating only the end date through the specialized form will only contain the triples related to the end date and NOT the name. If you'd want to restore such an item, you'd have to restore the version of the item from before the end time update (if any) and then restore the triples referring only to the end time.
+
+## Types of forms
+
+There are three different type of forms that this service is able to manage. Every type of form needs the correct structure so the service known how to manage every one of them. Instances can be created for every type of form.
+
+1. Forms (1\*)
+
+These forms work with a static form-definition that lives in the config folder. A form definition folder structure can be as followed with form.ttl
+
+```md
+--|config
+|--| my-form
+|-- form.ttl
+```
+
+2. Form **extensions**
+
+These forms work with a base static form-definition which can be extended by the end-user with other fields. A form definition folder structure can be as followed with form.ttl
+
+```md
+--|config
+|--| my-form-extension
+|-- form.ttl
+```
+
+3. **Generated** forms
+
+These forms can be created by using the available endpoints. If you want a more in dept look on how these forms are buildup you can have a look at `form-definitions.ts` method `createEmptyFormDefinition()`
+
+> Note: when a path is not specified when adding fields they get a generated path
+
+<details>
+  <summary>Example form ttl (1*)</summary>
+
+```
+  @prefix form: <http://lblod.data.gift/vocabularies/forms/>.
+  @prefix sh: <http://www.w3.org/ns/shacl#>.
+  @prefix mu: <http://mu.semte.ch/vocabularies/core/>.
+  @prefix displayTypes: <http://lblod.data.gift/display-types/>.
+  @prefix ext: <http://mu.semte.ch/vocabularies/ext/>.
+  @prefix person: <http://www.w3.org/ns/person#>.
+
+  ext:testFieldF
+      a form:Field;
+      form:displayType displayTypes:defaultInput;
+      sh:group ext:testPG;
+      sh:name "Test";
+      sh:order 2;
+      sh:path ext:test.
+  ext:testPG
+      a form:PropertyGroup; sh:name "Test"; sh:order 1.
+
+  <http://data.lblod.info/id/lmb/forms/test>
+      a form:Form, form:TopLevelForm;
+      form:includes
+        ext:testFieldF
+      sh:group ext:testPG;
+      form:initGenerator ext:testG;
+      form:targetType person:Person;
+      form:targetLabel ext:test;
+      mu:uuid "59605cf4-49e7-4813-a619-7481fc313026".
+
+  ext:testG a form:Generator;
+    form:prototype [
+      form:shape [
+        a person:Person
+      ]
+    ];
+    form:dataGenerator form:addMuUuid.
+```
+
+</details>
 
 ## Extending Forms
 
@@ -145,10 +219,12 @@ Use the same model as regular forms, with the following differences:
 
 An extension (type: `form:Extension`) is represented by
 
-    <extensionUri> a form:Extension ;
-                   form:includes <fieldUri> ;
-                   ext:extendsForm <formUri> ;
-                   mu:uuid "b5a86f3a-aac8-4911-a3fb-37f9f194b58e" .
+```
+<extensionUri> a form:Extension ;
+                form:includes <fieldUri> ;
+                ext:extendsForm <formUri> ;
+                mu:uuid "b5a86f3a-aac8-4911-a3fb-37f9f194b58e" .
+```
 
 Note that if you want to add a field to an existing Section, there is no need to define that section again using a `sh:group` from the extension to the section. This link is already specified in the original form. You only need to add a link like this for entirely new sections that you create.
 
@@ -168,13 +244,15 @@ To clients of the form-content service, instances of the `form:Extension` class 
 
 Because a form extension is translated directly into a regular form, it is straight forward to create an extension of an extension. In that case, the `form:extends` predicate points to the URI of another `form:Extension`. The translation to a form follows the following algorithm:
 
-    def extension_to_form(uri):
-      extended = get_extended(uri)
-      if is_extension(extended):
-        extended_as_form = extension_to_form(extended)
-        return merge_into_form(extended_as_form, uri)
-      else:
-        return merge_into_form(extended, uri)
+```
+def extension_to_form(uri):
+  extended = get_extended(uri)
+  if is_extension(extended):
+    extended_as_form = extension_to_form(extended)
+    return merge_into_form(extended_as_form, uri)
+  else:
+    return merge_into_form(extended, uri)
+```
 
 ## Limitations
 
