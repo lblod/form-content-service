@@ -1,10 +1,14 @@
 import { HttpError } from '../domain/http-error';
 import { cleanAndValidateFormInstance } from '../form-validator';
-import { FormDefinition, InstanceData, InstanceInput } from '../types';
+import { FormDefinition, InstanceData, InstanceInput, Label } from '../types';
 import { fetchFormDefinitionById } from './forms-from-config';
 import formRepo from '../domain/data-access/form-repository';
 import comunicaRepo from '../domain/data-access/comunica-repository';
 import { fetchUserIdFromSession } from '../domain/data-access/user-repository';
+import { jsonToCsv } from '../utils/json-to-csv-string';
+import { getFormInstanceLabels } from './custom-forms';
+
+import { query, sparqlEscapeString } from 'mu';
 
 export const postFormInstance = async (
   formId: string,
@@ -55,7 +59,13 @@ export const postFormInstance = async (
 
 export const getInstancesForForm = async (
   formId: string,
-  options?: { limit?: number; offset?: number; sort?: string; filter?: string },
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    labels?: Array<Label>;
+  },
 ) => {
   const form = await fetchFormDefinitionById(formId);
   if (!form) {
@@ -63,7 +73,51 @@ export const getInstancesForForm = async (
   }
 
   const type = await comunicaRepo.getFormTarget(form.formTtl);
-  const labels = await comunicaRepo.getFormLabels(form.formTtl);
+  let labels = options.labels;
+  if (!labels || labels.length === 0) {
+    labels = await comunicaRepo.getDefaultFormLabels(form.formTtl);
+  }
+  const labelVariables = labels.map((l) => l.var);
+  const allLabelsWithOrder = (await getFormInstanceLabels(formId)).map(
+    (label) => {
+      const match = labels.find((l) => l.var === label.var);
+      if (match && match.order) {
+        delete label.order;
+        return {
+          ...label,
+          order: match.order,
+        };
+      }
+      return label;
+    },
+  );
+  labels = allLabelsWithOrder
+    .filter((label) => labelVariables.includes(label.var))
+    .sort((a, b) => a.order - b.order);
+
+  return await formRepo.getFormInstancesWithCount(type, labels, options);
+};
+export const getInstancesForFormByUris = async (
+  formDefinitionId: string,
+  options: {
+    limit?: number;
+    offset?: number;
+    sort?: string;
+    filter?: string;
+    labels?: Array<Label>;
+    instanceUris?: Array<string>;
+  },
+) => {
+  const form = await fetchFormDefinitionById(formDefinitionId);
+  if (!form) {
+    throw new HttpError('Form not found', 404);
+  }
+
+  let labels = options.labels;
+  const type = await comunicaRepo.getFormTarget(form.formTtl);
+  if (!labels || labels.length === 0) {
+    labels = await comunicaRepo.getDefaultFormLabels(form.formTtl);
+  }
 
   return await formRepo.getFormInstancesWithCount(type, labels, options);
 };
@@ -208,4 +262,54 @@ export const deleteFormInstance = async (
   }
 
   await formRepo.deleteFormInstance(form.formTtl, instanceUri);
+};
+
+export const instancesAsCsv = async (
+  formId: string,
+  labels: Array<Label>,
+  options: {
+    sort?: string;
+    offset?: number;
+    limit?: number;
+  } = { limit: 9999 }, // Get all instances
+): Promise<string> => {
+  const result = await getInstancesForForm(formId, {
+    labels,
+    ...options,
+  });
+  const instancePropertiesForLabels = result.instances.map((instance) => {
+    return Object.fromEntries(
+      Object.entries(instance).filter(([key]) =>
+        labels.map((l) => l.name).includes(key),
+      ),
+    );
+  });
+
+  const withNullReplaced = instancePropertiesForLabels.map((instance) => {
+    return Object.fromEntries(
+      Object.entries(instance).map(([key, value]) => {
+        return [key, value ?? ''];
+      }),
+    );
+  });
+
+  return jsonToCsv(withNullReplaced);
+};
+
+export const getInstanceUsageCount = async (instanceId: string) => {
+  const queryString = `
+      PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+      PREFIX form: <http://lblod.data.gift/vocabularies/forms/>
+      PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  
+      SELECT (COUNT(DISTINCT ?usage) AS ?count)
+      WHERE {
+        ?instance mu:uuid ${sparqlEscapeString(instanceId)} .
+        ?usage ?p ?instance .
+      }
+    `;
+  const queryResult = await query(queryString);
+  const count = queryResult.results.bindings?.at(0)?.count.value || '0';
+
+  return parseInt(count);
 };

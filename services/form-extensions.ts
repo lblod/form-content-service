@@ -5,6 +5,7 @@ import { fetchFormDefinitionByUri } from './forms-from-config';
 import { FormDefinition } from '../types';
 
 export const extendForm = async (
+  extensionUri: string,
   extensionFormTtl: string,
 ): Promise<FormDefinition> => {
   const store = new N3.Store();
@@ -14,6 +15,7 @@ export const extendForm = async (
     return {
       formTtl: extensionFormTtl,
       metaTtl: null,
+      uri: extensionUri,
     };
   }
 
@@ -30,22 +32,32 @@ export const extendForm = async (
 
   const predicatesToDeleteFromBase = await getDefinedPredicatesInExtensionForm(
     extensionFormTtl,
-    ['form:targetType', 'form:targetLabel', 'ext:prefix'],
+    [
+      'http://lblod.data.gift/vocabularies/forms/targetType',
+      'http://lblod.data.gift/vocabularies/forms/targetLabel',
+      'http://mu.semte.ch/vocabularies/ext/prefix',
+    ],
   );
   await formExtRepo.deleteAllFromBaseForm(
-    [...predicatesToDeleteFromBase, 'mu:uuid'],
+    [
+      ...predicatesToDeleteFromBase,
+      'http://mu.semte.ch/vocabularies/core/uuid',
+    ],
     mergeGraph,
     store,
   );
 
   await formExtRepo.replaceFormUri(mergeGraph, store);
   await formExtRepo.replaceExtendsGroup(mergeGraph, store);
+  await formExtRepo.addExtensionFieldGenerators(mergeGraph, store);
+  await formExtRepo.addComplexPaths(mergeGraph, store);
 
   const extendedFormTtl = await formExtRepo.graphToTtl(mergeGraph, store);
 
   return {
     formTtl: extendedFormTtl,
     metaTtl: baseFormDefinition.metaTtl,
+    uri: extensionUri,
   };
 };
 
@@ -55,13 +67,13 @@ const getDefinedPredicatesInExtensionForm = async (
 ) => {
   const definedPredicates: Array<string> = [];
 
-  for (const predicate of predicatesToCheck) {
+  for (const predicateUri of predicatesToCheck) {
     const isDefined = await formExtRepo.formExtensionHasPredicateSet(
-      predicate,
+      predicateUri,
       extensionFormTtl,
     );
     if (isDefined) {
-      definedPredicates.push(predicate);
+      definedPredicates.push(predicateUri);
     }
   }
 

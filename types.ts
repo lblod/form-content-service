@@ -1,12 +1,17 @@
 export type FormDefinition = {
   formTtl: string;
   metaTtl?: string | null;
+  custom?: boolean;
+  uri: string;
 };
 
 export type Label = {
   name: string;
   uri: string;
   var: string;
+  order?: number;
+  type?: string;
+  isShownInSummary?: boolean;
 };
 
 export type InstanceMinimal = {

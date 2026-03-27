@@ -1,5 +1,5 @@
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscape } from 'mu';
-import { Quad } from 'n3';
+import { Quad, Parser, Writer } from 'n3';
 import N3 from 'n3';
 
 const datatypeNames = {
@@ -22,7 +22,7 @@ export const sparqlEscapeObject = (bindingObject): string => {
 /**
  * The n3 Quad library's writer is not safe enough, let's use the mu encoding functions
  */
-const quadToString = function (quad: Quad) {
+export const quadToString = function (quad: Quad) {
   let object;
   if (quad.object.termType === 'Literal') {
     const datatype = quad.object.datatype;
@@ -36,59 +36,43 @@ const quadToString = function (quad: Quad) {
   )} ${object} .`;
 };
 
-export const ttlToStore = function (ttl: string): Promise<N3.Store> {
-  const store = new N3.Store();
+export const ttlToStore = function (
+  ttl: string,
+  existingStore?: N3.Store,
+  graph?: string,
+): Promise<N3.Store> {
+  let store = existingStore;
+  if (!store) {
+    store = new N3.Store();
+  }
   const parser = new N3.Parser();
 
   return new Promise((resolve, reject) => {
-    parser.parse(ttl, (error, quad) => {
-      if (error) {
-        console.error(error);
-        reject(error);
-        return;
-      }
-      if (!quad) {
-        resolve(store);
-        return;
-      }
-      store.addQuad(quad);
-    });
+    parser.parse(
+      `@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n ${ttl}`,
+      (error, quad) => {
+        if (error) {
+          console.error(error);
+          reject(error);
+          return;
+        }
+        if (!quad) {
+          resolve(store);
+          return;
+        }
+        store.addQuad(quad.subject, quad.predicate, quad.object, graph);
+      },
+    );
   });
 };
 
-export const ttlToTriplesAndPrefixes = function (ttl: string) {
-  const lines = ttl.split(/\.\s/);
-  const prefixLines = [] as string[];
-  const insertLines = [] as string[];
+export const ttlToQuadStrings = function (ttl: string): Array<string> {
+  const parser = new Parser();
+  const quads = parser.parse(ttl);
+  const writer = new Writer({ prefixes: {} });
+  writer.addQuads(quads);
 
-  lines.forEach((line) => {
-    const trimmedLine = line.trim();
-    if (trimmedLine.toLowerCase().startsWith('@prefix')) {
-      prefixLines.push(`PREFIX ${trimmedLine.substring(8)}`);
-    } else {
-      insertLines.push(trimmedLine);
-    }
-  });
-
-  return { prefixLines, insertLines };
-};
-
-/**
- * This is a naive implementation that will not work for data of the format:
- * <#foo> <#bar> """this text talks about somthing. @prefix is a keyword. if left in text like this, it breaks our implementation""" .
- *
- * The text about prefix will be removed from the text and is a keyword will be interpreted as a prefix statement.
- *
- * We probably don't care.
- */
-export const ttlToInsert = function (ttl) {
-  const { insertLines, prefixLines } = ttlToTriplesAndPrefixes(ttl);
-
-  return `${prefixLines.join('\n')}
-
-  INSERT DATA {
-    ${insertLines.join('.\n')}
-  }`;
+  return quads.map((q) => writer.quadsToString([q]));
 };
 
 export const addTripleToTtl = function (
