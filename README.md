@@ -165,6 +165,8 @@ These forms can be created by using the available endpoints. If you want a more 
 
 > Note: when a path is not specified when adding fields they get a generated path
 
+> ⚠️ Note: complex paths are broken at the moment, this means that if the sh:path object is a class value it won't set the value correctly!
+
 <details>
   <summary>Example form ttl (1*)</summary>
 
