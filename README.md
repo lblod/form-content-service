@@ -40,7 +40,7 @@ Running the service standalone will not give you a working setup. The following 
 
   ```yaml
   form-content:
-    image: semtech/mu-javascript-template:1.8.0
+    image: semtech/mu-javascript-template:1.9.1
     environment:
       - NODE_ENV=development
     labels:
@@ -58,11 +58,11 @@ Running the service standalone will not give you a working setup. The following 
 - **A triplestore (Virtuoso):** the bundled `mu` library queries Virtuoso through mu-authorization, and the CONSTRUCT used to read instances avoids `UNION` because it is broken in Comunica (see `form-validator.ts`).
 - **Routing:** add `dispatcher.ex` rules for the paths you expose; nothing is routed automatically.
 
-A smoke test once the stack is up:
+A smoke test once the stack is up, assuming the service is exposed directly on 8080 (don't do this in an actual deployment, go through the identifier+dispatcher):
 
 ```bash
-curl http://localhost/                        # {"status":"ok"} through the dispatcher
-curl -H 'mu-session-id: <session-uri>' http://localhost/forms   # list loaded config directories
+curl http://localhost:8080/                        # {"status":"ok"} through the dispatcher
+curl -H 'mu-session-id: <session-uri>' http://localhost:8080/forms   # list loaded config directories
 ```
 
 ## API
